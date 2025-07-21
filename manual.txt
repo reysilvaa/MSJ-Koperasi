@@ -1,0 +1,61 @@
+<<============= Dokumentasi msjframework ================>>
+
+Langkah-langkah menambah menu baru :
+1. Klik Tambah Pada Menu System->Menu
+2. Sesuaikan Pilihan Layout nya
+3. Jika Membutuhkan Tabel Baru, Gunakan Migration Database Dengan Perintah "php artisan make:migration nama_migration" Format Penamaan "namatabel"
+4. Selain Layout Manual, Tambahkan Nama-nama Kolom Di Menu System->Tabel Menu
+5. Membuat Seeders Untuk Tabel Menu Dengan Perintah "php artisan make:seeder nama_seeder" Format Penamaan "tabel_namatabel"
+6. Setelah Membuat Keduanya Jalankan Perintah "php artisan migrate" Dan "php artisan db:seed nama_seeder"
+
+Pilihan Layout :
+1.Manual = Membuat file tamplian manual
+  Khusus Layout Manual Jika Anda Memilih Ini, Maka Harus Membuat Folder Sesuai Nama Dmenu Di Dalam Folder Views->(Nama GMENU)->(NamaDMENU).
+
+2.Standard = Tampilan List, Show, Add, Edit, Delete Hanya Menggunakan 1 Primary Key
+
+3.Master = Tampilan List, Show, Add, Edit, Delete Sama Dengan Layout Standard Tetapi Bisa Menggunakan lebih dari 1 Primary Key
+
+4.System = Tampilan List, Show, Add, Edit, Delete Menggunakan lebih dari 1 Primary Key Dan Mempunyai 2 Bagian Tampilan   
+ -Nomor Urut 1, Set Posisi Sebagai Header. Nomor Urut 1 Ini Berisi Query Untuk Menampilkan List Bagian Kiri Tampilan
+ -Nomor Urut 2 dan Seterusnya, Set Posisi Sebagai Detail Dan Akan Tampil Dibagian Kanan Sebagai List Detail Data
+
+5.Report = Tampilan Filter Dan Result Report
+ -Nomor Urut 1, Set Field=query Dan Type=report. Nomor Urut 1 Ini Berisi Query Report Yang Akan Dijalankan
+ -Nomor Urut 2 Dan Seterusnya Digunakan Untuk Input Form Filter Report. Set Filter=1
+
+6.SubLink  = Tampilan Detail Dari Link Lain Dan Memiliki 2 Tampilan Seperti Layout System
+ -Buat List Menu Baru Dengan Settingan Show=TIDAK
+ -Kemudian Buat List Menu Baru Yang Akan Menjadi Submenu Dan Setting Kolom SubMenu=DMENU Yang Dibuat Tadi.
+ -Isi Link Dengan Id DMENU Yang Dibuat Tadi Pada Field Yang Memiliki Tujuan Ke Layout SubLink
+
+7.Transaksi(Proses Pengembangan)
+
+<<============================================================================================================================================>>
+
+Jenis Class Yang Tersedia :
+ 1.upper = Membuat Ukuran Font Menjadi Besar Semua
+ 2.lower = Membuat Ukuran Font Menjadi Kecil Semua
+ 3.filter = Class Ini Berfungsi Hanya Di Layout Report Sebagai Filter Saat Data Sudah Tampil
+ 4.notspace = Hapus Spasi Pada Inputan
+ 5.readonly = Membuat Inputan Tidak Bisa Diedit
+ 6.check-date = Type Kolom Harus 'Date', Berfungsi Untuk Memberi Warna Ketika Data Tersebut Dibawah Batas Kolom 'Length'
+
+Jenis Type Kolom Yang Tersedia :
+ 1.char = Tampilan Input Text
+ 2.currency = Tampilan Number Dengan Format Currency, Set Kolom Sub Dengan Currency Yang Digunakan Misal 'IDR'
+ 3.Date = Tampilan Tanggal
+ 4.Date2 = Tampilan Rentang Tanggal, Hanya Berfungsi Di Layout Report
+ 5.email = Tampilan Format email
+ 6.enum = Tampilan Select Option
+ 7.file = Tampilan Untuk Upload File Format 'pdf,xls,xlsx'
+ 8.hidden = Untuk Menyembunyikan Field
+ 9.image = Tampilan Untuk Upload File Format 'jpg,png,jpeg'
+ 10.join = Untuk Menampilkan Data Dari Join Tabel Pada Tampilan List Saja, Tidak Memerlukan Kolom Pada Tabel
+ 11.number = Tampilan Number
+ 12.password = Khusus Untuk Password
+ 13.report = Digunakan Pada Layout Report Di Nomor Urut 1
+ 14.search = Tampilan Input Text Yang Dapat Menampilakan Modal Search
+ 15.string = Tampilan Input Text Seperti Jenis 'char'
+ 16.sublink = Sementara Jangan Di Pakai Dulu
+ 17.text = Tampilan Text Area
