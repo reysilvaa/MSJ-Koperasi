@@ -15,7 +15,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        //insert tabel sys_roles
+        // Hapus semua data yang akan di-seed terlebih dahulu
+        // Hapus dalam urutan yang benar berdasarkan foreign key dependency
+        DB::table('sys_auth')->delete();
+        DB::table('sys_table')->delete(); // menghapus sys_table dulu karena reference ke sys_dmenu
+        DB::table('sys_enum')->delete();
+        DB::table('sys_app')->delete();
+        DB::table('users')->delete(); // users reference ke sys_roles
+        DB::table('sys_dmenu')->delete(); // sys_dmenu reference ke sys_gmenu
+        DB::table('sys_gmenu')->delete();
+        DB::table('sys_roles')->delete();
+
+        //insert tabel sys_roles first
         DB::table('sys_roles')->insert([
             'idroles' => 'admins',
             'name' => 'Admin',
@@ -30,6 +41,13 @@ class DatabaseSeeder extends Seeder
             'email' => 'msjit@spunindo.com',
             'password' => bcrypt('mis'),
             'idroles' => 'admins'
+        ]);
+
+        // Jalankan seeder koperasi setelah role dan user dibuat
+        $this->call([
+            KoperasiMenuSeeder::class,
+            KoperasiTableSeeder::class,
+            KoperasiAuthSeeder::class,
         ]);
 
         //insert tabel sys_gmenu
@@ -187,7 +205,7 @@ class DatabaseSeeder extends Seeder
             'layout' => 'report'
         ]);
 
-        //insert tabel sys_auth        
+        //insert tabel sys_auth
         DB::table('sys_auth')->insert([
             'idroles' => 'admins',
             'gmenu' => 'blankx',
@@ -281,7 +299,7 @@ class DatabaseSeeder extends Seeder
             'gmenu' => 'report',
             'dmenu' => 'rsyslg',
             'add' => '1',
-            'edit' => '0',
+            'edit' => '1',
             'delete' => '0'
         ]);
 
@@ -527,7 +545,7 @@ class DatabaseSeeder extends Seeder
             'name' => '2026'
         ]);
 
-        //insert tabel sys_app        
+        //insert tabel sys_app
         DB::table('sys_app')->insert([
             'appid' => 'msjframework',
             'appname' => 'MSJFramework',
@@ -557,6 +575,8 @@ class DatabaseSeeder extends Seeder
             menu_rpt_seeder::class,
             tabel_rpt_seeder::class,
             example_call_seed::class,
+            KoperasiMenuSeeder::class,
+            KoperasiTableSeeder::class,
         ]);
     }
 }

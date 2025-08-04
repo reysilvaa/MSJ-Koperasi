@@ -14,6 +14,7 @@ class example_insert_data extends Seeder
     public function run(): void
     {
         //delete data
+        DB::table('example_data_by_rule')->delete();
         DB::table('example_standard')->delete();
         DB::table('example_form')->delete();
         DB::table('example_data')->delete();
