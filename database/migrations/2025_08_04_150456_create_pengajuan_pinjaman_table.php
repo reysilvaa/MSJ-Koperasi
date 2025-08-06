@@ -14,26 +14,43 @@ return new class extends Migration
         Schema::create('pengajuan_pinjaman', function (Blueprint $table) {
             $table->id();
             $table->string('nomor_pengajuan', 20)->unique();
-            $table->foreignId('anggota_id')->constrained('anggota');
-            $table->foreignId('master_paket_pinjaman_id')->constrained('master_paket_pinjaman');
-            $table->foreignId('master_tenor_id')->constrained('master_tenor');
-            $table->decimal('nominal_pengajuan', 15, 2);
-            $table->integer('tenor_bulan');
-            $table->text('tujuan_pinjaman');
-            $table->enum('status', ['pending', 'review', 'approved', 'rejected', 'cancelled'])->default('pending');
-            $table->decimal('nominal_disetujui', 15, 2)->nullable();
+
+            // FOREIGN KEY REFERENCES
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('paket_pinjaman_id');
+            $table->unsignedBigInteger('tenor_id');
+
+            // DETAIL PENGAJUAN
+            $table->decimal('jumlah_pinjaman', 15, 2);
+            $table->decimal('bunga_per_bulan', 5, 2); // dari master_paket_pinjaman
+            $table->decimal('cicilan_per_bulan', 15, 2); // hitung otomatis
+            $table->decimal('total_pembayaran', 15, 2); // hitung otomatis
+
+            // KHUSUS TOP UP
+            $table->unsignedBigInteger('pinjaman_asal_id')->nullable(); // untuk TOP UP
+            $table->decimal('sisa_cicilan_lama', 15, 2)->nullable(); // untuk TOP UP
+            $table->enum('jenis_pengajuan', ['baru', 'top_up'])->default('baru');
+
+            // STATUS & APPROVAL
+            $table->enum('status_pengajuan', ['draft', 'diajukan', 'review', 'disetujui', 'ditolak', 'dibatalkan'])->default('draft');
             $table->text('catatan_pengajuan')->nullable();
-            $table->date('tanggal_pengajuan');
-            $table->date('tanggal_review')->nullable();
-            $table->date('tanggal_approval')->nullable();
-            $table->string('reviewed_by')->nullable();
-            $table->string('approved_by')->nullable();
-            $table->text('alasan_penolakan')->nullable();
+            $table->text('catatan_approval')->nullable();
+            $table->dateTime('tanggal_pengajuan');
+            $table->dateTime('tanggal_approval')->nullable();
+            $table->unsignedBigInteger('approved_by')->nullable();
+
             $table->enum('isactive', [0, 1])->default(1);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             $table->string('user_create')->nullable();
             $table->string('user_update')->nullable();
+
+            // FOREIGN KEY CONSTRAINTS
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('paket_pinjaman_id')->references('id')->on('master_paket_pinjaman')->onDelete('cascade');
+            $table->foreign('tenor_id')->references('id')->on('master_tenor')->onDelete('cascade');
+            $table->foreign('pinjaman_asal_id')->references('id')->on('pengajuan_pinjaman')->onDelete('cascade');
+            $table->foreign('approved_by')->references('id')->on('users')->onDelete('set null');
         });
     }
 

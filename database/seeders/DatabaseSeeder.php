@@ -42,14 +42,6 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('mis'),
             'idroles' => 'admins'
         ]);
-
-        // Jalankan seeder koperasi setelah role dan user dibuat
-        $this->call([
-            KoperasiMenuSeeder::class,
-            KoperasiTableSeeder::class,
-            KoperasiAuthSeeder::class,
-        ]);
-
         //insert tabel sys_gmenu
         DB::table('sys_gmenu')->insert([
             'gmenu' => 'blankx',
@@ -577,6 +569,7 @@ class DatabaseSeeder extends Seeder
             example_call_seed::class,
             KoperasiMenuSeeder::class,
             KoperasiTableSeeder::class,
+            KoperasiAuthSeeder::class,
         ]);
     }
 }

@@ -16,13 +16,19 @@ return new class extends Migration
             $table->string('kode_paket', 10)->unique();
             $table->string('nama_paket', 100);
             $table->text('deskripsi')->nullable();
-            $table->decimal('limit_minimum', 15, 2);
-            $table->decimal('limit_maksimum', 15, 2);
-            $table->decimal('bunga_per_tahun', 5, 2);
-            $table->integer('tenor_minimum');
-            $table->integer('tenor_maksimum');
-            $table->decimal('biaya_admin', 15, 2)->default(0);
-            $table->decimal('denda_per_hari', 15, 2)->default(0);
+
+            // SISTEM PAKET: 1 paket = Rp 500.000
+            $table->integer('jumlah_paket'); // 5, 10, 20, 40
+            $table->decimal('nilai_per_paket', 15, 2)->default(500000); // Rp 500.000
+            $table->decimal('limit_minimum', 15, 2); // jumlah_paket * 500000
+            $table->decimal('limit_maksimum', 15, 2); // jumlah_paket * 500000
+
+            // BUNGA FLAT 1% PER BULAN
+            $table->decimal('bunga_per_bulan', 5, 2)->default(1.00); // 1% per bulan
+
+            // TENOR YANG DIIZINKAN (JSON array of tenor IDs)
+            $table->json('tenor_diizinkan'); // [6,10,12] atau [1,2,3]
+
             $table->enum('status', ['aktif', 'non_aktif'])->default('aktif');
             $table->json('syarat_pengajuan')->nullable();
             $table->enum('isactive', [0, 1])->default(1);

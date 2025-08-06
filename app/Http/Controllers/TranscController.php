@@ -39,10 +39,21 @@ class TranscController extends Controller
         (Session::has('idtrans')) ? $primaryArray = explode(':', Session::get('idtrans')) : $primaryArray = ['-', '-', '-', '-', '-'];
         $i = 0;
         $wherekey_h = [];
+
+        // Initialize table_detail_h as empty collection
+        $data['table_detail_h'] = collect();
+
         foreach ($data['table_header_h'] as $header_h) {
-            ($header_h->query != '') ? $data['table_detail_h'] = DB::select($header_h->query) : $data['table_detail_h'] = $data['table_detail_h'];
+            if ($header_h->query != '') {
+                $data['table_detail_h'] = DB::select($header_h->query);
+            }
             $wherekey_h[$header_h->field] = $primaryArray[$i];
             $i++;
+        }
+
+        // If no query was found, get data from main table
+        if ($data['table_detail_h']->isEmpty()) {
+            $data['table_detail_h'] = DB::table($data['tabel'])->get();
         }
         //list data table
         $data['colomh'] = $i;
@@ -430,7 +441,7 @@ class TranscController extends Controller
                 $attributes[$img->field] = request()->file($img->field)->store($data['tabel']);
             }
         }
-        //list data 
+        //list data
         $data['table_header'] = DB::table('sys_table')->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'],  'list' => '1'])->orderBy('urut')->get();
         $data['table_detail'] = DB::table($data['tabel'])->get();
         // Update data by id

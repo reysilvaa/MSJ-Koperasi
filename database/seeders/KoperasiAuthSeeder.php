@@ -16,48 +16,41 @@ class KoperasiAuthSeeder extends Seeder
         // Delete existing data first
         DB::table('sys_auth')->where('gmenu', 'like', 'KOP%')->delete();
 
-        // Use existing 'admins' role from DatabaseSeeder
-        // No need to create new role, use the existing one
+        // Define all menu items with their groups
+        $menuItems = [
+            // KOP001 - Master Data
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP101'],
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP102'],
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP103'],
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP104'],
 
-        // Auth untuk KOP001 - KOP101: Data Anggota
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP001',
-            'dmenu' => 'KOP101',
-            'add' => '1',
-            'edit' => '1',  // edit = 0 sesuai permintaan
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0', // rules = 0 sesuai permintaan
-            'isactive' => '1'
-        ]);
+            // KOP002 - Pinjaman
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP201'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP202'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP203'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP204'],
 
-        // Auth untuk KOP001 - KOP102: Master Paket Pinjaman
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP001',
-            'dmenu' => 'KOP102',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
+            // KOP003 - Keuangan
+            ['gmenu' => 'KOP003', 'dmenu' => 'KOP301'],
+            ['gmenu' => 'KOP003', 'dmenu' => 'KOP302'],
+            ['gmenu' => 'KOP003', 'dmenu' => 'KOP303'],
+            ['gmenu' => 'KOP003', 'dmenu' => 'KOP304'],
 
-        // Auth untuk KOP001 - KOP103: Master Tenor
-        DB::table('sys_auth')->insert([
+            // KOP004 - Laporan
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP401'],
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP402'],
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP403'],
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP404'],
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP405'],
+
+            // KOP005 - Sistem
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP501'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP502'],
+        ];
+
+        // Default authorization template
+        $authTemplate = [
             'idroles' => 'admins',
-            'gmenu' => 'KOP001',
-            'dmenu' => 'KOP103',
             'add' => '1',
             'edit' => '1',
             'delete' => '1',
@@ -68,227 +61,15 @@ class KoperasiAuthSeeder extends Seeder
             'value' => '1',
             'rules' => '0',
             'isactive' => '1'
-        ]);
+        ];
 
-        // Auth untuk KOP001 - KOP104: Konfigurasi Koperasi
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP001',
-            'dmenu' => 'KOP104',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
+        // Create authorization records for all menu items
+        $authRecords = [];
+        foreach ($menuItems as $menu) {
+            $authRecords[] = array_merge($authTemplate, $menu);
+        }
 
-        // Auth untuk KOP002 - KOP201: Pengajuan Pinjaman
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP002',
-            'dmenu' => 'KOP201',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP002 - KOP202: Approval Pinjaman
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP002',
-            'dmenu' => 'KOP202',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP002 - KOP203: Data Pinjaman
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP002',
-            'dmenu' => 'KOP203',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP002 - KOP204: Cicilan Pinjaman
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP002',
-            'dmenu' => 'KOP204',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP003 - KOP301: Iuran Anggota
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP003',
-            'dmenu' => 'KOP301',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP003 - KOP302: Transfer Dana
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP003',
-            'dmenu' => 'KOP302',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP003 - KOP303: SHU
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP003',
-            'dmenu' => 'KOP303',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP003 - KOP304: Jurnal Keuangan
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP003',
-            'dmenu' => 'KOP304',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP004 - KOP401: Dashboard
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP004',
-            'dmenu' => 'KOP401',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP004 - KOP402: Monitoring
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP004',
-            'dmenu' => 'KOP402',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP004 - KOP403: Laporan Laba Rugi
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP004',
-            'dmenu' => 'KOP403',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
-
-        // Auth untuk KOP004 - KOP404: Laporan Neraca
-        DB::table('sys_auth')->insert([
-            'idroles' => 'admins',
-            'gmenu' => 'KOP004',
-            'dmenu' => 'KOP404',
-            'add' => '1',
-            'edit' => '1',
-            'delete' => '1',
-            'approval' => '1',
-            'print' => '1',
-            'excel' => '1',
-            'pdf' => '1',
-            'value' => '1',
-            'rules' => '0',
-            'isactive' => '1'
-        ]);
+        // Insert all records at once
+        DB::table('sys_auth')->insert($authRecords);
     }
 }

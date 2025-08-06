@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('master_tenor', function (Blueprint $table) {
             $table->id();
-            $table->integer('tenor_bulan')->unique();
-            $table->string('nama_tenor', 50);
+            $table->integer('tenor_bulan')->unique(); // 6, 10, 12
+            $table->string('nama_tenor', 50); // "6 Bulan", "10 Bulan", "12 Bulan"
             $table->text('deskripsi')->nullable();
-            $table->decimal('bunga_tambahan', 5, 2)->default(0);
+            // HAPUS bunga_tambahan karena bunga flat 1% untuk semua tenor
             $table->enum('status', ['aktif', 'non_aktif'])->default('aktif');
             $table->enum('isactive', [0, 1])->default(1);
             $table->timestamp('created_at')->useCurrent();
