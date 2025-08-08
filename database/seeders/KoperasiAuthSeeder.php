@@ -142,7 +142,7 @@ class KoperasiAuthSeeder extends Seeder
                 'print' => '1', 'excel' => '1', 'pdf' => '1', 'value' => '1',
                 'rules' => '0', 'isactive' => '1'
             ],
-            
+
 
             // Admin Kredit - Credit analysis and approval focus
             'akredt' => [

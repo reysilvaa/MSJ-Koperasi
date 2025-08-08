@@ -13,28 +13,20 @@ return new class extends Migration
     {
         Schema::create('master_paket_pinjaman', function (Blueprint $table) {
             $table->id();
-            $table->string('kode_paket', 10)->unique();
+            $table->string('periode', 7); // Format: 2025-08 (tahun-bulan)
             $table->string('nama_paket', 100);
             $table->text('deskripsi')->nullable();
-
-            // NILAI PAKET FIXED: 1 paket = Rp 500.000 (tidak perlu field)
-            // JUMLAH PAKET: Sudah diwakili stock_limit_bulanan
 
             // BUNGA FLAT 1% PER BULAN
             $table->decimal('bunga_per_bulan', 5, 2)->default(1.00); // 1% per bulan
 
             // TENOR YANG DIIZINKAN (JSON array of tenor IDs)
-            $table->json('tenor_diizinkan'); // [6,10,12] atau [1,2,3]
+            $table->json('tenor_diizinkan'); // [1,2,3] = ID dari master_tenor
 
-            // STOCK MANAGEMENT (sesuai Activity Diagram 07)
-            $table->integer('stock_limit_bulanan')->default(50); // Limit stock per bulan
-            $table->integer('stock_terpakai')->default(0); // Stock yang sudah digunakan bulan ini
-            $table->integer('stock_reserved')->default(0); // Stock yang direserve untuk pending
-            $table->integer('stock_tersedia')->default(50); // Auto calculated: limit - terpakai - reserved
-            $table->integer('alert_threshold')->default(10); // Alert jika stock <= threshold
-            $table->date('reset_terakhir')->nullable(); // Tanggal terakhir reset stock bulanan
+            // STOCK MANAGEMENT (sederhana)
+            $table->integer('stock_limit')->default(100); // Total limit untuk bulan ini
+            $table->integer('stock_terpakai')->default(0); // Yang sudah digunakan
 
-            // Hapus syarat_pengajuan karena terlalu kompleks untuk JSON
             $table->enum('isactive', [0, 1])->default(1);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();

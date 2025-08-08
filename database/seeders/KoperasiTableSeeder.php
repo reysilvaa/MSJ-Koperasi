@@ -65,19 +65,15 @@ class KoperasiTableSeeder extends Seeder
                 'gmenu' => 'KOP001',
                 'fields' => [
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
-                    ['field' => 'kode_paket', 'alias' => 'Kode Paket', 'type' => 'text', 'length' => '10', 'validate' => 'required|unique:master_paket_pinjaman,kode_paket'],
+                    ['field' => 'periode', 'alias' => 'Periode', 'type' => 'text', 'length' => '7', 'validate' => 'required', 'default' => date('Y-m'), 'note' => 'Format: 2025-08'],
                     ['field' => 'nama_paket', 'alias' => 'Nama Paket', 'type' => 'text', 'length' => '100', 'validate' => 'required'],
                     ['field' => 'deskripsi', 'alias' => 'Deskripsi', 'type' => 'text', 'length' => '500'],
                     ['field' => 'bunga_per_bulan', 'alias' => 'Bunga per Bulan (%)', 'type' => 'number', 'length' => '5', 'decimals' => '2', 'default' => '1.00', 'validate' => 'required'],
-                    ['field' => 'tenor_diizinkan', 'alias' => 'Tenor Diizinkan (JSON)', 'type' => 'text', 'length' => '255', 'note' => 'Contoh: [6,10,12] untuk tenor 6,10,12 bulan'],
+                    ['field' => 'tenor_diizinkan', 'alias' => 'Tenor Diizinkan (JSON)', 'type' => 'text', 'length' => '255', 'note' => 'Contoh: [1,2,3] untuk ID tenor dari master_tenor'],
 
-                    // Stock Management Fields (Read-only, managed by system)
-                    ['field' => 'stock_limit_bulanan', 'alias' => 'Stock Limit per Bulan', 'type' => 'number', 'length' => '11', 'validate' => 'required', 'default' => '10'],
+                    // Stock Management Fields (Sederhana)
+                    ['field' => 'stock_limit', 'alias' => 'Stock Limit', 'type' => 'number', 'length' => '11', 'validate' => 'required', 'default' => '100'],
                     ['field' => 'stock_terpakai', 'alias' => 'Stock Terpakai', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1', 'show' => '0'],
-                    ['field' => 'stock_reserved', 'alias' => 'Stock Reserved', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1', 'show' => '0'],
-                    ['field' => 'stock_tersedia', 'alias' => 'Stock Tersedia', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1', 'show' => '0', 'filter' => '0', 'note' => 'Auto calculated'],
-                    ['field' => 'alert_threshold', 'alias' => 'Alert Threshold', 'type' => 'number', 'length' => '11', 'validate' => 'required', 'default' => '5'],
-                    ['field' => 'reset_terakhir', 'alias' => 'Reset Terakhir', 'type' => 'date', 'list' => '1', 'show' => '0'],
 
                     $this->getActiveField()
                 ]
@@ -100,7 +96,7 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
                     ['field' => 'nomor_pengajuan', 'alias' => 'Nomor Pengajuan', 'type' => 'text', 'length' => '20', 'validate' => 'required', 'generateid' => 'auto'],
                     ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where status_keanggotaan = 'aktif' and isactive = '1'"],
-                    
+
                     // Sistem Berbasis Unit (user input langsung berapa unit yang diinginkan)
                     ['field' => 'jumlah_unit', 'alias' => 'Jumlah Unit', 'type' => 'number', 'length' => '3', 'validate' => 'required|min:1|max:40', 'default' => '1', 'note' => '1 unit = Rp 500.000 (min: 1, max: 40 unit)'],
                     ['field' => 'tenor_id', 'alias' => 'Tenor Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(tenor_bulan, ' bulan - ', nama_tenor) as name from master_tenor where isactive = '1'"],

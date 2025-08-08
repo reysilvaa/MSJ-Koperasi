@@ -55,7 +55,7 @@ class KoperasiMenuSeeder extends Seeder
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP501', 'name' => 'Laporan Pinjaman', 'layout' => 'report', 'url' => 'laporan-pinjaman', 'tabel' => 'pinjaman', 'icon' => 'fas fa-file-alt', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP502', 'name' => 'Laporan Keuangan', 'layout' => 'report', 'url' => 'laporan-keuangan', 'tabel' => 'cicilan_pinjaman', 'icon' => 'fas fa-file-invoice', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP503', 'name' => 'Laporan Anggota', 'layout' => 'report', 'url' => 'laporan-anggota', 'tabel' => 'anggota', 'icon' => 'fas fa-users', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            
+
             // Laporan Keuangan Sesuai Activity Diagrams 09 & 11
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP504', 'name' => 'Neraca (Balance Sheet)', 'layout' => 'report', 'url' => 'laporan-neraca', 'tabel' => 'anggota', 'icon' => 'fas fa-balance-scale', 'urut' => 4, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP505', 'name' => 'Laporan Laba/Rugi', 'layout' => 'report', 'url' => 'laporan-laba-rugi', 'tabel' => 'cicilan_pinjaman', 'icon' => 'fas fa-chart-pie', 'urut' => 5, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],

@@ -38,6 +38,7 @@ class StockPaketSeeder extends Seeder
                 'tenor_diizinkan' => json_encode([$tenor6Bulan, $tenor10Bulan, $tenor12Bulan, $tenor15Bulan]),
                 'stock_limit' => 100, // Total 100 unit untuk bulan ini
                 'stock_terpakai' => 0,
+                'status' => 'aktif',
                 'isactive' => 1,
                 'created_at' => now(),
                 'updated_at' => now()
