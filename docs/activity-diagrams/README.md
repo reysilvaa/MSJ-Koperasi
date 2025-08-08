@@ -8,18 +8,6 @@ Koleksi activity diagram yang memecah sistem pinjaman koperasi berdasarkan fitur
 - **Dashboard System**: Notification delivery
 - **Accounting System**: Financial data syncnan pada **interaksi sistem otomatis** dan **human-system interaction**.
 
-## 🏗️ System Architecture Overview
-
-**File:** `00-system-architecture-diagram.md`
-Diagram arsitektur sistem yang menunjukkan:
-- User Layer (5 roles)
-- Interface Layer (Web, Mobile, Dashboard)
-- Application Layer (6 core systems)
-- Business Logic Layer (4 engines)
-- Data Layer (Database & Storage)
-- External Systems (Banking, HR)
-- Automated System Processes (5 automation modules)
-
 ## 📋 Daftar Activity Diagrams
 
 ### 1. Authentication & Role-Based Access ✨

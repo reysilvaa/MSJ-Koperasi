@@ -25,10 +25,14 @@ return new class extends Migration
             $table->string('departemen', 50);
             $table->decimal('gaji_pokok', 15, 2);
             $table->date('tanggal_bergabung');
-            $table->enum('status_anggota', ['aktif', 'non_aktif', 'keluar'])->default('aktif');
+            $table->date('tanggal_aktif')->nullable(); // aktif setelah 1 bulan
+            $table->enum('status_keanggotaan', ['pending', 'aktif', 'non_aktif', 'keluar'])->default('pending');
             $table->decimal('simpanan_pokok', 15, 2)->default(0);
-            $table->decimal('simpanan_wajib', 15, 2)->default(0);
-            $table->decimal('simpanan_sukarela', 15, 2)->default(0);
+            $table->decimal('simpanan_wajib_bulanan', 15, 2)->default(0);
+            $table->decimal('total_simpanan_wajib', 15, 2)->default(0);
+            $table->decimal('total_simpanan_sukarela', 15, 2)->default(0);
+            $table->string('no_rekening', 20)->nullable();
+            $table->string('nama_bank', 50)->nullable();
             $table->string('foto')->nullable();
             $table->text('keterangan')->nullable();
             $table->enum('isactive', [0, 1])->default(1);

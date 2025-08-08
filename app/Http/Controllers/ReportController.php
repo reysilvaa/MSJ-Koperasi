@@ -98,7 +98,12 @@ class ReportController extends Controller
         if (@$where['rules']) {
             //check athorization access rules
             if ($data['authorize']->rules == '1') {
-                $where['rules'] = session('user')->idroles;
+                // Check if user session exists
+                if (session('user') && session('user')->idroles) {
+                    $where['rules'] = session('user')->idroles;
+                } else {
+                    return redirect('/login')->withErrors(['error' => 'Session expired. Please login again.']);
+                }
             } else {
                 $where['rules'] = '%';
             }

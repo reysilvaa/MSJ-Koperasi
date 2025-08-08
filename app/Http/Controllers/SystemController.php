@@ -41,6 +41,10 @@ class SystemController extends Controller
         $i = 0;
         $wherekey_h = [];
         $whereString = '';
+
+        // Initialize table_detail_h as empty collection
+        $data['table_detail_h'] = collect();
+
         foreach ($data['table_header_h'] as $header_h) {
             ($header_h->query != '') ? $data['table_detail_h'] = DB::select($header_h->query) : $data['table_detail_h'] = $data['table_detail_h'];
             $wherekey_h[$header_h->field] = $primaryArray[$i];
@@ -59,7 +63,12 @@ class SystemController extends Controller
             $query = DB::table($data['tabel']);
             $sql = $query->toSql();
             if ($data['authorize']->rules == '1') {
-                $sql = $sql . " " . $getdatawhere->where . " and rules = '" . session('user')->idroles . "' and " . $whereString;
+                // Check if user session exists
+                if (session('user') && session('user')->idroles) {
+                    $sql = $sql . " " . $getdatawhere->where . " and rules = '" . session('user')->idroles . "' and " . $whereString;
+                } else {
+                    return redirect('/login')->withErrors(['error' => 'Session expired. Please login again.']);
+                }
             } else {
                 $sql = $sql . " " . $getdatawhere->where . " and " . $whereString;
             }
@@ -68,7 +77,12 @@ class SystemController extends Controller
         } else {
             //check athorization access rules
             if ($data['authorize']->rules == '1') {
-                $wherekey_h['rules'] = session('user')->idroles;
+                // Check if user session exists
+                if (session('user') && session('user')->idroles) {
+                    $wherekey_h['rules'] = session('user')->idroles;
+                } else {
+                    return redirect('/login')->withErrors(['error' => 'Session expired. Please login again.']);
+                }
             }
             $data['table_detail_d'] = DB::table($data['tabel'])->where($wherekey_h)->get();
         }
@@ -123,7 +137,12 @@ class SystemController extends Controller
             $query = DB::table($data['tabel']);
             $sql = $query->toSql();
             if ($data['authorize']->rules == '1') {
-                $sql = $sql . " " . $getdatawhere->where . " and rules = '" . session('user')->idroles . "' and " . $whereString;
+                // Check if user session exists
+                if (session('user') && session('user')->idroles) {
+                    $sql = $sql . " " . $getdatawhere->where . " and rules = '" . session('user')->idroles . "' and " . $whereString;
+                } else {
+                    return redirect('/login')->withErrors(['error' => 'Session expired. Please login again.']);
+                }
             } else {
                 $sql = $sql . " " . $getdatawhere->where . " and " . $whereString;
             }
@@ -132,7 +151,12 @@ class SystemController extends Controller
         } else {
             //check athorization access rules
             if ($data['authorize']->rules == '1') {
-                $wherekey_h['rules'] = session('user')->idroles;
+                // Check if user session exists
+                if (session('user') && session('user')->idroles) {
+                    $wherekey_h['rules'] = session('user')->idroles;
+                } else {
+                    return redirect('/login')->withErrors(['error' => 'Session expired. Please login again.']);
+                }
             }
             $data['table_detail_d_ajax'] = DB::table($data['tabel'])->where($wherekey_h)->get();
         }
@@ -302,7 +326,7 @@ class SystemController extends Controller
                     $image = $manager->read(request()->file($img->field));
                     // resize image proportionally to 35px height
                     $image->scale(height: 35);
-                    // save modified image in new format 
+                    // save modified image in new format
                     $image->toPng()->save(public_path('storage/' . $filenameimage . 'tumb.png'));
                 };
             }
@@ -526,12 +550,12 @@ class SystemController extends Controller
                     $image = $manager->read(request()->file($img->field));
                     // resize image proportionally to 35px height
                     $image->scale(height: 35);
-                    // save modified image in new format 
+                    // save modified image in new format
                     $image->toPng()->save(public_path('storage/' . $filenameimage . 'tumb.png'));
                 };
             }
         }
-        //list data 
+        //list data
         $data['table_header'] = DB::table('sys_table')->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'],  'list' => '1'])->orderBy('urut')->get();
         $data['table_detail'] = DB::table($data['tabel'])->get();
         // Update data by id
