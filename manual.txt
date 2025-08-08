@@ -16,7 +16,7 @@ Pilihan Layout :
 
 3.Master = Tampilan List, Show, Add, Edit, Delete Sama Dengan Layout Standard Tetapi Bisa Menggunakan lebih dari 1 Primary Key
 
-4.System = Tampilan List, Show, Add, Edit, Delete Menggunakan lebih dari 1 Primary Key Dan Mempunyai 2 Bagian Tampilan   
+4.System = Tampilan List, Show, Add, Edit, Delete Menggunakan lebih dari 1 Primary Key Dan Mempunyai 2 Bagian Tampilan
  -Nomor Urut 1, Set Posisi Sebagai Header. Nomor Urut 1 Ini Berisi Query Untuk Menampilkan List Bagian Kiri Tampilan
  -Nomor Urut 2 dan Seterusnya, Set Posisi Sebagai Detail Dan Akan Tampil Dibagian Kanan Sebagai List Detail Data
 
@@ -59,3 +59,73 @@ Jenis Type Kolom Yang Tersedia :
  15.string = Tampilan Input Text Seperti Jenis 'char'
  16.sublink = Sementara Jangan Di Pakai Dulu
  17.text = Tampilan Text Area
+
+
+ Framework MSJ Koperasi - Analisis Sistem
+1. Arsitektur Framework
+Framework MSJ Koperasi adalah sistem berbasis Laravel 12 yang menggunakan konsep menu-driven framework dengan struktur yang sangat fleksibel. Berikut adalah komponen utamanya:
+
+2. Komponen Inti System
+A. Tabel System Utama
+sys_gmenu - Group Menu (menu utama/kategori)
+sys_dmenu - Detail Menu (sub-menu/fitur spesifik)
+sys_table - Definisi kolom dan field untuk setiap menu
+sys_auth - Otorisasi akses berdasarkan role
+B. Controller Utama
+PageController - Router utama yang mengatur semua request
+MasterController - Layout "Master" (CRUD dengan 1 primary key)
+StandrController - Layout "Standard" (CRUD sederhana)
+SystemController - Layout "System" (CRUD dengan multiple primary key + header-detail)
+ReportController - Layout "Report" (Filter + laporan)
+SublnkController - Layout "SubLink" (Detail dari link lain)
+3. Cara Kerja Framework
+A. Flow Request
+B. Layout System
+Framework ini memiliki 6 tipe layout yang dapat dipilih:
+
+Manual - Custom view yang dibuat manual
+Standard - CRUD sederhana dengan 1 primary key
+Master - CRUD dengan multiple primary key
+System - CRUD dengan tampilan header-detail (2 bagian)
+Report - Filter form + hasil laporan
+SubLink - Detail dari menu lain dengan 2 tampilan
+C. Dynamic Menu System
+Menu dibuat secara dinamis berdasarkan data di database
+Setiap menu memiliki konfigurasi layout, field, validasi, dan authorization
+Field dan kolom tabel didefinisikan di sys_table
+4. Fitur Utama Framework
+A. Authorization System
+Role-based access control
+Setiap user memiliki multiple roles
+Permission diatur per menu dan action (create, read, update, delete)
+B. Dynamic Form Generation
+Form dibuat otomatis berdasarkan definisi di sys_table
+Support berbagai tipe input (text, select, file, dll)
+Validasi otomatis berdasarkan konfigurasi
+C. Export Functionality
+Export ke Excel dan PDF
+Konfigurasi export per menu
+D. Logging System
+Semua aktivitas user dicatat di sys_log
+Tracking perubahan data
+5. Alur Pengembangan
+Untuk menambah fitur baru:
+
+Buat Group Menu di sys_gmenu
+Buat Detail Menu di sys_dmenu (pilih layout)
+Buat Migration untuk tabel baru (jika perlu)
+Definisikan Fields di sys_table
+Buat Seeder untuk data awal
+Set Authorization di sys_auth
+6. Kelebihan Framework
+✅ Rapid Development - Menu baru bisa dibuat tanpa coding ✅ Konsisten - Semua fitur menggunakan pattern yang sama ✅ Flexible - 6 layout berbeda untuk kebutuhan yang beragam ✅ Secure - Built-in authorization dan logging ✅ Maintainable - Struktur yang terorganisir
+
+7. Use Case Ideal
+Framework ini sangat cocok untuk:
+
+Sistem Koperasi/Keuangan
+ERP System
+Back-office Applications
+Admin Panel dengan banyak CRUD
+Sistem dengan requirement yang sering berubah
+Framework MSJ ini pada dasarnya adalah "Low-Code Framework" yang memungkinkan pengembangan aplikasi dengan minimal coding, sangat efisien untuk sistem administrative dan business applications.

@@ -569,7 +569,9 @@ class DatabaseSeeder extends Seeder
             example_call_seed::class,
             KoperasiMenuSeeder::class,
             KoperasiTableSeeder::class,
+            KoperasiDataSeeder::class,
             KoperasiAuthSeeder::class,
+            StockPaketSeeder::class,
         ]);
     }
 }

@@ -22,6 +22,15 @@ class PageController extends Controller
         $syslog = new Function_Helper;
         // get data user login
         $data['user_login'] = User::find(session('username'));
+
+        // Check if user is found, if not redirect to login
+        if (!$data['user_login']) {
+            auth()->logout();
+            session()->invalidate();
+            session()->regenerateToken();
+            return redirect('/login')->withErrors(['error' => 'Session expired. Please login again.']);
+        }
+
         //get multiple rules
         $users_rules = array_map('trim', explode(',', $data['user_login']->idroles));
         $data['users_rules'] = array_map('trim', explode(',', $data['user_login']->idroles));

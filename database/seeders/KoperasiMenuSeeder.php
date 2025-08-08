@@ -19,47 +19,49 @@ class KoperasiMenuSeeder extends Seeder
         DB::table('sys_dmenu')->where('gmenu', 'like', 'KOP%')->delete();
         DB::table('sys_gmenu')->where('gmenu', 'like', 'KOP%')->delete();
 
-        // Insert sys_gmenu (Group Menu)
+        // Insert sys_gmenu (Group Menu) - sesuai activity diagram
         $gmenus = [
             ['gmenu' => 'KOP001', 'name' => 'Master Data', 'icon' => 'fas fa-database', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
             ['gmenu' => 'KOP002', 'name' => 'Pinjaman', 'icon' => 'fas fa-money-bill-wave', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP003', 'name' => 'Keuangan', 'icon' => 'fas fa-coins', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP004', 'name' => 'Laporan', 'icon' => 'fas fa-chart-line', 'urut' => 4, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP005', 'name' => 'Sistem', 'icon' => 'fas fa-cogs', 'urut' => 5, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP003', 'name' => 'Pencairan', 'icon' => 'fas fa-hand-holding-usd', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP004', 'name' => 'Keuangan', 'icon' => 'fas fa-coins', 'urut' => 4, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP005', 'name' => 'Laporan', 'icon' => 'fas fa-chart-line', 'urut' => 5, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
         ];
 
         DB::table('sys_gmenu')->insert($gmenus);
 
-        // Insert sys_dmenu (Detail Menu)
+        // Insert sys_dmenu (Detail Menu) - sesuai business process
         $dmenus = [
-            // Master Data
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP101', 'name' => 'Data Anggota', 'layout' => 'master', 'url' => 'KOP101', 'tabel' => 'anggota', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP102', 'name' => 'Paket Pinjaman', 'layout' => 'master', 'url' => 'KOP102', 'tabel' => 'master_paket_pinjaman', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP103', 'name' => 'Tenor Pinjaman', 'layout' => 'master', 'url' => 'KOP103', 'tabel' => 'master_tenor', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP104', 'name' => 'Konfigurasi', 'layout' => 'master', 'url' => 'KOP104', 'tabel' => 'konfigurasi_koperasi', 'urut' => 4, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            // KOP001 - Master Data
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP101', 'name' => 'Data Anggota', 'layout' => 'master', 'url' => 'anggota', 'tabel' => 'anggota', 'icon' => 'fas fa-user-friends', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP102', 'name' => 'Paket Pinjaman', 'layout' => 'master', 'url' => 'paket-pinjaman', 'tabel' => 'master_paket_pinjaman', 'icon' => 'fas fa-box', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP103', 'name' => 'Tenor Pinjaman', 'layout' => 'master', 'url' => 'tenor', 'tabel' => 'master_tenor', 'icon' => 'fas fa-clock', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 
-            // Pinjaman
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP201', 'name' => 'Pengajuan Pinjaman', 'layout' => 'transc', 'url' => 'KOP201', 'tabel' => 'pengajuan_pinjaman', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP202', 'name' => 'Approval Pinjaman', 'layout' => 'stdr', 'url' => 'KOP202', 'tabel' => 'approval_history', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP203', 'name' => 'Data Pinjaman', 'layout' => 'stdr', 'url' => 'KOP203', 'tabel' => 'pinjaman', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP204', 'name' => 'Pembayaran Cicilan', 'layout' => 'transc', 'url' => 'KOP204', 'tabel' => 'cicilan_pinjaman', 'urut' => 4, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            // KOP002 - Pinjaman (sesuai activity diagram 02)
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP201', 'name' => 'Pengajuan Pinjaman', 'layout' => 'master', 'url' => 'pengajuan-pinjaman', 'tabel' => 'pengajuan_pinjaman', 'icon' => 'fas fa-file-invoice-dollar', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP202', 'name' => 'Approval Pinjaman', 'layout' => 'system', 'url' => 'approval-pinjaman', 'tabel' => 'pengajuan_pinjaman', 'icon' => 'fas fa-check-circle', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP203', 'name' => 'Data Pinjaman Aktif', 'layout' => 'master', 'url' => 'pinjaman', 'tabel' => 'pinjaman', 'icon' => 'fas fa-money-check-alt', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 
-            // Keuangan
-            ['gmenu' => 'KOP003', 'dmenu' => 'KOP301', 'name' => 'Iuran Anggota', 'layout' => 'transc', 'url' => 'KOP301', 'tabel' => 'iuran_anggota', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP003', 'dmenu' => 'KOP302', 'name' => 'Transfer Dana', 'layout' => 'transc', 'url' => 'KOP302', 'tabel' => 'transfer_dana', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP003', 'dmenu' => 'KOP303', 'name' => 'SHU Anggota', 'layout' => 'stdr', 'url' => 'KOP303', 'tabel' => 'shu', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP003', 'dmenu' => 'KOP304', 'name' => 'Jurnal Keuangan', 'layout' => 'stdr', 'url' => 'KOP304', 'tabel' => 'jurnal_keuangan', 'urut' => 4, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            // KOP003 - Pencairan (sesuai activity diagram 04)
+            ['gmenu' => 'KOP003', 'dmenu' => 'KOP301', 'name' => 'Periode Pencairan', 'layout' => 'master', 'url' => 'periode-pencairan', 'tabel' => 'periode_pencairan', 'icon' => 'fas fa-calendar-alt', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP003', 'dmenu' => 'KOP302', 'name' => 'Proses Pencairan', 'layout' => 'system', 'url' => 'proses-pencairan', 'tabel' => 'pengajuan_pinjaman', 'icon' => 'fas fa-hand-holding-usd', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 
-            // Laporan
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP401', 'name' => 'Laporan Pinjaman', 'layout' => 'report', 'url' => 'KOP401', 'tabel' => 'pinjaman', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP402', 'name' => 'Laporan Iuran', 'layout' => 'report', 'url' => 'KOP402', 'tabel' => 'iuran_anggota', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP403', 'name' => 'Laba Rugi', 'layout' => 'report', 'url' => 'KOP403', 'tabel' => 'jurnal_keuangan', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP404', 'name' => 'Neraca', 'layout' => 'report', 'url' => 'KOP404', 'tabel' => 'jurnal_keuangan', 'urut' => 4, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP405', 'name' => 'Laporan SHU', 'layout' => 'report', 'url' => 'KOP405', 'tabel' => 'shu', 'urut' => 5, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            // KOP004 - Keuangan (sesuai activity diagram 05)
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP401', 'name' => 'Cicilan Anggota', 'layout' => 'master', 'url' => 'cicilan', 'tabel' => 'cicilan_pinjaman', 'icon' => 'fas fa-credit-card', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP402', 'name' => 'Iuran Anggota', 'layout' => 'master', 'url' => 'iuran', 'tabel' => 'iuran_anggota', 'icon' => 'fas fa-piggy-bank', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP403', 'name' => 'Notifikasi', 'layout' => 'master', 'url' => 'notifikasi', 'tabel' => 'notifikasi', 'icon' => 'fas fa-bell', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 
-            // Sistem
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP501', 'name' => 'Notifikasi', 'layout' => 'stdr', 'url' => 'KOP501', 'tabel' => 'notifikasi', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP502', 'name' => 'Dokumen Pengajuan', 'layout' => 'stdr', 'url' => 'KOP502', 'tabel' => 'dokumen_pengajuan', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            // KOP005 - Laporan (sesuai kebutuhan reporting dan activity diagrams)
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP501', 'name' => 'Laporan Pinjaman', 'layout' => 'report', 'url' => 'laporan-pinjaman', 'tabel' => 'pinjaman', 'icon' => 'fas fa-file-alt', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP502', 'name' => 'Laporan Keuangan', 'layout' => 'report', 'url' => 'laporan-keuangan', 'tabel' => 'cicilan_pinjaman', 'icon' => 'fas fa-file-invoice', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP503', 'name' => 'Laporan Anggota', 'layout' => 'report', 'url' => 'laporan-anggota', 'tabel' => 'anggota', 'icon' => 'fas fa-users', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+
+            // Laporan Keuangan Sesuai Activity Diagrams 09 & 11
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP504', 'name' => 'Neraca (Balance Sheet)', 'layout' => 'report', 'url' => 'laporan-neraca', 'tabel' => 'anggota', 'icon' => 'fas fa-balance-scale', 'urut' => 4, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP505', 'name' => 'Laporan Laba/Rugi', 'layout' => 'report', 'url' => 'laporan-laba-rugi', 'tabel' => 'cicilan_pinjaman', 'icon' => 'fas fa-chart-pie', 'urut' => 5, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP506', 'name' => 'Cash Flow Statement', 'layout' => 'report', 'url' => 'laporan-cash-flow', 'tabel' => 'cicilan_pinjaman', 'icon' => 'fas fa-exchange-alt', 'urut' => 6, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP507', 'name' => 'Laporan SHU Tahunan', 'layout' => 'report', 'url' => 'laporan-shu', 'tabel' => 'anggota', 'icon' => 'fas fa-trophy', 'urut' => 7, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP508', 'name' => 'Jurnal Umum', 'layout' => 'report', 'url' => 'laporan-jurnal', 'tabel' => 'cicilan_pinjaman', 'icon' => 'fas fa-book', 'urut' => 8, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
         ];
 
         DB::table('sys_dmenu')->insert($dmenus);
