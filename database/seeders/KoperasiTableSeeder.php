@@ -27,6 +27,7 @@ class KoperasiTableSeeder extends Seeder
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP403'],
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP404'],
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP501'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP502'],
         ];
 
         foreach ($menuToDelete as $menu) {
@@ -176,6 +177,44 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'anggota_pengirim_id', 'alias' => 'Anggota Pengirim', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where status_anggota = 'aktif' and isactive = '1'"],
                     ['field' => 'anggota_penerima_id', 'alias' => 'Anggota Penerima', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where status_anggota = 'aktif' and isactive = '1'"],
                     ['field' => 'nominal', 'alias' => 'Nominal Transfer', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required']
+                ]
+            ],
+
+            // KOP303 - SHU Anggota
+            'KOP303' => [
+                'gmenu' => 'KOP003',
+                'fields' => [
+                    ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
+                    ['field' => 'tahun_buku', 'alias' => 'Tahun Buku', 'type' => 'number', 'length' => '4', 'validate' => 'required'],
+                    ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where status_anggota = 'aktif' and isactive = '1'"],
+                    ['field' => 'total_simpanan', 'alias' => 'Total Simpanan', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
+                    ['field' => 'total_transaksi', 'alias' => 'Total Transaksi', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
+                    ['field' => 'persentase_simpanan', 'alias' => 'Persentase dari Simpanan (%)', 'type' => 'number', 'length' => '5', 'decimals' => '2', 'validate' => 'required'],
+                    ['field' => 'persentase_transaksi', 'alias' => 'Persentase dari Transaksi (%)', 'type' => 'number', 'length' => '5', 'decimals' => '2', 'validate' => 'required'],
+                    ['field' => 'shu_simpanan', 'alias' => 'SHU dari Simpanan', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
+                    ['field' => 'shu_transaksi', 'alias' => 'SHU dari Transaksi', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
+                    ['field' => 'total_shu', 'alias' => 'Total SHU', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
+                    ['field' => 'status_pembayaran', 'alias' => 'Status Pembayaran', 'type' => 'enum', 'default' => 'belum_dibayar', 'validate' => 'required', 'query' => "select 'belum_dibayar' as value, 'Belum Dibayar' as name union select 'sudah_dibayar' as value, 'Sudah Dibayar' as name"],
+                    ['field' => 'tanggal_pembayaran', 'alias' => 'Tanggal Pembayaran', 'type' => 'date'],
+                    $this->getActiveField()
+                ]
+            ],
+
+            // KOP304 - Jurnal Keuangan
+            'KOP304' => [
+                'gmenu' => 'KOP003',
+                'fields' => [
+                    ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
+                    ['field' => 'nomor_jurnal', 'alias' => 'Nomor Jurnal', 'type' => 'text', 'length' => '20', 'validate' => 'required', 'generateid' => 'auto'],
+                    ['field' => 'tanggal', 'alias' => 'Tanggal', 'type' => 'date', 'validate' => 'required'],
+                    ['field' => 'keterangan', 'alias' => 'Keterangan', 'type' => 'text', 'length' => '255', 'validate' => 'required'],
+                    ['field' => 'jenis_akun', 'alias' => 'Jenis Akun', 'type' => 'enum', 'length' => '20', 'validate' => 'required', 'query' => "select 'aset' as value, 'Aset' as name union select 'kewajiban' as value, 'Kewajiban' as name union select 'modal' as value, 'Modal' as name union select 'pendapatan' as value, 'Pendapatan' as name union select 'beban' as value, 'Beban' as name"],
+                    ['field' => 'nama_akun', 'alias' => 'Nama Akun', 'type' => 'text', 'length' => '100', 'validate' => 'required'],
+                    ['field' => 'debit', 'alias' => 'Debit', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'default' => '0'],
+                    ['field' => 'kredit', 'alias' => 'Kredit', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'default' => '0'],
+                    ['field' => 'referensi_id', 'alias' => 'Referensi ID', 'type' => 'text', 'length' => '50', 'filter' => '0'],
+                    ['field' => 'referensi_tabel', 'alias' => 'Referensi Tabel', 'type' => 'text', 'length' => '50', 'filter' => '0'],
+                    $this->getActiveField()
                 ]
             ],
 
