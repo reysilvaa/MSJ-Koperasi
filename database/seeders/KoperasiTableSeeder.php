@@ -70,15 +70,15 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'deskripsi', 'alias' => 'Deskripsi', 'type' => 'text', 'length' => '500'],
                     ['field' => 'bunga_per_bulan', 'alias' => 'Bunga per Bulan (%)', 'type' => 'number', 'length' => '5', 'decimals' => '2', 'default' => '1.00', 'validate' => 'required'],
                     ['field' => 'tenor_diizinkan', 'alias' => 'Tenor Diizinkan (JSON)', 'type' => 'text', 'length' => '255', 'note' => 'Contoh: [6,10,12] untuk tenor 6,10,12 bulan'],
-                    
-                    // Stock Management Fields
+
+                    // Stock Management Fields (Read-only, managed by system)
                     ['field' => 'stock_limit_bulanan', 'alias' => 'Stock Limit per Bulan', 'type' => 'number', 'length' => '11', 'validate' => 'required', 'default' => '10'],
-                    ['field' => 'stock_terpakai', 'alias' => 'Stock Terpakai', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1'],
-                    ['field' => 'stock_reserved', 'alias' => 'Stock Reserved', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1'],
-                    ['field' => 'stock_tersedia', 'alias' => 'Stock Tersedia', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1', 'note' => 'Auto calculated'],
+                    ['field' => 'stock_terpakai', 'alias' => 'Stock Terpakai', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1', 'show' => '0'],
+                    ['field' => 'stock_reserved', 'alias' => 'Stock Reserved', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1', 'show' => '0'],
+                    ['field' => 'stock_tersedia', 'alias' => 'Stock Tersedia', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1', 'show' => '0', 'filter' => '0', 'note' => 'Auto calculated'],
                     ['field' => 'alert_threshold', 'alias' => 'Alert Threshold', 'type' => 'number', 'length' => '11', 'validate' => 'required', 'default' => '5'],
-                    ['field' => 'reset_terakhir', 'alias' => 'Reset Terakhir', 'type' => 'date', 'list' => '1'],
-                    
+                    ['field' => 'reset_terakhir', 'alias' => 'Reset Terakhir', 'type' => 'date', 'list' => '1', 'show' => '0'],
+
                     $this->getActiveField()
                 ]
             ],
@@ -101,21 +101,20 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'nomor_pengajuan', 'alias' => 'Nomor Pengajuan', 'type' => 'text', 'length' => '20', 'validate' => 'required', 'generateid' => 'auto'],
                     ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where status_keanggotaan = 'aktif' and isactive = '1'"],
                     
-                    // Sistem Berbasis Paket (sesuai activity diagram)
-                    ['field' => 'paket_pinjaman_id', 'alias' => 'Paket Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(kode_paket, ' - ', nama_paket) as name from master_paket_pinjaman where is_active = '1'"],
-                    ['field' => 'jumlah_paket_dipilih', 'alias' => 'Jumlah Paket', 'type' => 'number', 'length' => '2', 'validate' => 'required|min:1', 'default' => '1', 'note' => 'Berapa paket dari paket yang dipilih'],
-                    ['field' => 'tenor_id', 'alias' => 'Tenor Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(tenor_bulan, ' bulan - ', nama_tenor) as name from master_tenor where status = 'aktif'"],
-                    
+                    // Sistem Berbasis Unit (user input langsung berapa unit yang diinginkan)
+                    ['field' => 'jumlah_unit', 'alias' => 'Jumlah Unit', 'type' => 'number', 'length' => '3', 'validate' => 'required|min:1|max:40', 'default' => '1', 'note' => '1 unit = Rp 500.000 (min: 1, max: 40 unit)'],
+                    ['field' => 'tenor_id', 'alias' => 'Tenor Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(tenor_bulan, ' bulan - ', nama_tenor) as name from master_tenor where isactive = '1'"],
+
                     // Auto-Calculate Fields (calculated by system)
-                    ['field' => 'jumlah_pinjaman', 'alias' => 'Jumlah Pinjaman (Auto)', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'list' => '1', 'note' => 'Auto calculated: jumlah_paket × nilai_per_paket'],
-                    ['field' => 'bunga_per_bulan', 'alias' => 'Bunga per Bulan (%)', 'type' => 'number', 'length' => '5', 'decimals' => '2', 'default' => '1.00', 'list' => '1'],
-                    ['field' => 'cicilan_per_bulan', 'alias' => 'Cicilan per Bulan (Auto)', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'list' => '1', 'note' => 'Auto calculated berdasarkan tenor'],
-                    ['field' => 'total_pembayaran', 'alias' => 'Total Pembayaran (Auto)', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'list' => '1', 'note' => 'Auto calculated: cicilan × tenor'],
-                    
+                    ['field' => 'jumlah_pinjaman', 'alias' => 'Jumlah Pinjaman (Auto)', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'list' => '1', 'show' => '0', 'filter' => '0', 'note' => 'Auto calculated: jumlah_unit × 500.000'],
+                    ['field' => 'bunga_per_bulan', 'alias' => 'Bunga per Bulan (%)', 'type' => 'number', 'length' => '5', 'decimals' => '2', 'default' => '1.00', 'list' => '1', 'show' => '0'],
+                    ['field' => 'cicilan_per_bulan', 'alias' => 'Cicilan per Bulan (Auto)', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'list' => '1', 'show' => '0', 'filter' => '0', 'note' => 'Auto calculated berdasarkan tenor'],
+                    ['field' => 'total_pembayaran', 'alias' => 'Total Pembayaran (Auto)', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'list' => '1', 'show' => '0', 'filter' => '0', 'note' => 'Auto calculated: cicilan × tenor'],
+
                     // Pengajuan Details
                     ['field' => 'tujuan_pinjaman', 'alias' => 'Tujuan Pinjaman', 'type' => 'text', 'length' => '500', 'validate' => 'required'],
                     ['field' => 'jenis_pengajuan', 'alias' => 'Jenis Pengajuan', 'type' => 'enum', 'default' => 'baru', 'query' => "select 'baru' as value, 'Pinjaman Baru' as name union select 'top_up' as value, 'Top Up' as name"],
-                    ['field' => 'status_pengajuan', 'alias' => 'Status', 'type' => 'enum', 'default' => 'draft', 'validate' => 'required', 'query' => "select 'draft' as value, 'Draft' as name union select 'diajukan' as value, 'Diajukan' as name union select 'review_admin' as value, 'Review Admin' as name union select 'review_panitia' as value, 'Review Panitia' as name union select 'review_ketua' as value, 'Review Ketua' as name union select 'disetujui' as value, 'Disetujui' as name union select 'ditolak' as value, 'Ditolak' as name"],
+                    ['field' => 'status_pengajuan', 'alias' => 'Status', 'type' => 'enum', 'default' => 'draft', 'validate' => 'required', 'show' => '0', 'query' => "select 'draft' as value, 'Draft' as name union select 'diajukan' as value, 'Diajukan' as name union select 'review_admin' as value, 'Review Admin' as name union select 'review_panitia' as value, 'Review Panitia' as name union select 'review_ketua' as value, 'Review Ketua' as name union select 'disetujui' as value, 'Disetujui' as name union select 'ditolak' as value, 'Ditolak' as name"],
                     ['field' => 'catatan_pengajuan', 'alias' => 'Catatan Pengajuan', 'type' => 'text', 'length' => '500', 'filter' => '0'],
                     $this->getActiveField()
                 ]
@@ -175,8 +174,8 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
                     ['field' => 'periode_pencairan_id', 'alias' => 'Periode Pencairan', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(kode_periode, ' - ', nama_periode) as name from periode_pencairan where status = 'aktif' and isactive = '1'"],
                     ['field' => 'pengajuan_pinjaman_id', 'alias' => 'Pengajuan Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_pengajuan, ' - Rp ', format(jumlah_pinjaman, 0)) as name from pengajuan_pinjaman where status_pengajuan = 'disetujui' and isactive = '1'"],
-                    ['field' => 'status_pencairan', 'alias' => 'Status Pencairan', 'type' => 'enum', 'default' => 'menunggu', 'validate' => 'required', 'query' => "select 'menunggu' as value, 'Menunggu' as name union select 'proses' as value, 'Proses' as name union select 'selesai' as value, 'Selesai' as name"],
-                    ['field' => 'tanggal_pencairan', 'alias' => 'Tanggal Pencairan', 'type' => 'date'],
+                    ['field' => 'status_pencairan', 'alias' => 'Status Pencairan', 'type' => 'enum', 'default' => 'menunggu', 'validate' => 'required', 'show' => '0', 'query' => "select 'menunggu' as value, 'Menunggu' as name union select 'proses' as value, 'Proses' as name union select 'selesai' as value, 'Selesai' as name"],
+                    ['field' => 'tanggal_pencairan', 'alias' => 'Tanggal Pencairan', 'type' => 'date', 'show' => '0'],
                     ['field' => 'catatan', 'alias' => 'Catatan', 'type' => 'text', 'length' => '500', 'filter' => '0', 'list' => '0']
                 ]
             ],
@@ -194,8 +193,8 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'denda', 'alias' => 'Denda', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'default' => '0'],
                     ['field' => 'total_bayar', 'alias' => 'Total Bayar', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
                     ['field' => 'tanggal_jatuh_tempo', 'alias' => 'Tanggal Jatuh Tempo', 'type' => 'date', 'validate' => 'required'],
-                    ['field' => 'tanggal_bayar', 'alias' => 'Tanggal Bayar', 'type' => 'date'],
-                    ['field' => 'status', 'alias' => 'Status Cicilan', 'type' => 'enum', 'default' => 'belum_bayar', 'validate' => 'required', 'query' => "select 'belum_bayar' as value, 'Belum Bayar' as name union select 'lunas' as value, 'Lunas' as name union select 'telat' as value, 'Telat' as name"],
+                    ['field' => 'tanggal_bayar', 'alias' => 'Tanggal Bayar', 'type' => 'date', 'show' => '0'],
+                    ['field' => 'status', 'alias' => 'Status Cicilan', 'type' => 'enum', 'default' => 'belum_bayar', 'validate' => 'required', 'show' => '0', 'query' => "select 'belum_bayar' as value, 'Belum Bayar' as name union select 'lunas' as value, 'Lunas' as name union select 'telat' as value, 'Telat' as name"],
                     $this->getActiveField()
                 ]
             ],

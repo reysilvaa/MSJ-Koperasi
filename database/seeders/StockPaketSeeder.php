@@ -10,7 +10,7 @@ class StockPaketSeeder extends Seeder
 {
     /**
      * Seed master_paket_pinjaman dengan stock management fields
-     * 
+     *
      * Business Rules:
      * 1. 1 paket = Rp 500.000 (fixed value)
      * 2. Stock management di master_paket_pinjaman langsung
@@ -20,13 +20,13 @@ class StockPaketSeeder extends Seeder
     {
         // Clean up existing data with better criteria
         DB::table('master_paket_pinjaman')->whereIn('kode_paket', ['P5', 'P10', 'P20', 'P40'])->delete();
-        
+
         // Ambil ID tenor dari master_tenor untuk mapping
         $tenor6Bulan = DB::table('master_tenor')->where('tenor_bulan', 6)->first()->id ?? 1;
         $tenor10Bulan = DB::table('master_tenor')->where('tenor_bulan', 10)->first()->id ?? 2;
         $tenor12Bulan = DB::table('master_tenor')->where('tenor_bulan', 12)->first()->id ?? 3;
         $tenor15Bulan = DB::table('master_tenor')->where('tenor_bulan', 15)->first()->id ?? 4;
-        
+
         // Master paket data dengan stock management
         $masterPaketData = [
             [
@@ -57,7 +57,7 @@ class StockPaketSeeder extends Seeder
                 'stock_tersedia' => 15,
                 'alert_threshold' => 3,
                 'reset_terakhir' => now()->format('Y-m-01'),
-                'is_active' => 1,
+                'isactive' => 1,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -73,7 +73,7 @@ class StockPaketSeeder extends Seeder
                 'stock_tersedia' => 10,
                 'alert_threshold' => 2,
                 'reset_terakhir' => now()->format('Y-m-01'),
-                'is_active' => 1,
+                'isactive' => 1,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -89,7 +89,7 @@ class StockPaketSeeder extends Seeder
                 'stock_tersedia' => 5,
                 'alert_threshold' => 1,
                 'reset_terakhir' => now()->format('Y-m-01'),
-                'is_active' => 1,
+                'isactive' => 1,
                 'created_at' => now(),
                 'updated_at' => now()
             ]
@@ -97,7 +97,7 @@ class StockPaketSeeder extends Seeder
 
         // Insert master paket data
         DB::table('master_paket_pinjaman')->insert($masterPaketData);
-        
+
         $this->command->info('✅ Master Paket Pinjaman dengan Stock Management berhasil di-seed');
         $this->command->info('📊 Paket Summary:');
         $this->command->info('   - P5 (2.5 Juta): 20 unit/bulan');
