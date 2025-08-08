@@ -163,7 +163,7 @@ Diagram ini menunjukkan fitur-fitur khusus untuk Ketua Umum dalam sistem koperas
 
 ### 📊 REPORTING SYSTEM (Reporting Lane)
 - Generate Balance Sheet
-- Generate Profit & Loss Statement  
+- Generate Profit & Loss Statement
 - Generate Cash Flow Statement
 - Compile executive reports
 - Format report outputs

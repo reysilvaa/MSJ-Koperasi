@@ -120,6 +120,11 @@ class KoperasiAuthSeeder extends Seeder
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP501'],
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP502'],
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP503'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP504'], // Neraca
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP505'], // Laba Rugi
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP506'], // Cash Flow
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP507'], // SHU
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP508'], // Jurnal Umum
         ];
 
                 // Authorization configurations based on activity diagram roles (5 roles)
@@ -137,6 +142,7 @@ class KoperasiAuthSeeder extends Seeder
                 'print' => '1', 'excel' => '1', 'pdf' => '1', 'value' => '1',
                 'rules' => '0', 'isactive' => '1'
             ],
+            
 
             // Admin Kredit - Credit analysis and approval focus
             'akredt' => [
