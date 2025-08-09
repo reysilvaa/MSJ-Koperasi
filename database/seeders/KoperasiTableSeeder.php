@@ -154,11 +154,14 @@ class KoperasiTableSeeder extends Seeder
                 'gmenu' => 'KOP003',
                 'fields' => [
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
-                    ['field' => 'kode_periode', 'alias' => 'Kode Periode', 'type' => 'text', 'length' => '20', 'validate' => 'required|unique:periode_pencairan,kode_periode'],
                     ['field' => 'nama_periode', 'alias' => 'Nama Periode', 'type' => 'text', 'length' => '100', 'validate' => 'required'],
                     ['field' => 'tanggal_mulai', 'alias' => 'Tanggal Mulai', 'type' => 'date', 'validate' => 'required'],
                     ['field' => 'tanggal_selesai', 'alias' => 'Tanggal Selesai', 'type' => 'date', 'validate' => 'required'],
-                    ['field' => 'status', 'alias' => 'Status', 'type' => 'enum', 'default' => 'draft', 'validate' => 'required', 'query' => "select 'draft' as value, 'Draft' as name union select 'aktif' as value, 'Aktif' as name union select 'selesai' as value, 'Selesai' as name"],
+                    ['field' => 'tanggal_pencairan', 'alias' => 'Tanggal Pencairan', 'type' => 'date', 'validate' => 'required'],
+                    ['field' => 'maksimal_aplikasi', 'alias' => 'Maksimal Aplikasi', 'type' => 'number', 'length' => '11', 'default' => '0', 'note' => '0 = unlimited'],
+                    ['field' => 'total_dana_tersedia', 'alias' => 'Total Dana Tersedia', 'type' => 'number', 'length' => '15', 'decimals' => '2', 'default' => '0.00'],
+                    ['field' => 'total_dana_terpakai', 'alias' => 'Total Dana Terpakai', 'type' => 'number', 'length' => '15', 'decimals' => '2', 'default' => '0.00', 'show' => '0'],
+                    ['field' => 'keterangan', 'alias' => 'Keterangan', 'type' => 'text', 'length' => '500'],
                     $this->getActiveField()
                 ]
             ],
@@ -168,7 +171,7 @@ class KoperasiTableSeeder extends Seeder
                 'gmenu' => 'KOP003',
                 'fields' => [
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
-                    ['field' => 'periode_pencairan_id', 'alias' => 'Periode Pencairan', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(kode_periode, ' - ', nama_periode) as name from periode_pencairan where status = 'aktif' and isactive = '1'"],
+                    ['field' => 'periode_pencairan_id', 'alias' => 'Periode Pencairan', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, nama_periode as name from periode_pencairan where isactive = '1'"],
                     ['field' => 'pengajuan_pinjaman_id', 'alias' => 'Pengajuan Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_pengajuan, ' - Rp ', format(jumlah_pinjaman, 0)) as name from pengajuan_pinjaman where status_pengajuan = 'disetujui' and isactive = '1'"],
                     ['field' => 'status_pencairan', 'alias' => 'Status Pencairan', 'type' => 'enum', 'default' => 'menunggu', 'validate' => 'required', 'show' => '0', 'query' => "select 'menunggu' as value, 'Menunggu' as name union select 'proses' as value, 'Proses' as name union select 'selesai' as value, 'Selesai' as name"],
                     ['field' => 'tanggal_pencairan', 'alias' => 'Tanggal Pencairan', 'type' => 'date', 'show' => '0'],

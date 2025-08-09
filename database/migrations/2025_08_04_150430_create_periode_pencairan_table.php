@@ -20,7 +20,6 @@ return new class extends Migration
             $table->integer('maksimal_aplikasi')->default(0); // 0 = unlimited
             $table->decimal('total_dana_tersedia', 15, 2)->default(0);
             $table->decimal('total_dana_terpakai', 15, 2)->default(0);
-            $table->enum('status', ['draft', 'aktif', 'selesai', 'ditutup'])->default('draft');
             $table->text('keterangan')->nullable();
             $table->enum('isactive', [0, 1])->default(1);
             $table->timestamp('created_at')->useCurrent();
