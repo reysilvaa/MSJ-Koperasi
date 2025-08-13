@@ -18,3 +18,4 @@ yarn-error.log
 /.idea
 /.vscode
 composer.lock
+/.github/copilot-instructions.md
