@@ -25,7 +25,7 @@
                 <div class="card">
                     <div class="card-header pb-0">
                         <h6>Detail Pengajuan Pinjaman</h6>
-                        <p class="text-sm mb-0">{{ $pengajuan->nomor_pengajuan }}</p>
+                        <p class="text-sm mb-0">ID: {{ $pengajuan->id }}</p>
                     </div>
                     <div class="card-body">
                         {{-- Alert Messages --}}

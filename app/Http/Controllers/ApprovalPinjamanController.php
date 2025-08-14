@@ -69,7 +69,7 @@ class ApprovalPinjamanController extends Controller
         $search = request('search');
         if (!empty($search)) {
             $query->where(function($q) use ($search) {
-                $q->where('nomor_pengajuan', 'like', "%$search%")
+                $q->where('id', 'like', "%$search%")
                   ->orWhereHas('anggota', function($q) use ($search) {
                       $q->where('nama_lengkap', 'like', "%$search%")
                         ->orWhere('nomor_anggota', 'like', "%$search%");
@@ -187,7 +187,7 @@ class ApprovalPinjamanController extends Controller
             ->get();
 
         // Log access
-        $syslog->log_insert('R', $data['dmenu'], 'Approval Pinjaman Detail Accessed: ' . $pengajuan->nomor_pengajuan, '1');
+        $syslog->log_insert('R', $data['dmenu'], 'Approval Pinjaman Detail Accessed: ID ' . $pengajuan->id, '1');
 
         return view('KOP002.approvalPinjaman.show', $data);
     }
@@ -291,7 +291,7 @@ class ApprovalPinjamanController extends Controller
             DB::commit();
 
             // Log success
-            $syslog->log_insert('U', $data['dmenu'], 'Approval Processed: ' . $pengajuan->nomor_pengajuan . ' - ' . $new_status, '1');
+            $syslog->log_insert('U', $data['dmenu'], 'Approval Processed: ID ' . $pengajuan->id . ' - ' . $new_status, '1');
 
             Session::flash('message', 'Approval berhasil diproses!');
             Session::flash('class', 'success');

@@ -44,8 +44,8 @@
                                 {{-- Nomor Pengajuan (Read Only) --}}
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-control-label">Nomor Pengajuan</label>
-                                        <input type="text" class="form-control" value="{{ $pengajuan->nomor_pengajuan }}" readonly>
+                                        <label class="form-control-label">ID Pengajuan</label>
+                                        <input type="text" class="form-control" value="{{ $pengajuan->id }}" readonly>
                                     </div>
                                 </div>
 

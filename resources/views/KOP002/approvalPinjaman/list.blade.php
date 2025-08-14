@@ -1,5 +1,16 @@
 @extends('layouts.app', ['class' => 'g-sidenav-show bg-gray-100'])
 
+@php
+    // Set default column configuration for master-detail view
+    $colomh = 0; // Single list view, no master-detail needed
+
+    // Define empty collections for master-detail variables to prevent errors
+    $table_header_d = collect();
+    $table_detail_d = collect();
+    $table_primary_h = collect();
+    $table_primary_d = collect();
+@endphp
+
 @section('content')
     @include('layouts.navbars.auth.topnav', ['title' => $title_menu])
 
@@ -95,12 +106,12 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($pengajuan_list as $pengajuan)
+                                    @foreach($list as $pengajuan)
                                         <tr>
                                             <td>
                                                 <div class="d-flex px-2 py-1">
                                                     <div class="d-flex flex-column justify-content-center">
-                                                        <h6 class="mb-0 text-sm">{{ $pengajuan->nomor_pengajuan }}</h6>
+                                                        <h6 class="mb-0 text-sm">ID: {{ $pengajuan->id }}</h6>
                                                         <p class="text-xs text-secondary mb-0">{{ $pengajuan->jenis_pengajuan }}</p>
                                                     </div>
                                                 </div>
@@ -108,18 +119,18 @@
                                             <td>
                                                 <div class="d-flex px-2 py-1">
                                                     <div class="d-flex flex-column justify-content-center">
-                                                        <h6 class="mb-0 text-sm">{{ $pengajuan->nama_lengkap }}</h6>
-                                                        <p class="text-xs text-secondary mb-0">{{ $pengajuan->nomor_anggota }}</p>
+                                                        <h6 class="mb-0 text-sm">{{ $pengajuan->anggota->nama_lengkap ?? 'N/A' }}</h6>
+                                                        <p class="text-xs text-secondary mb-0">{{ $pengajuan->anggota->nomor_anggota ?? 'N/A' }}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                <p class="text-xs font-weight-bold mb-0">{{ $pengajuan->nama_paket }}</p>
+                                                <p class="text-xs font-weight-bold mb-0">{{ $pengajuan->paketPinjaman->periode ?? 'N/A' }}</p>
                                                 <p class="text-xs text-secondary mb-0">{{ $pengajuan->jumlah_paket_dipilih ?? 1 }} paket</p>
                                             </td>
                                             <td>
                                                 <p class="text-xs font-weight-bold mb-0">Rp {{ number_format($pengajuan->jumlah_pinjaman, 0, ',', '.') }}</p>
-                                                <p class="text-xs text-secondary mb-0">{{ $pengajuan->tenor_bulan }} bulan</p>
+                                                <p class="text-xs text-secondary mb-0">{{ $pengajuan->tenor_pinjaman }}</p>
                                             </td>
                                             <td class="align-middle text-center text-sm">
                                                 @php
@@ -154,8 +165,6 @@
             </div>
         </div>
     </div>
-@endsection
-
 @push('js')
     <script>
         $(document).ready(function() {
@@ -179,6 +188,9 @@
         });
     </script>
 @endpush
+
+{{-- Hide master-detail section for approval list as it's not needed --}}
+@if(false) {{-- Conditional to hide unused master-detail section --}}
             <div class="col-md-{{ $colomh > 1 ? '8' : '9' }}">
                 <div class="row mx-1">
                     <div class="card" style="min-height: 650px;">
@@ -427,6 +439,8 @@
             </div>
         </div>
     </div>
+@endif {{-- End of hidden master-detail section --}}
+
     {{-- check flag js on dmenu --}}
     @if ($jsmenu == '1')
         @if (view()->exists("js.{$dmenu}"))

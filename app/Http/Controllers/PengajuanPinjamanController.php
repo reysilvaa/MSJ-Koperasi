@@ -51,9 +51,9 @@ class PengajuanPinjamanController extends Controller
         $search = request('search');
         if (!empty($search)) {
             $query->where(function($q) use ($search) {
-                $q->where('nomor_pengajuan', 'like', "%$search%")
-                  ->orWhereHas('anggota', function($q) use ($search) {
-                      $q->where('nama_lengkap', 'like', "%$search%")
+                $q->where('id', 'like', "%$search%")
+                  ->orWhereHas('anggotum', function($qa) use ($search) {
+                      $qa->where('nama_lengkap', 'like', "%$search%")
                         ->orWhere('nomor_anggota', 'like', "%$search%");
                   });
             });
@@ -139,9 +139,6 @@ class PengajuanPinjamanController extends Controller
             ->select('id', 'nama_periode', 'tanggal_mulai', 'tanggal_selesai')
             ->get();
 
-        // Generate nomor pengajuan
-        $data['nomor_pengajuan'] = $data['format']->IDFormat('KOP201');
-
         return view('KOP002.pengajuanPinjaman.add', $data);
     }
 
@@ -221,7 +218,6 @@ class PengajuanPinjamanController extends Controller
 
             // Create pengajuan using Eloquent
             $pengajuan = PengajuanPinjaman::create([
-                'nomor_pengajuan' => $data['format']->IDFormat('KOP201'),
                 'anggota_id' => request('anggota_id'),
                 'paket_pinjaman_id' => request('paket_pinjaman_id'),
                 'jumlah_paket_dipilih' => $jumlah_paket,
@@ -248,7 +244,7 @@ class PengajuanPinjamanController extends Controller
             DB::commit();
 
             // Log success
-            $syslog->log_insert('C', $data['dmenu'], 'Pengajuan Pinjaman Created: ' . $pengajuan->nomor_pengajuan, '1');
+            $syslog->log_insert('C', $data['dmenu'], 'Pengajuan Pinjaman Created: ID ' . $pengajuan->id, '1');
 
             Session::flash('message', 'Pengajuan pinjaman berhasil dibuat!');
             Session::flash('class', 'success');
@@ -344,7 +340,7 @@ class PengajuanPinjamanController extends Controller
             ->get();
 
         // Log access
-        $syslog->log_insert('R', $data['dmenu'], 'Pengajuan Pinjaman Detail Accessed: ' . $pengajuan->nomor_pengajuan, '1');
+        $syslog->log_insert('R', $data['dmenu'], 'Pengajuan Pinjaman Detail Accessed: ID ' . $pengajuan->id, '1');
 
         return view('KOP002.pengajuanPinjaman.show', $data);
     }
@@ -473,7 +469,7 @@ class PengajuanPinjamanController extends Controller
         DB::beginTransaction();
 
         try {
-            // Get pengajuan using Eloquent
+            // Get pengajuan using Eloquent (UPDATE method)
             $pengajuan = PengajuanPinjaman::find($id);
 
             if (!$pengajuan) {
@@ -540,7 +536,7 @@ class PengajuanPinjamanController extends Controller
             DB::commit();
 
             // Log success
-            $syslog->log_insert('U', $data['dmenu'], 'Pengajuan Pinjaman Updated: ' . $pengajuan->nomor_pengajuan, '1');
+            $syslog->log_insert('U', $data['dmenu'], 'Pengajuan Pinjaman Updated: ID ' . $pengajuan->id, '1');
 
             Session::flash('message', 'Pengajuan pinjaman berhasil diupdate!');
             Session::flash('class', 'success');
@@ -585,7 +581,7 @@ class PengajuanPinjamanController extends Controller
         DB::beginTransaction();
 
         try {
-            // Get pengajuan using Eloquent
+            // Get pengajuan using Eloquent (DESTROY method)
             $pengajuan = PengajuanPinjaman::find($id);
 
             if (!$pengajuan) {
@@ -615,7 +611,7 @@ class PengajuanPinjamanController extends Controller
             DB::commit();
 
             // Log success
-            $syslog->log_insert('D', $data['dmenu'], 'Pengajuan Pinjaman Deleted: ' . $pengajuan->nomor_pengajuan, '1');
+            $syslog->log_insert('D', $data['dmenu'], 'Pengajuan Pinjaman Deleted: ID ' . $pengajuan->id, '1');
 
             Session::flash('message', 'Pengajuan pinjaman berhasil dihapus!');
             Session::flash('class', 'success');

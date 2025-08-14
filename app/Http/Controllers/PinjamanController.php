@@ -31,7 +31,7 @@ class PinjamanController extends Controller
                 'a.nomor_anggota',
                 'a.nama_lengkap',
                 'mpp.nama_paket',
-                'pp.nomor_pengajuan',
+                'pp.id as pengajuan_id',
                 DB::raw('(SELECT COUNT(*) FROM cicilan_pinjaman WHERE pinjaman_id = p.id AND status = "lunas") as cicilan_lunas'),
                 DB::raw('(SELECT COUNT(*) FROM cicilan_pinjaman WHERE pinjaman_id = p.id) as total_cicilan'),
                 DB::raw('(SELECT SUM(nominal_dibayar) FROM cicilan_pinjaman WHERE pinjaman_id = p.id AND status = "lunas") as total_terbayar')
@@ -90,7 +90,7 @@ class PinjamanController extends Controller
                 'a.no_telepon',
                 'a.alamat',
                 'mpp.nama_paket',
-                'pp.nomor_pengajuan',
+                'pp.id as pengajuan_id',
                 'pp.tujuan_pinjaman'
             )
             ->where('p.id', $id)

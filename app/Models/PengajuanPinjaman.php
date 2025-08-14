@@ -70,7 +70,6 @@ class PengajuanPinjaman extends Model
 	];
 
 	protected $fillable = [
-		'nomor_pengajuan',
 		'anggota_id',
 		'paket_pinjaman_id',
 		'jumlah_paket_dipilih',

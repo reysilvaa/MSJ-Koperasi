@@ -168,7 +168,7 @@
                                                         </div>
                                                     </td>
                                                     <td>{{ $list->firstItem() + $index }}</td>
-                                                    <td class="text-sm font-weight-normal">{{ $pengajuan->nomor_pengajuan }}</td>
+                                                    <td class="text-sm font-weight-normal">ID: {{ $pengajuan->id }}</td>
                                                     <td class="text-sm font-weight-normal">
                                                         {{ $pengajuan->anggota->nama_lengkap ?? 'N/A' }}
                                                         ({{ $pengajuan->anggota->nomor_anggota ?? 'N/A' }})

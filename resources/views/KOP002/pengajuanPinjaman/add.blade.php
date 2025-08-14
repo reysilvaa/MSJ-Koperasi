@@ -43,9 +43,8 @@
                                 {{-- Nomor Pengajuan (Auto Generated) --}}
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-control-label">Nomor Pengajuan</label>
-                                        <input type="text" class="form-control" value="{{ $nomor_pengajuan }}" readonly>
-                                        <input type="hidden" name="nomor_pengajuan" value="{{ $nomor_pengajuan }}">
+                                        <label class="form-control-label">Status</label>
+                                        <input type="text" class="form-control" value="Pengajuan Baru" readonly>
                                     </div>
                                 </div>
 

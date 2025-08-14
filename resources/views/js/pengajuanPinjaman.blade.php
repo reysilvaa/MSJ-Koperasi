@@ -45,7 +45,7 @@ $(document).ready(function() {
     function initializeAddPage() {
         // Real-time calculation
         $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', calculateLoan);
-        
+
         // Initial calculation
         setTimeout(calculateLoan, 500);
 
@@ -71,7 +71,6 @@ $(document).ready(function() {
     function initializeEditPage() {
         // Real-time calculation for edit page
         $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', calculateLoanEdit);
-        
         // Initial calculation
         setTimeout(calculateLoanEdit, 500);
     }
@@ -143,7 +142,7 @@ $(document).ready(function() {
 
             // Validate stock
             if (jumlahPaket > stock && document.getElementById('display-stock')) {
-                document.getElementById('display-stock').innerHTML = 
+                document.getElementById('display-stock').innerHTML =
                     '<span class="text-danger">' + stock + ' paket (Tidak mencukupi!)</span>';
             } else if (document.getElementById('display-stock')) {
                 document.getElementById('display-stock').textContent = stock + ' paket';
@@ -345,7 +344,7 @@ $(document).ready(function() {
         $(this).after(counterHtml);
     });
 
-    console.log('PengajuanPinjaman JavaScript initialized successfully for:', 
+    console.log('PengajuanPinjaman JavaScript initialized successfully for:',
                 isListPage ? 'List' : isAddPage ? 'Add' : isEditPage ? 'Edit' : isShowPage ? 'Show' : 'Unknown');
 
 });

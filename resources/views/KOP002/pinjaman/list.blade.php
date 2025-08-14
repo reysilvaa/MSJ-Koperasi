@@ -122,7 +122,7 @@
                                                 <div class="d-flex px-2 py-1">
                                                     <div class="d-flex flex-column justify-content-center">
                                                         <h6 class="mb-0 text-sm">{{ $pinjaman->nomor_pinjaman }}</h6>
-                                                        <p class="text-xs text-secondary mb-0">{{ $pinjaman->nomor_pengajuan }}</p>
+                                                        <p class="text-xs text-secondary mb-0">ID Pengajuan: {{ $pinjaman->pengajuan_id ?? $pinjaman->pengajuan_pinjaman_id }}</p>
                                                     </div>
                                                 </div>
                                             </td>

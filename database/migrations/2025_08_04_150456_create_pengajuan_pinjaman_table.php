@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('pengajuan_pinjaman', function (Blueprint $table) {
+            // Primary key standar auto increment
             $table->id();
-            $table->string('nomor_pengajuan', 20)->unique();
 
             // FOREIGN KEY REFERENCES
             $table->foreignId('anggota_id')->constrained('anggota');
@@ -29,7 +29,7 @@ return new class extends Migration
             $table->text('tujuan_pinjaman');
 
             // KHUSUS TOP UP
-            $table->unsignedBigInteger('pinjaman_asal_id')->nullable(); // untuk TOP UP
+            $table->unsignedBigInteger('pinjaman_asal_id')->nullable(); // untuk TOP UP - reference ke id pinjaman
             $table->decimal('sisa_cicilan_lama', 15, 2)->nullable(); // untuk TOP UP
             $table->enum('jenis_pengajuan', ['baru', 'top_up'])->default('baru');
 
@@ -53,8 +53,13 @@ return new class extends Migration
 
             // FOREIGN KEY CONSTRAINTS
             $table->foreign('paket_pinjaman_id')->references('id')->on('master_paket_pinjaman')->onDelete('cascade');
-            $table->foreign('pinjaman_asal_id')->references('id')->on('pengajuan_pinjaman')->onDelete('cascade');
+            $table->foreign('pinjaman_asal_id')->references('id')->on('pengajuan_pinjaman')->onDelete('set null');
             $table->foreign('periode_pencairan_id')->references('id')->on('periode_pencairan')->onDelete('set null');
+
+            // Index untuk performa
+            $table->index('anggota_id');
+            $table->index('status_pengajuan');
+            $table->index('created_at');
         });
     }
 
