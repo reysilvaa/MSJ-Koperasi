@@ -114,79 +114,6 @@
                                         </div>
                                     </div>
                                 </div>
-
-                                {{-- Detail Perhitungan Tenor --}}
-                                <div class="row mt-3">
-                                    <div class="col-md-12">
-                                        <div class="alert alert-light border">
-                                            <h6 class="font-weight-bold mb-2">📋 Detail Perhitungan Berdasarkan Tenor</h6>
-                                            @php
-                                                $pokok = $pengajuan->jumlah_pinjaman;
-                                                $bunga_persen = $pengajuan->bunga_per_bulan;
-                                                $tenor_bulan = (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
-
-                                                // Perhitungan Bunga Flat per bulan
-                                                $cicilan_pokok_per_bulan = $pokok / $tenor_bulan;
-                                                $bunga_flat_per_bulan = $pokok * ($bunga_persen / 100);
-                                                $cicilan_per_bulan_hitung = $cicilan_pokok_per_bulan + $bunga_flat_per_bulan;
-                                                $total_bayar_hitung = $cicilan_per_bulan_hitung * $tenor_bulan;
-                                                $total_bunga = $bunga_flat_per_bulan * $tenor_bulan;
-                                            @endphp
-                                            <div class="row text-sm">
-                                                <div class="col-md-6">
-                                                    <table class="table table-sm">
-                                                        <tr>
-                                                            <td><strong>Pokok Pinjaman:</strong></td>
-                                                            <td>Rp {{ number_format($pokok, 0, ',', '.') }}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td><strong>Cicilan Pokok/bulan:</strong></td>
-                                                            <td>Rp {{ number_format($cicilan_pokok_per_bulan, 0, ',', '.') }}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td><strong>Bunga Flat {{ $bunga_persen }}%/bulan:</strong></td>
-                                                            <td>Rp {{ number_format($bunga_flat_per_bulan, 0, ',', '.') }}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td><strong>Total Bunga {{ $tenor_bulan }} bulan:</strong></td>
-                                                            <td>Rp {{ number_format($total_bunga, 0, ',', '.') }}</td>
-                                                        </tr>
-                                                        <tr class="border-top">
-                                                            <td><strong>Total Harus Dibayar:</strong></td>
-                                                            <td><strong>Rp {{ number_format($total_bayar_hitung, 0, ',', '.') }}</strong></td>
-                                                        </tr>
-                                                    </table>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <table class="table table-sm">
-                                                        <tr>
-                                                            <td><strong>Cicilan/Bulan ({{ $tenor_bulan }}x):</strong></td>
-                                                            <td><strong>Rp {{ number_format($cicilan_per_bulan_hitung, 0, ',', '.') }}</strong></td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td><small>(Pokok: {{ number_format($cicilan_pokok_per_bulan, 0, ',', '.') }} + Bunga: {{ number_format($bunga_flat_per_bulan, 0, ',', '.') }})</small></td>
-                                                            <td></td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td><strong>Status Perhitungan:</strong></td>
-                                                            <td>
-                                                                @if(abs($pengajuan->total_pembayaran - $total_bayar_hitung) < 1 && abs($pengajuan->cicilan_per_bulan - $cicilan_per_bulan_hitung) < 1)
-                                                                    <span class="badge bg-success">✅ Perhitungan Benar</span>
-                                                                @else
-                                                                    <span class="badge bg-warning">⚠️ Ada Selisih</span>
-                                                                    <small class="text-muted d-block">
-                                                                        DB: Rp {{ number_format($pengajuan->cicilan_per_bulan, 0, ',', '.') }}/bulan,
-                                                                        Total: Rp {{ number_format($pengajuan->total_pembayaran, 0, ',', '.') }}
-                                                                    </small>
-                                                                @endif
-                                                            </td>
-                                                        </tr>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
 
                             {{-- Tujuan Pinjaman --}}
@@ -302,7 +229,7 @@
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <h6 class="text-sm mb-0">{{ $loan->nomor_pinjaman }}</h6>
-                                        <p class="text-xs text-secondary mb-0">{{ $loan->nama_paket }}</p>
+                                        <p class="text-xs text-secondary mb-0">{{ $loan->periode }}</p>
                                     </div>
                                     <div class="text-end">
                                         <span class="badge badge-sm bg-{{ $loan->status_pinjaman == 'lunas' ? 'success' : ($loan->status_pinjaman == 'aktif' ? 'info' : 'warning') }}">
@@ -320,42 +247,23 @@
     </div>
 @endsection
 
-@push('js')
-    <script>
-        $(document).ready(function() {
-            // Form validation
-            $('#approval-form').on('submit', function(e) {
-                const action = $('input[name="action"]:checked').val();
-
-                if (!action) {
-                    e.preventDefault();
+    {{-- Check flag js on dmenu --}}
+    @if ($jsmenu == '1')
+        @if (view()->exists("js.{$dmenu}"))
+            @push('addjs')
+                {{-- file js in folder (resources/views/js) --}}
+                @include('js.' . $dmenu)
+            @endpush
+        @else
+            @push('addjs')
+                <script>
                     Swal.fire({
-                        title: 'Pilih Keputusan!',
-                        text: 'Silakan pilih apakah akan menyetujui atau menolak pengajuan ini.',
-                        icon: 'warning',
-                        confirmButtonColor: '#3085d6'
+                        title: 'JS Not Found!!',
+                        text: 'Please Create File JS',
+                        icon: 'error',
+                        confirmButtonColor: '#028284'
                     });
-                    return false;
-                }
-
-                const actionText = action === 'approve' ? 'menyetujui' : 'menolak';
-                const confirmText = action === 'approve' ? 'Setujui' : 'Tolak';
-
-                e.preventDefault();
-                Swal.fire({
-                    title: 'Konfirmasi Approval',
-                    text: `Apakah Anda yakin akan ${actionText} pengajuan ini?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: confirmText,
-                    cancelButtonText: 'Batal',
-                    confirmButtonColor: action === 'approve' ? '#28a745' : '#dc3545'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        this.submit();
-                    }
-                });
-            });
-        });
-    </script>
-@endpush
+                </script>
+            @endpush
+        @endif
+    @endif

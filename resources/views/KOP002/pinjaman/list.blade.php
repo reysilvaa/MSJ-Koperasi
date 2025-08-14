@@ -135,7 +135,7 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                <p class="text-xs font-weight-bold mb-0">{{ $pinjaman->nama_paket }}</p>
+                                                <p class="text-xs font-weight-bold mb-0">{{ $pinjaman->periode }}</p>
                                                 <p class="text-xs text-secondary mb-0">{{ $pinjaman->tenor_bulan }} bulan</p>
                                             </td>
                                             <td>

@@ -30,7 +30,7 @@ class PinjamanController extends Controller
                 'p.*',
                 'a.nomor_anggota',
                 'a.nama_lengkap',
-                'mpp.nama_paket',
+                'mpp.periode',
                 'pp.id as pengajuan_id',
                 DB::raw('(SELECT COUNT(*) FROM cicilan_pinjaman WHERE pinjaman_id = p.id AND status = "lunas") as cicilan_lunas'),
                 DB::raw('(SELECT COUNT(*) FROM cicilan_pinjaman WHERE pinjaman_id = p.id) as total_cicilan'),
@@ -89,7 +89,7 @@ class PinjamanController extends Controller
                 'a.email',
                 'a.no_telepon',
                 'a.alamat',
-                'mpp.nama_paket',
+                'mpp.periode',
                 'pp.id as pengajuan_id',
                 'pp.tujuan_pinjaman'
             )
@@ -133,13 +133,8 @@ class PinjamanController extends Controller
         $data['pinjaman_list'] = DB::table('pinjaman as p')
             ->leftJoin('anggota as a', 'p.anggota_id', '=', 'a.id')
             ->leftJoin('pengajuan_pinjaman as pp', 'p.pengajuan_pinjaman_id', '=', 'pp.id')
-            ->leftJoin('master_paket_pinjaman as mpp', 'pp.paket_pinjaman_id', '=', 'mpp.id')
-            ->select(
-                'p.*',
-                'a.nomor_anggota',
-                'a.nama_lengkap',
-                'mpp.nama_paket'
-            )
+            ->leftJoin('master_paket_pinjaman as mpp', 'p.id_paket_pinjaman', '=', 'mpp.id')
+            ->select('p.*', 'a.nama_lengkap', 'a.nomor_anggota', 'mpp.periode')
             ->where('p.status', 'aktif')
             ->where('p.isactive', '1')
             ->whereNotExists(function($query) {

@@ -191,12 +191,6 @@
                                     <div class="info-item mb-3">
                                         <label class="text-sm font-weight-bold">Total Pembayaran:</label>
                                         <h5 class="text-danger mb-0">{{ $format->CurrencyFormat($total_pembayaran_correct) }}</h5>
-                                        @if(abs($pengajuan->total_pembayaran - $total_pembayaran_correct) > 1)
-                                            <small class="text-muted">
-                                                <span class="badge bg-warning">⚠️ Perlu Update</span>
-                                                DB: {{ $format->CurrencyFormat($pengajuan->total_pembayaran) }}
-                                            </small>
-                                        @endif
                                     </div>
                                 </div>
                             </div>

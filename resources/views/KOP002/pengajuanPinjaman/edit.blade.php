@@ -198,121 +198,25 @@
 
 @endsection
 
-@push('js')
-    <script>
-        $(document).ready(function() {
-            // Real-time calculation when form values change
-            function updateCalculation() {
-                const paketSelect = $('#paket_pinjaman_id');
-                const jumlahPaket = parseInt($('#jumlah_paket_dipilih').val()) || 1;
-                const tenorSelect = $('#tenor_pinjaman');
-
-                if (paketSelect.val() && tenorSelect.val()) {
-                    const selectedPaket = paketSelect.find(':selected');
-                    const selectedTenor = tenorSelect.find(':selected');
-                    const bunga = parseFloat(selectedPaket.data('bunga')) || 0;
-                    const stock = parseInt(selectedPaket.data('stock')) || 0;
-                    const tenor = parseInt(selectedTenor.data('bulan')) || 1;
-
-                    const nilaiPerPaket = 500000;
-                    const jumlahPinjaman = jumlahPaket * nilaiPerPaket;
-                    const cicilanPerBulan = (jumlahPinjaman * (1 + (bunga/100))) / tenor;
-                    const totalPembayaran = cicilanPerBulan * tenor;
-
-                    // Update display
-                    $('#display-jumlah-pinjaman').text(formatCurrency(jumlahPinjaman));
-                    $('#display-bunga').text(bunga + '%');
-                    $('#display-cicilan').text(formatCurrency(Math.round(cicilanPerBulan)));
-                    $('#display-total').text(formatCurrency(Math.round(totalPembayaran)));
-
-                    // Validate stock
-                    if (jumlahPaket > stock) {
-                        $('#display-stock').html('<span class="text-danger">' + stock + ' paket (Tidak mencukupi!)</span>');
-                        $('button[type="submit"]').prop('disabled', true);
-                    } else {
-                        $('#display-stock').text(stock + ' paket');
-                        $('button[type="submit"]').prop('disabled', false);
-                    }
-                } else {
-                    // Reset display
-                    $('#display-jumlah-pinjaman').text('{{ $format->CurrencyFormat($pengajuan->jumlah_pinjaman) }}');
-                    $('#display-bunga').text('{{ $pengajuan->bunga_per_bulan }}%');
-                    $('#display-cicilan').text('{{ $format->CurrencyFormat($pengajuan->cicilan_per_bulan) }}');
-                    $('#display-total').text('{{ $format->CurrencyFormat($pengajuan->total_pembayaran) }}');
-                    $('#display-stock').text('-');
-                }
-            }
-
-            // Function to format currency
-            function formatCurrency(amount) {
-                return new Intl.NumberFormat('id-ID', {
-                    style: 'currency',
-                    currency: 'IDR',
-                    minimumFractionDigits: 0
-                }).format(amount);
-            }
-
-            // Character counter for tujuan pinjaman
-            function updateCharacterCounter() {
-                const textarea = $('textarea[name="tujuan_pinjaman"]');
-                const maxLength = 500;
-                const currentLength = textarea.val().length;
-                const remaining = maxLength - currentLength;
-
-                let counterHtml = `<small class="text-muted">${currentLength}/${maxLength} karakter`;
-                if (remaining < 50) {
-                    counterHtml = `<small class="text-warning">${currentLength}/${maxLength} karakter (sisa: ${remaining})`;
-                }
-                if (remaining <= 0) {
-                    counterHtml = `<small class="text-danger">${currentLength}/${maxLength} karakter (melebihi batas!)`;
-                }
-                counterHtml += '</small>';
-
-                // Remove existing counter and add new one
-                textarea.next('small').remove();
-                textarea.after(counterHtml);
-            }
-
-            // Event listeners
-            $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', updateCalculation);
-            $('textarea[name="tujuan_pinjaman"]').on('input', updateCharacterCounter);
-
-            // Initial calculation and character counter
-            updateCalculation();
-            updateCharacterCounter();
-
-            // Form validation
-            $('#pengajuan-form').on('submit', function(e) {
-                const stockAvailable = parseInt($('#paket_pinjaman_id').find(':selected').data('stock')) || 0;
-                const jumlahPaket = parseInt($('#jumlah_paket_dipilih').val()) || 1;
-
-                if (jumlahPaket > stockAvailable) {
-                    e.preventDefault();
-                    Swal.fire({
-                        title: 'Stock Tidak Mencukupi!',
-                        text: `Stock tersedia: ${stockAvailable} paket, Anda meminta: ${jumlahPaket} paket`,
-                        icon: 'error',
-                        confirmButtonColor: '#d33'
-                    });
-                    return false;
-                }
-
-                // Additional validation
-                if (jumlahPaket < 1 || jumlahPaket > 40) {
-                    e.preventDefault();
-                    Swal.fire({
-                        title: 'Validasi Error',
-                        text: 'Jumlah paket harus antara 1-40 paket!',
-                        icon: 'error',
-                        confirmButtonColor: '#d33'
-                    });
-                    return false;
-                }
-            });
-
-            console.log('PengajuanPinjaman Edit Form JavaScript initialized successfully');
-        });
-    </script>
-@endpush
+{{-- Check flag js on dmenu --}}
+@if ($jsmenu == '1')
+    @if (view()->exists("js.{$dmenu}"))
+        @push('addjs')
+            {{-- file js in folder (resources/views/js) --}}
+            @include('js.' . $dmenu)
+        @endpush
+    @else
+        @push('addjs')
+            <script>
+                Swal.fire({
+                    title: 'JS Not Found!!',
+                    text: 'Please Create File JS',
+                    icon: 'error',
+                    confirmButtonColor: '#028284'
+                });
+            </script>
+        @endpush
+    @endif
+@endif
 
 

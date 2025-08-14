@@ -20,3 +20,5 @@ yarn-error.log
 composer.lock
 /.github/copilot-instructions.md
 /.augment/*
+composer.json
+composer.json
