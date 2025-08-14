@@ -215,7 +215,6 @@
             </div>
         </div>
     </div>
-@endsection
 
     {{-- Check flag js on dmenu --}}
     @if ($jsmenu == '1')
