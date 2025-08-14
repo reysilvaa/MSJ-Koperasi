@@ -14,16 +14,7 @@ return new class extends Migration
         Schema::create('master_paket_pinjaman', function (Blueprint $table) {
             $table->id();
             $table->string('periode', 7); // Format: 2025-08 (tahun-bulan)
-            $table->string('nama_paket', 100);
-            $table->text('deskripsi')->nullable();
-
-            // BUNGA FLAT 1% PER BULAN
             $table->decimal('bunga_per_bulan', 5, 2)->default(1.00); // 1% per bulan
-
-            // TENOR YANG DIIZINKAN (JSON array of tenor IDs)
-            $table->json('tenor_diizinkan'); // [1,2,3] = ID dari master_tenor
-
-            // STOCK MANAGEMENT (sederhana)
             $table->integer('stock_limit')->default(100); // Total limit untuk bulan ini
             $table->integer('stock_terpakai')->default(0); // Yang sudah digunakan
 

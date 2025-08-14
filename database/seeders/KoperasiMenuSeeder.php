@@ -1,8 +1,6 @@
 <?php
 
 namespace Database\Seeders;
-
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -35,12 +33,11 @@ class KoperasiMenuSeeder extends Seeder
             // KOP001 - Master Data
             ['gmenu' => 'KOP001', 'dmenu' => 'KOP101', 'name' => 'Data Anggota', 'layout' => 'master', 'url' => 'anggota', 'tabel' => 'anggota', 'icon' => 'fas fa-user-friends', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
             ['gmenu' => 'KOP001', 'dmenu' => 'KOP102', 'name' => 'Paket Pinjaman', 'layout' => 'master', 'url' => 'paket-pinjaman', 'tabel' => 'master_paket_pinjaman', 'icon' => 'fas fa-box', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP103', 'name' => 'Tenor Pinjaman', 'layout' => 'master', 'url' => 'tenor', 'tabel' => 'master_tenor', 'icon' => 'fas fa-clock', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 
             // KOP002 - Pinjaman (sesuai activity diagram 02)
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP201', 'name' => 'Pengajuan Pinjaman', 'layout' => 'master', 'url' => 'pengajuan-pinjaman', 'tabel' => 'pengajuan_pinjaman', 'icon' => 'fas fa-file-invoice-dollar', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP202', 'name' => 'Approval Pinjaman', 'layout' => 'system', 'url' => 'approval-pinjaman', 'tabel' => 'pengajuan_pinjaman', 'icon' => 'fas fa-check-circle', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP203', 'name' => 'Data Pinjaman Aktif', 'layout' => 'master', 'url' => 'pinjaman', 'tabel' => 'pinjaman', 'icon' => 'fas fa-money-check-alt', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP201', 'name' => 'Pengajuan Pinjaman', 'layout' => 'manual', 'url' => 'pengajuanPinjaman', 'tabel' => 'pengajuan_pinjaman', 'icon' => 'fas fa-file-invoice-dollar', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP202', 'name' => 'Approval Pinjaman', 'layout' => 'manual', 'url' => 'approvalPinjaman', 'tabel' => 'pengajuan_pinjaman', 'icon' => 'fas fa-check-circle', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP203', 'name' => 'Data Pinjaman Aktif', 'layout' => 'manual', 'url' => 'pinjaman', 'tabel' => 'pinjaman', 'icon' => 'fas fa-money-check-alt', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 
             // KOP003 - Pencairan (sesuai activity diagram 04)
             ['gmenu' => 'KOP003', 'dmenu' => 'KOP301', 'name' => 'Periode Pencairan', 'layout' => 'master', 'url' => 'periode-pencairan', 'tabel' => 'periode_pencairan', 'icon' => 'fas fa-calendar-alt', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],

@@ -100,7 +100,6 @@ class KoperasiAuthSeeder extends Seeder
             // KOP001 - Master Data
             ['gmenu' => 'KOP001', 'dmenu' => 'KOP101'],
             ['gmenu' => 'KOP001', 'dmenu' => 'KOP102'],
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP103'],
 
             // KOP002 - Pinjaman
             ['gmenu' => 'KOP002', 'dmenu' => 'KOP201'],
@@ -180,7 +179,7 @@ class KoperasiAuthSeeder extends Seeder
                         $menuPermissions['add'] = '1'; // Anggota bisa mengajukan pinjaman
                         $menuPermissions['edit'] = '1'; // Edit pengajuan sendiri
                     }
-                    if (in_array($menu['dmenu'], ['KOP101', 'KOP102', 'KOP103', 'KOP202', 'KOP301', 'KOP302'])) {
+                    if (in_array($menu['dmenu'], ['KOP101', 'KOP102', 'KOP202', 'KOP301', 'KOP302'])) {
                         $menuPermissions['value'] = '0'; // No access to master data and admin functions
                         $menuPermissions['isactive'] = '0';
                     }
@@ -202,7 +201,7 @@ class KoperasiAuthSeeder extends Seeder
                     if (in_array($menu['dmenu'], ['KOP301', 'KOP302', 'KOP401', 'KOP402'])) { // Transfer & Finance
                         $menuPermissions['approval'] = '1'; // Strong approval for transfers
                     }
-                    if (in_array($menu['dmenu'], ['KOP101', 'KOP102', 'KOP103', 'KOP202'])) { // Limited access to master & approval
+                    if (in_array($menu['dmenu'], ['KOP101', 'KOP102','KOP202'])) { // Limited access to master & approval
                         $menuPermissions['add'] = '0';
                         $menuPermissions['delete'] = '0';
                     }

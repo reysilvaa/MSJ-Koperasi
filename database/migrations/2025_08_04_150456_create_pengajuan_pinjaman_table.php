@@ -18,9 +18,10 @@ return new class extends Migration
             // FOREIGN KEY REFERENCES
             $table->foreignId('anggota_id')->constrained('anggota');
             $table->unsignedBigInteger('paket_pinjaman_id');
-            $table->unsignedBigInteger('tenor_id');
+            $table->string('tenor_pinjaman', 50); // Simpan sebagai string: "6 bulan", "12 bulan", dll
 
             // DETAIL PENGAJUAN
+            $table->integer('jumlah_paket_dipilih'); // Jumlah paket yang dipilih
             $table->decimal('jumlah_pinjaman', 15, 2);
             $table->decimal('bunga_per_bulan', 5, 2); // dari master_paket_pinjaman
             $table->decimal('cicilan_per_bulan', 15, 2); // hitung otomatis
@@ -52,7 +53,6 @@ return new class extends Migration
 
             // FOREIGN KEY CONSTRAINTS
             $table->foreign('paket_pinjaman_id')->references('id')->on('master_paket_pinjaman')->onDelete('cascade');
-            $table->foreign('tenor_id')->references('id')->on('master_tenor')->onDelete('cascade');
             $table->foreign('pinjaman_asal_id')->references('id')->on('pengajuan_pinjaman')->onDelete('cascade');
             $table->foreign('periode_pencairan_id')->references('id')->on('periode_pencairan')->onDelete('set null');
         });

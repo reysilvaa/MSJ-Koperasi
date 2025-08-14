@@ -13,58 +13,6 @@ class KoperasiDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // Cek apakah data master tenor sudah ada
-        if (DB::table('master_tenor')->count() == 0) {
-            // Insert Master Tenor
-        DB::table('master_tenor')->insert([
-            [
-                'tenor_bulan' => 6,
-                'nama_tenor' => '6 Bulan',
-                'deskripsi' => 'Tenor pendek 6 bulan dengan bunga flat 1%',
-                'status' => 'aktif',
-                'isactive' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-                'user_create' => 'seeder',
-                'user_update' => 'seeder'
-            ],
-            [
-                'tenor_bulan' => 10,
-                'nama_tenor' => '10 Bulan',
-                'deskripsi' => 'Tenor menengah 10 bulan dengan bunga flat 1%',
-                'status' => 'aktif',
-                'isactive' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-                'user_create' => 'seeder',
-                'user_update' => 'seeder'
-            ],
-            [
-                'tenor_bulan' => 12,
-                'nama_tenor' => '12 Bulan',
-                'deskripsi' => 'Tenor panjang 12 bulan dengan bunga flat 1%',
-                'status' => 'aktif',
-                'isactive' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-                'user_create' => 'seeder',
-                'user_update' => 'seeder'
-            ],
-            [
-                'tenor_bulan' => 15,
-                'nama_tenor' => '15 Bulan',
-                'deskripsi' => 'Tenor panjang 15 bulan dengan bunga flat 1%',
-                'status' => 'aktif',
-                'isactive' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-                'user_create' => 'seeder',
-                'user_update' => 'seeder'
-            ]
-        ]);
-        }
-
-
         // Cek apakah data anggota sudah ada
         if (DB::table('anggota')->where('nomor_anggota', 'A240001')->count() == 0) {
         // Insert data anggota untuk user dengan role anggota
