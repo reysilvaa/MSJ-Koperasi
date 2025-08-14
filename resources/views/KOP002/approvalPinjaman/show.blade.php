@@ -37,19 +37,19 @@
                                 <h6 class="text-sm font-weight-bold mb-3">Data Anggota</h6>
                                 <div class="form-group">
                                     <label class="form-control-label">Nomor Anggota</label>
-                                    <input class="form-control" type="text" value="{{ $pengajuan->nomor_anggota }}" readonly>
+                                    <input class="form-control" type="text" value="{{ $pengajuan->anggotum->nomor_anggota ?? 'N/A' }}" readonly>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-control-label">Nama Lengkap</label>
-                                    <input class="form-control" type="text" value="{{ $pengajuan->nama_lengkap }}" readonly>
+                                    <input class="form-control" type="text" value="{{ $pengajuan->anggotum->nama_lengkap ?? 'N/A' }}" readonly>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-control-label">Email</label>
-                                    <input class="form-control" type="text" value="{{ $pengajuan->email }}" readonly>
+                                    <input class="form-control" type="text" value="{{ $pengajuan->anggotum->email ?? 'N/A' }}" readonly>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-control-label">No. Telepon</label>
-                                    <input class="form-control" type="text" value="{{ $pengajuan->no_telepon }}" readonly>
+                                    <input class="form-control" type="text" value="{{ $pengajuan->anggotum->no_telepon ?? 'N/A' }}" readonly>
                                 </div>
                             </div>
 
@@ -62,7 +62,11 @@
                                 </div>
                                 <div class="form-group">
                                     <label class="form-control-label">Paket Pinjaman</label>
-                                    <input class="form-control" type="text" value="{{ $pengajuan->nama_paket }}" readonly>
+                                    <input class="form-control" type="text" value="Paket {{ $pengajuan->master_paket_pinjaman->periode ?? 'N/A' }} ({{ $pengajuan->master_paket_pinjaman->bunga_per_bulan ?? 0 }}% per bulan)" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-control-label">Tenor Pinjaman</label>
+                                    <input class="form-control" type="text" value="{{ $pengajuan->tenor_pinjaman ?? 'N/A' }}" readonly>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-control-label">Jumlah Paket</label>
@@ -70,7 +74,11 @@
                                 </div>
                                 <div class="form-group">
                                     <label class="form-control-label">Periode Pencairan</label>
-                                    <input class="form-control" type="text" value="{{ $pengajuan->nama_periode ?? 'Belum ditentukan' }}" readonly>
+                                    <input class="form-control" type="text" value="{{ $pengajuan->periode_pencairan->nama_periode ?? 'Belum ditentukan' }}" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-control-label">Ketersediaan Paket</label>
+                                    <input class="form-control" type="text" value="{{ ($pengajuan->master_paket_pinjaman->stock_limit ?? 0) - ($pengajuan->master_paket_pinjaman->stock_terpakai ?? 0) }} dari {{ $pengajuan->master_paket_pinjaman->stock_limit ?? 0 }} tersisa" readonly>
                                 </div>
                             </div>
 
@@ -103,6 +111,79 @@
                                             <label class="form-control-label">Total Pembayaran</label>
                                             <input class="form-control text-danger font-weight-bold" type="text"
                                                    value="Rp {{ number_format($pengajuan->total_pembayaran, 0, ',', '.') }}" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Detail Perhitungan Tenor --}}
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <div class="alert alert-light border">
+                                            <h6 class="font-weight-bold mb-2">📋 Detail Perhitungan Berdasarkan Tenor</h6>
+                                            @php
+                                                $pokok = $pengajuan->jumlah_pinjaman;
+                                                $bunga_persen = $pengajuan->bunga_per_bulan;
+                                                $tenor_bulan = (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
+
+                                                // Perhitungan Bunga Flat per bulan
+                                                $cicilan_pokok_per_bulan = $pokok / $tenor_bulan;
+                                                $bunga_flat_per_bulan = $pokok * ($bunga_persen / 100);
+                                                $cicilan_per_bulan_hitung = $cicilan_pokok_per_bulan + $bunga_flat_per_bulan;
+                                                $total_bayar_hitung = $cicilan_per_bulan_hitung * $tenor_bulan;
+                                                $total_bunga = $bunga_flat_per_bulan * $tenor_bulan;
+                                            @endphp
+                                            <div class="row text-sm">
+                                                <div class="col-md-6">
+                                                    <table class="table table-sm">
+                                                        <tr>
+                                                            <td><strong>Pokok Pinjaman:</strong></td>
+                                                            <td>Rp {{ number_format($pokok, 0, ',', '.') }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><strong>Cicilan Pokok/bulan:</strong></td>
+                                                            <td>Rp {{ number_format($cicilan_pokok_per_bulan, 0, ',', '.') }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><strong>Bunga Flat {{ $bunga_persen }}%/bulan:</strong></td>
+                                                            <td>Rp {{ number_format($bunga_flat_per_bulan, 0, ',', '.') }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><strong>Total Bunga {{ $tenor_bulan }} bulan:</strong></td>
+                                                            <td>Rp {{ number_format($total_bunga, 0, ',', '.') }}</td>
+                                                        </tr>
+                                                        <tr class="border-top">
+                                                            <td><strong>Total Harus Dibayar:</strong></td>
+                                                            <td><strong>Rp {{ number_format($total_bayar_hitung, 0, ',', '.') }}</strong></td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <table class="table table-sm">
+                                                        <tr>
+                                                            <td><strong>Cicilan/Bulan ({{ $tenor_bulan }}x):</strong></td>
+                                                            <td><strong>Rp {{ number_format($cicilan_per_bulan_hitung, 0, ',', '.') }}</strong></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><small>(Pokok: {{ number_format($cicilan_pokok_per_bulan, 0, ',', '.') }} + Bunga: {{ number_format($bunga_flat_per_bulan, 0, ',', '.') }})</small></td>
+                                                            <td></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><strong>Status Perhitungan:</strong></td>
+                                                            <td>
+                                                                @if(abs($pengajuan->total_pembayaran - $total_bayar_hitung) < 1 && abs($pengajuan->cicilan_per_bulan - $cicilan_per_bulan_hitung) < 1)
+                                                                    <span class="badge bg-success">✅ Perhitungan Benar</span>
+                                                                @else
+                                                                    <span class="badge bg-warning">⚠️ Ada Selisih</span>
+                                                                    <small class="text-muted d-block">
+                                                                        DB: Rp {{ number_format($pengajuan->cicilan_per_bulan, 0, ',', '.') }}/bulan,
+                                                                        Total: Rp {{ number_format($pengajuan->total_pembayaran, 0, ',', '.') }}
+                                                                    </small>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

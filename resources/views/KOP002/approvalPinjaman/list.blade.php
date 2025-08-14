@@ -119,13 +119,13 @@
                                             <td>
                                                 <div class="d-flex px-2 py-1">
                                                     <div class="d-flex flex-column justify-content-center">
-                                                        <h6 class="mb-0 text-sm">{{ $pengajuan->anggota->nama_lengkap ?? 'N/A' }}</h6>
-                                                        <p class="text-xs text-secondary mb-0">{{ $pengajuan->anggota->nomor_anggota ?? 'N/A' }}</p>
+                                                        <h6 class="mb-0 text-sm">{{ $pengajuan->anggotum->nama_lengkap ?? 'N/A' }}</h6>
+                                                        <p class="text-xs text-secondary mb-0">{{ $pengajuan->anggotum->nomor_anggota ?? 'N/A' }}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                <p class="text-xs font-weight-bold mb-0">{{ $pengajuan->paketPinjaman->periode ?? 'N/A' }}</p>
+                                                <p class="text-xs font-weight-bold mb-0">{{ $pengajuan->master_paket_pinjaman->periode ?? 'N/A' }}</p>
                                                 <p class="text-xs text-secondary mb-0">{{ $pengajuan->jumlah_paket_dipilih ?? 1 }} paket</p>
                                             </td>
                                             <td>

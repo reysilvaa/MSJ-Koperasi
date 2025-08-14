@@ -36,6 +36,15 @@
                         {{-- Alert Messages --}}
                         @include('components.alert')
 
+                        {{-- Calculation Info Alert --}}
+                        @if(abs($pengajuan->cicilan_per_bulan - $cicilan_per_bulan_correct) > 1)
+                            <div class="alert alert-warning">
+                                <strong>📊 Informasi Perhitungan:</strong>
+                                Sistem telah menggunakan perhitungan <strong>bunga flat</strong> yang benar.
+                                Data di database mungkin masih menggunakan perhitungan lama dan perlu diperbarui.
+                            </div>
+                        @endif
+
                         <div class="row">
                             {{-- ID Pengajuan --}}
                             <div class="col-md-6">
@@ -172,13 +181,22 @@
                                 <div class="col-12">
                                     <div class="info-item mb-3">
                                         <label class="text-sm font-weight-bold">Cicilan per Bulan:</label>
-                                        <h5 class="text-warning mb-0">{{ $format->CurrencyFormat($pengajuan->cicilan_per_bulan) }}</h5>
+                                        <h5 class="text-warning mb-0">{{ $format->CurrencyFormat($cicilan_per_bulan_correct) }}</h5>
+                                        <small class="text-muted">
+                                            (Pokok: {{ $format->CurrencyFormat($cicilan_pokok) }} + Bunga: {{ $format->CurrencyFormat($bunga_flat) }})
+                                        </small>
                                     </div>
                                 </div>
                                 <div class="col-12">
                                     <div class="info-item mb-3">
                                         <label class="text-sm font-weight-bold">Total Pembayaran:</label>
-                                        <h5 class="text-danger mb-0">{{ $format->CurrencyFormat($pengajuan->total_pembayaran) }}</h5>
+                                        <h5 class="text-danger mb-0">{{ $format->CurrencyFormat($total_pembayaran_correct) }}</h5>
+                                        @if(abs($pengajuan->total_pembayaran - $total_pembayaran_correct) > 1)
+                                            <small class="text-muted">
+                                                <span class="badge bg-warning">⚠️ Perlu Update</span>
+                                                DB: {{ $format->CurrencyFormat($pengajuan->total_pembayaran) }}
+                                            </small>
+                                        @endif
                                     </div>
                                 </div>
                             </div>

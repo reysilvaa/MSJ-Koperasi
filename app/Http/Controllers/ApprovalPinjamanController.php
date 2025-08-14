@@ -47,21 +47,21 @@ class ApprovalPinjamanController extends Controller
         $user_role = $data['user_login']->idroles;
 
         // Filter pengajuan based on role and status using Eloquent
-        $query = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
+        $query = PengajuanPinjaman::with(['anggotum', 'master_paket_pinjaman', 'periode_pencairan'])
             ->where('isactive', '1');
 
-        // Role-based filtering sesuai activity diagram
+        // Role-based filtering sesuai activity diagram (CORRECTED FLOW)
         switch ($user_role) {
-            case 'akredt': // Admin Kredit
+            case 'kadmin': // Ketua Admin - review pertama
                 $query->whereIn('status_pengajuan', ['diajukan', 'review_admin']);
                 break;
-            case 'kadmin': // Ketua Admin - review panitia
+            case 'akredt': // Admin Kredit - review kedua
                 $query->whereIn('status_pengajuan', ['review_admin', 'review_panitia']);
                 break;
             case 'ketuum': // Ketua Umum - final approval
                 $query->whereIn('status_pengajuan', ['review_panitia', 'review_ketua']);
                 break;
-            default:
+            default: // Default: show all pending approvals
                 $query->whereIn('status_pengajuan', ['diajukan', 'review_admin', 'review_panitia', 'review_ketua']);
         }
 
@@ -70,22 +70,16 @@ class ApprovalPinjamanController extends Controller
         if (!empty($search)) {
             $query->where(function($q) use ($search) {
                 $q->where('id', 'like', "%$search%")
-                  ->orWhereHas('anggota', function($q) use ($search) {
-                      $q->where('nama_lengkap', 'like', "%$search%")
+                  ->orWhereHas('anggotum', function($qa) use ($search) {
+                      $qa->where('nama_lengkap', 'like', "%$search%")
                         ->orWhere('nomor_anggota', 'like', "%$search%");
                   });
             });
         }
 
-        // Check authorization rules
-        if ($data['authorize']->rules == '1') {
-            $roles = $data['users_rules'];
-            $query->where(function ($q) use ($roles) {
-                foreach ($roles as $role) {
-                    $q->orWhereRaw("FIND_IN_SET(?, REPLACE(rules, ' ', ''))", [$role]);
-                }
-            });
-        }
+        // Check authorization rules - Skip for pengajuan_pinjaman as it doesn't have rules column
+        // The pengajuan_pinjaman table doesn't use role-based record filtering
+        // Authorization is handled at the controller/menu level instead
 
         $collectionData = $query->orderBy('created_at', 'desc')->get();
 
@@ -144,7 +138,7 @@ class ApprovalPinjamanController extends Controller
         }
 
         // Get pengajuan detail using Eloquent
-        $pengajuan = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
+        $pengajuan = PengajuanPinjaman::with(['anggotum', 'master_paket_pinjaman', 'periode_pencairan'])
             ->find($id);
 
         if (!$pengajuan) {
@@ -153,22 +147,8 @@ class ApprovalPinjamanController extends Controller
             return redirect($data['url_menu']);
         }
 
-        // Check authorization
-        if ($data['authorize']->rules == '1') {
-            $roles = $data['users_rules'];
-            $hasAccess = false;
-            foreach ($roles as $role) {
-                if (in_array($role, explode(',', str_replace(' ', '', $pengajuan->rules ?? '')))) {
-                    $hasAccess = true;
-                    break;
-                }
-            }
-            if (!$hasAccess) {
-                Session::flash('message', 'Anda tidak memiliki akses untuk data ini!');
-                Session::flash('class', 'danger');
-                return redirect($data['url_menu']);
-            }
-        }
+        // Check authorization - Skip rules check for pengajuan_pinjaman
+        // Authorization is handled at controller/menu level, not record level
 
         $data['pengajuan'] = $pengajuan;
         $data['list'] = $pengajuan; // For view compatibility
@@ -180,7 +160,7 @@ class ApprovalPinjamanController extends Controller
             ->get();
 
         // Get member's loan history using Eloquent
-        $data['loan_history'] = Pinjaman::with('paketPinjaman')
+        $data['loan_history'] = Pinjaman::with('master_paket_pinjaman')
             ->where('anggota_id', $pengajuan->anggota_id)
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -244,11 +224,11 @@ class ApprovalPinjamanController extends Controller
             $user_role = $data['user_login']->idroles;
             $approved_by = $data['user_login']->username;
 
-            // Determine next status based on role and action
+            // Determine next status based on role and action (CORRECTED FLOW)
             $status_map = [
-                'akredt' => ['approve' => 'review_admin', 'reject' => 'ditolak'],
-                'kadmin' => ['approve' => 'review_panitia', 'reject' => 'ditolak'],
-                'ketuum' => ['approve' => 'disetujui', 'reject' => 'ditolak'],
+                'kadmin' => ['approve' => 'review_admin', 'reject' => 'ditolak'],     // Ketua Admin -> review_admin
+                'akredt' => ['approve' => 'review_panitia', 'reject' => 'ditolak'],   // Admin Kredit -> review_panitia
+                'ketuum' => ['approve' => 'disetujui', 'reject' => 'ditolak'],        // Ketua Umum -> disetujui (final)
             ];
 
             $new_status = $status_map[$user_role][$action] ?? 'ditolak';
@@ -310,7 +290,7 @@ class ApprovalPinjamanController extends Controller
     }
 
     /**
-     * Helper method to get next status based on current status and user role
+     * Helper method to get next status based on current status and user role (CORRECTED FLOW)
      */
     private function getNextStatus($current_status, $user_role, $action)
     {
@@ -320,13 +300,13 @@ class ApprovalPinjamanController extends Controller
 
         $workflow = [
             'diajukan' => [
-                'akredt' => 'review_admin', // Admin Kredit
+                'kadmin' => 'review_admin', // Ketua Admin (level tertinggi)
             ],
             'review_admin' => [
-                'kadmin' => 'review_panitia', // Ketua Admin
+                'akredt' => 'review_panitia', // Admin Kredit (level menengah)
             ],
             'review_panitia' => [
-                'ketuum' => 'disetujui', // Ketua Umum
+                'ketuum' => 'disetujui', // Ketua Umum (final approval)
             ],
         ];
 

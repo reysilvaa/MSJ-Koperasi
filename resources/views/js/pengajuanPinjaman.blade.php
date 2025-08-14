@@ -97,7 +97,11 @@ $(document).ready(function() {
             // Business logic calculation sesuai docs/PENGAJUAN_PINJAMAN_FIX.md
             const nilaiPerPaket = 500000;
             const jumlahPinjaman = jumlahPaket * nilaiPerPaket;
-            const cicilanPerBulan = (jumlahPinjaman * (1 + (bunga/100))) / tenorBulan;
+
+            // Perhitungan Bunga Flat (CORRECTED)
+            const cicilanPokok = jumlahPinjaman / tenorBulan;
+            const bungaFlat = jumlahPinjaman * (bunga / 100);
+            const cicilanPerBulan = cicilanPokok + bungaFlat;
             const totalPembayaran = cicilanPerBulan * tenorBulan;
 
             // Update display
@@ -123,7 +127,11 @@ $(document).ready(function() {
 
             const nilaiPerPaket = 500000;
             const jumlahPinjaman = jumlahPaket * nilaiPerPaket;
-            const cicilanPerBulan = (jumlahPinjaman * (1 + (bunga/100))) / tenor;
+
+            // Perhitungan Bunga Flat (CORRECTED)
+            const cicilanPokok = jumlahPinjaman / tenor;
+            const bungaFlat = jumlahPinjaman * (bunga / 100);
+            const cicilanPerBulan = cicilanPokok + bungaFlat;
             const totalPembayaran = cicilanPerBulan * tenor;
 
             // Update display

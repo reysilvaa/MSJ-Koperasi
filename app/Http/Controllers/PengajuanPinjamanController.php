@@ -189,7 +189,11 @@ class PengajuanPinjamanController extends Controller
             $nilai_per_paket = 500000; // Rp 500.000 per paket
             $jumlah_pinjaman = $jumlah_paket * $nilai_per_paket;
             $bunga_per_bulan = $paket->bunga_per_bulan; // 1%
-            $cicilan_per_bulan = ($jumlah_pinjaman * (1 + ($bunga_per_bulan/100))) / $tenor_bulan;
+
+            // Perhitungan Bunga Flat (CORRECTED)
+            $cicilan_pokok = $jumlah_pinjaman / $tenor_bulan;
+            $bunga_flat = $jumlah_pinjaman * ($bunga_per_bulan / 100);
+            $cicilan_per_bulan = $cicilan_pokok + $bunga_flat;
             $total_pembayaran = $cicilan_per_bulan * $tenor_bulan;
 
             // Check stock availability
@@ -221,7 +225,7 @@ class PengajuanPinjamanController extends Controller
                 'anggota_id' => request('anggota_id'),
                 'paket_pinjaman_id' => request('paket_pinjaman_id'),
                 'jumlah_paket_dipilih' => $jumlah_paket,
-                'tenor_pinjaman' => $tenor_pinjaman,
+                'tenor_pinjaman' => $tenor_pinjaman, // Store as string like "6 bulan"
                 'jumlah_pinjaman' => $jumlah_pinjaman,
                 'bunga_per_bulan' => $bunga_per_bulan,
                 'cicilan_per_bulan' => $cicilan_per_bulan,
@@ -230,7 +234,7 @@ class PengajuanPinjamanController extends Controller
                 'jenis_pengajuan' => request('jenis_pengajuan'),
                 'periode_pencairan_id' => request('periode_pencairan_id'),
                 'status_pengajuan' => 'diajukan', // Auto submit sesuai requirement
-                'status_pencairan' => 'belum_dicairkan',
+                'status_pencairan' => 'belum_cair', // Fixed enum value
                 'tanggal_pengajuan' => now(),
                 'isactive' => '1',
                 'user_create' => $data['user_login']->username ?? 'system',
@@ -321,6 +325,23 @@ class PengajuanPinjamanController extends Controller
         // Set data for view compatibility
         $data['pengajuan'] = $pengajuan;
         $data['list'] = $pengajuan; // For view compatibility with $list variable
+
+        // Recalculate with correct bunga flat formula for display
+        $tenor_bulan = (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
+        $jumlah_pinjaman = $pengajuan->jumlah_pinjaman;
+        $bunga_per_bulan = $pengajuan->bunga_per_bulan;
+
+        // Perhitungan Bunga Flat yang Benar
+        $cicilan_pokok = $jumlah_pinjaman / $tenor_bulan;
+        $bunga_flat = $jumlah_pinjaman * ($bunga_per_bulan / 100);
+        $cicilan_per_bulan_correct = $cicilan_pokok + $bunga_flat;
+        $total_pembayaran_correct = $cicilan_per_bulan_correct * $tenor_bulan;
+
+        // Add corrected calculations to data
+        $data['cicilan_per_bulan_correct'] = $cicilan_per_bulan_correct;
+        $data['total_pembayaran_correct'] = $total_pembayaran_correct;
+        $data['cicilan_pokok'] = $cicilan_pokok;
+        $data['bunga_flat'] = $bunga_flat;
 
         // Get additional data for view using Eloquent
         $data['periode_list'] = PeriodePencairan::where('isactive', '1')
@@ -495,7 +516,10 @@ class PengajuanPinjamanController extends Controller
             $nilai_per_paket = 500000;
             $jumlah_pinjaman = $jumlah_paket * $nilai_per_paket;
             $bunga_per_bulan = $paket->bunga_per_bulan;
-            $cicilan_per_bulan = ($jumlah_pinjaman * (1 + ($bunga_per_bulan/100))) / $tenor_bulan;
+
+            $cicilan_pokok = $jumlah_pinjaman / $tenor_bulan;
+            $bunga_flat = $jumlah_pinjaman * ($bunga_per_bulan / 100);
+            $cicilan_per_bulan = $cicilan_pokok + $bunga_flat;
             $total_pembayaran = $cicilan_per_bulan * $tenor_bulan;
 
             // Update stock if paket changed
