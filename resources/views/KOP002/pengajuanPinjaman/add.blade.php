@@ -90,7 +90,7 @@
                                                         data-stock-limit="{{ $paket->stock_limit }}"
                                                         data-stock-terpakai="{{ $paket->stock_terpakai }}"
                                                         {{ old('paket_pinjaman_id') == $paket->id ? 'selected' : '' }}>
-                                                    {{ $paket->nama_paket }} ({{ $paket->bunga_per_bulan }}% per bulan)
+                                                    {{ $paket->periode }} ({{ $paket->bunga_per_bulan }}% per bulan)
                                                 </option>
                                             @endforeach
                                         </select>
@@ -136,7 +136,8 @@
                                             @foreach($periode_list as $periode)
                                                 <option value="{{ $periode->id }}"
                                                         {{ old('periode_pencairan_id') == $periode->id ? 'selected' : '' }}>
-                                                    {{ $periode->nama_periode }} - {{ \Carbon\Carbon::parse($periode->tanggal_pencairan)->format('d M Y') }}
+                                                    {{ $periode->nama_periode }}
+                                                    ({{ \Carbon\Carbon::parse($periode->tanggal_mulai)->format('d M Y') }} - {{ \Carbon\Carbon::parse($periode->tanggal_selesai)->format('d M Y') }})
                                                 </option>
                                             @endforeach
                                         </select>
@@ -219,88 +220,27 @@
             </div>
         </div>
     </div>
+
+    {{-- Check flag js on dmenu --}}
+    @if ($jsmenu == '1')
+        @if (view()->exists("js.{$dmenu}"))
+            @push('addjs')
+                {{-- file js in folder (resources/views/js) --}}
+                @include('js.' . $dmenu)
+            @endpush
+        @else
+            @push('addjs')
+                <script>
+                    Swal.fire({
+                        title: 'JS Not Found!!',
+                        text: 'Please Create File JS',
+                        icon: 'error',
+                        confirmButtonColor: '#028284'
+                    });
+                </script>
+            @endpush
+        @endif
+    @endif
 @endsection
 
-@push('js')
-    <script>
-        $(document).ready(function() {
-            // Real-time calculation
-            function calculateLoan() {
-                const paketSelect = $('#paket_pinjaman_id');
-                const jumlahPaket = parseInt($('#jumlah_paket_dipilih').val()) || 1;
-                const tenorSelect = $('#tenor_pinjaman');
 
-                if (paketSelect.val() && tenorSelect.val()) {
-                    const bunga = parseFloat(paketSelect.find(':selected').data('bunga')) || 0;
-                    const tenorBulan = parseInt(tenorSelect.find(':selected').data('bulan')) || 1;
-                    const stockAvailable = parseInt(paketSelect.find(':selected').data('stock')) || 0;
-
-                    // Business logic calculation sesuai docs/PENGAJUAN_PINJAMAN_FIX.md
-                    const nilaiPerPaket = 500000;
-                    const jumlahPinjaman = jumlahPaket * nilaiPerPaket;
-                    const cicilanPerBulan = (jumlahPinjaman * (1 + (bunga/100))) / tenorBulan;
-                    const totalPembayaran = cicilanPerBulan * tenorBulan;
-
-                    // Update display
-                    $('#display-jumlah-pinjaman').text('Rp ' + jumlahPinjaman.toLocaleString('id-ID'));
-                    $('#display-bunga').text(bunga + '%');
-                    $('#display-cicilan').text('Rp ' + Math.round(cicilanPerBulan).toLocaleString('id-ID'));
-                    $('#display-total').text('Rp ' + Math.round(totalPembayaran).toLocaleString('id-ID'));
-
-                    // Stock validation
-                    if (jumlahPaket > stockAvailable) {
-                        $('#stock-info').text('⚠️ Stock tidak mencukupi! Tersedia: ' + stockAvailable + ' paket').removeClass('text-info').addClass('text-danger');
-                        $('button[type="submit"]').prop('disabled', true);
-                    } else {
-                        $('#stock-info').text('✅ Stock mencukupi (' + stockAvailable + ' paket tersedia)').removeClass('text-danger').addClass('text-success');
-                        $('button[type="submit"]').prop('disabled', false);
-                    }
-
-                    // Update stock display
-                    const stockLimit = parseInt(paketSelect.find(':selected').data('stock-limit')) || 0;
-                    const stockTerpakai = parseInt(paketSelect.find(':selected').data('stock-terpakai')) || 0;
-                    const stockSaatIni = stockLimit - stockTerpakai; // Stock tersedia saat ini
-                    const stockTersisaSetelahPinjam = stockSaatIni - jumlahPaket;
-
-                    $('#stock-display').html(`
-                        <div class="d-flex justify-content-between">
-                            <span class="text-sm">Stock Saat Ini:</span>
-                            <span class="text-sm font-weight-bold">${stockSaatIni} paket</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span class="text-sm">Akan Dipinjam:</span>
-                            <span class="text-sm text-warning">${jumlahPaket} paket</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span class="text-sm">Stock Tersisa:</span>
-                            <span class="text-sm font-weight-bold ${stockTersisaSetelahPinjam >= 0 ? 'text-success' : 'text-danger'}">${Math.max(0, stockTersisaSetelahPinjam)} paket</span>
-                        </div>
-                    `);
-                }
-            }
-
-            // Event listeners
-            $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', calculateLoan);
-
-            // Initial calculation
-            calculateLoan();
-
-            // Form validation
-            $('#pengajuan-form').on('submit', function(e) {
-                const stockAvailable = parseInt($('#paket_pinjaman_id').find(':selected').data('stock')) || 0;
-                const jumlahPaket = parseInt($('#jumlah_paket_dipilih').val()) || 1;
-
-                if (jumlahPaket > stockAvailable) {
-                    e.preventDefault();
-                    Swal.fire({
-                        title: 'Stock Tidak Mencukupi!',
-                        text: `Stock tersedia: ${stockAvailable} paket, Anda meminta: ${jumlahPaket} paket`,
-                        icon: 'error',
-                        confirmButtonColor: '#d33'
-                    });
-                    return false;
-                }
-            });
-        });
-    </script>
-@endpush

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class ApprovalHistory
- * 
+ *
  * @property int $id
  * @property int $pengajuan_pinjaman_id
  * @property string $level_approval
@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property Carbon $updated_at
  * @property string|null $user_create
  * @property string|null $user_update
- * 
+ *
  * @property PengajuanPinjaman $pengajuan_pinjaman
  *
  * @package App\Models
@@ -43,9 +43,12 @@ class ApprovalHistory extends Model
 
 	protected $fillable = [
 		'pengajuan_pinjaman_id',
+		'status_sebelum',
+		'status_sesudah',
 		'level_approval',
 		'approver_name',
 		'approver_jabatan',
+		'approved_by',
 		'status_approval',
 		'catatan',
 		'tanggal_approval',
@@ -58,5 +61,10 @@ class ApprovalHistory extends Model
 	public function pengajuan_pinjaman()
 	{
 		return $this->belongsTo(PengajuanPinjaman::class);
+	}
+
+	public function user()
+	{
+		return $this->belongsTo(User::class, 'approved_by', 'username');
 	}
 }

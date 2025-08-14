@@ -96,9 +96,19 @@ class PengajuanPinjaman extends Model
 		'user_update'
 	];
 
+	public function anggota()
+	{
+		return $this->belongsTo(Anggotum::class, 'anggota_id');
+	}
+
 	public function anggotum()
 	{
 		return $this->belongsTo(Anggotum::class, 'anggota_id');
+	}
+
+	public function paketPinjaman()
+	{
+		return $this->belongsTo(MasterPaketPinjaman::class, 'paket_pinjaman_id');
 	}
 
 	public function master_paket_pinjaman()
@@ -106,9 +116,14 @@ class PengajuanPinjaman extends Model
 		return $this->belongsTo(MasterPaketPinjaman::class, 'paket_pinjaman_id');
 	}
 
+	public function periodePencairan()
+	{
+		return $this->belongsTo(PeriodePencairan::class, 'periode_pencairan_id');
+	}
+
 	public function periode_pencairan()
 	{
-		return $this->belongsTo(PeriodePencairan::class);
+		return $this->belongsTo(PeriodePencairan::class, 'periode_pencairan_id');
 	}
 
 	public function pengajuan_pinjaman()

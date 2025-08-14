@@ -195,52 +195,124 @@
             </div>
         </div>
     </div>
+
 @endsection
 
 @push('js')
     <script>
-        // Real-time calculation when form values change
-        function updateCalculation() {
-            const paketSelect = document.getElementById('paket_pinjaman_id');
-            const jumlahPaket = document.getElementById('jumlah_paket_dipilih').value;
-            const tenorSelect = document.getElementById('tenor_pinjaman');
+        $(document).ready(function() {
+            // Real-time calculation when form values change
+            function updateCalculation() {
+                const paketSelect = $('#paket_pinjaman_id');
+                const jumlahPaket = parseInt($('#jumlah_paket_dipilih').val()) || 1;
+                const tenorSelect = $('#tenor_pinjaman');
 
-            if (paketSelect.value && jumlahPaket && tenorSelect.value) {
-                const selectedPaket = paketSelect.options[paketSelect.selectedIndex];
-                const selectedTenor = tenorSelect.options[tenorSelect.selectedIndex];
-                const bunga = parseFloat(selectedPaket.dataset.bunga);
-                const stock = parseInt(selectedPaket.dataset.stock);
-                const tenor = parseInt(selectedTenor.dataset.bulan);
+                if (paketSelect.val() && tenorSelect.val()) {
+                    const selectedPaket = paketSelect.find(':selected');
+                    const selectedTenor = tenorSelect.find(':selected');
+                    const bunga = parseFloat(selectedPaket.data('bunga')) || 0;
+                    const stock = parseInt(selectedPaket.data('stock')) || 0;
+                    const tenor = parseInt(selectedTenor.data('bulan')) || 1;
 
-                const nilaiPerPaket = 500000;
-                const jumlahPinjaman = parseInt(jumlahPaket) * nilaiPerPaket;
-                const cicilanPerBulan = (jumlahPinjaman * (1 + (bunga/100))) / tenor;
-                const totalPembayaran = cicilanPerBulan * tenor;
+                    const nilaiPerPaket = 500000;
+                    const jumlahPinjaman = jumlahPaket * nilaiPerPaket;
+                    const cicilanPerBulan = (jumlahPinjaman * (1 + (bunga/100))) / tenor;
+                    const totalPembayaran = cicilanPerBulan * tenor;
 
-                // Update display
-                document.getElementById('display-jumlah-pinjaman').textContent =
-                    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(jumlahPinjaman);
-                document.getElementById('display-bunga').textContent = bunga + '%';
-                document.getElementById('display-cicilan').textContent =
-                    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(cicilanPerBulan);
-                document.getElementById('display-total').textContent =
-                    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalPembayaran);
-                document.getElementById('display-stock').textContent = stock + ' paket';
+                    // Update display
+                    $('#display-jumlah-pinjaman').text(formatCurrency(jumlahPinjaman));
+                    $('#display-bunga').text(bunga + '%');
+                    $('#display-cicilan').text(formatCurrency(Math.round(cicilanPerBulan)));
+                    $('#display-total').text(formatCurrency(Math.round(totalPembayaran)));
 
-                // Validate stock
-                if (parseInt(jumlahPaket) > stock) {
-                    document.getElementById('display-stock').innerHTML =
-                        '<span class="text-danger">' + stock + ' paket (Tidak mencukupi!)</span>';
+                    // Validate stock
+                    if (jumlahPaket > stock) {
+                        $('#display-stock').html('<span class="text-danger">' + stock + ' paket (Tidak mencukupi!)</span>');
+                        $('button[type="submit"]').prop('disabled', true);
+                    } else {
+                        $('#display-stock').text(stock + ' paket');
+                        $('button[type="submit"]').prop('disabled', false);
+                    }
+                } else {
+                    // Reset display
+                    $('#display-jumlah-pinjaman').text('{{ $format->CurrencyFormat($pengajuan->jumlah_pinjaman) }}');
+                    $('#display-bunga').text('{{ $pengajuan->bunga_per_bulan }}%');
+                    $('#display-cicilan').text('{{ $format->CurrencyFormat($pengajuan->cicilan_per_bulan) }}');
+                    $('#display-total').text('{{ $format->CurrencyFormat($pengajuan->total_pembayaran) }}');
+                    $('#display-stock').text('-');
                 }
             }
-        }
 
-        // Attach event listeners
-        document.getElementById('paket_pinjaman_id').addEventListener('change', updateCalculation);
-        document.getElementById('jumlah_paket_dipilih').addEventListener('input', updateCalculation);
-        document.getElementById('tenor_pinjaman').addEventListener('change', updateCalculation);
+            // Function to format currency
+            function formatCurrency(amount) {
+                return new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0
+                }).format(amount);
+            }
 
-        // Initial calculation
-        updateCalculation();
+            // Character counter for tujuan pinjaman
+            function updateCharacterCounter() {
+                const textarea = $('textarea[name="tujuan_pinjaman"]');
+                const maxLength = 500;
+                const currentLength = textarea.val().length;
+                const remaining = maxLength - currentLength;
+
+                let counterHtml = `<small class="text-muted">${currentLength}/${maxLength} karakter`;
+                if (remaining < 50) {
+                    counterHtml = `<small class="text-warning">${currentLength}/${maxLength} karakter (sisa: ${remaining})`;
+                }
+                if (remaining <= 0) {
+                    counterHtml = `<small class="text-danger">${currentLength}/${maxLength} karakter (melebihi batas!)`;
+                }
+                counterHtml += '</small>';
+
+                // Remove existing counter and add new one
+                textarea.next('small').remove();
+                textarea.after(counterHtml);
+            }
+
+            // Event listeners
+            $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', updateCalculation);
+            $('textarea[name="tujuan_pinjaman"]').on('input', updateCharacterCounter);
+
+            // Initial calculation and character counter
+            updateCalculation();
+            updateCharacterCounter();
+
+            // Form validation
+            $('#pengajuan-form').on('submit', function(e) {
+                const stockAvailable = parseInt($('#paket_pinjaman_id').find(':selected').data('stock')) || 0;
+                const jumlahPaket = parseInt($('#jumlah_paket_dipilih').val()) || 1;
+
+                if (jumlahPaket > stockAvailable) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'Stock Tidak Mencukupi!',
+                        text: `Stock tersedia: ${stockAvailable} paket, Anda meminta: ${jumlahPaket} paket`,
+                        icon: 'error',
+                        confirmButtonColor: '#d33'
+                    });
+                    return false;
+                }
+
+                // Additional validation
+                if (jumlahPaket < 1 || jumlahPaket > 40) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'Validasi Error',
+                        text: 'Jumlah paket harus antara 1-40 paket!',
+                        icon: 'error',
+                        confirmButtonColor: '#d33'
+                    });
+                    return false;
+                }
+            });
+
+            console.log('PengajuanPinjaman Edit Form JavaScript initialized successfully');
+        });
     </script>
 @endpush
+
+

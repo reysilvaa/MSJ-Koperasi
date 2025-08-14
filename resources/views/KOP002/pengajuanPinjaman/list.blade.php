@@ -131,7 +131,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($pengajuan_list as $index => $pengajuan)
+                                            @foreach($list as $index => $pengajuan)
                                                 <tr>
                                                     <td class="text-sm font-weight-normal">
                                                         <div class="btn-group">
@@ -167,10 +167,16 @@
                                                             @endif
                                                         </div>
                                                     </td>
-                                                    <td>{{ $index + 1 }}</td>
+                                                    <td>{{ $list->firstItem() + $index }}</td>
                                                     <td class="text-sm font-weight-normal">{{ $pengajuan->nomor_pengajuan }}</td>
-                                                    <td class="text-sm font-weight-normal">{{ $pengajuan->nama_lengkap }} ({{ $pengajuan->nomor_anggota }})</td>
-                                                    <td class="text-sm font-weight-normal">{{ $pengajuan->nama_paket }} ({{ $pengajuan->jumlah_paket_dipilih ?? 1 }} paket)</td>
+                                                    <td class="text-sm font-weight-normal">
+                                                        {{ $pengajuan->anggota->nama_lengkap ?? 'N/A' }}
+                                                        ({{ $pengajuan->anggota->nomor_anggota ?? 'N/A' }})
+                                                    </td>
+                                                    <td class="text-sm font-weight-normal">
+                                                        {{ $pengajuan->paketPinjaman->periode ?? 'N/A' }}
+                                                        ({{ $pengajuan->jumlah_paket_dipilih ?? 1 }} paket)
+                                                    </td>
                                                     <td class="text-sm font-weight-normal">Rp {{ number_format($pengajuan->jumlah_pinjaman, 0, ',', '.') }}</td>
                                                     <td class="text-sm font-weight-normal">{{ $pengajuan->tenor_pinjaman }}</td>
                                                     <td class="text-sm font-weight-normal">
@@ -195,6 +201,12 @@
                                     </table>
                                 </div>
                             </div>
+                            {{-- Pagination --}}
+                            <div class="row px-4 py-2">
+                                <div class="col-lg">
+                                    {{ $list->links() }}
+                                </div>
+                            </div>
                             <div class="row px-4 py-2">
                                 <div class="col-lg">
                                     <div class="nav-wrapper">
@@ -208,63 +220,25 @@
             </div>
         </div>
     </div>
+
+    {{-- Check flag js on dmenu --}}
+    @if ($jsmenu == '1')
+        @if (view()->exists("js.{$dmenu}"))
+            @push('addjs')
+                {{-- file js in folder (resources/views/js) --}}
+                @include('js.' . $dmenu)
+            @endpush
+        @else
+            @push('addjs')
+                <script>
+                    Swal.fire({
+                        title: 'JS Not Found!!',
+                        text: 'Please Create File JS',
+                        icon: 'error',
+                        confirmButtonColor: '#028284'
+                    });
+                </script>
+            @endpush
+        @endif
+    @endif
 @endsection
-
-@push('js')
-    <script>
-        $(document).ready(function() {
-            // Initialize DataTable
-            $('#pengajuan-table').DataTable({
-                "language": {
-                    "search": "Cari :",
-                    "lengthMenu": "Tampilkan _MENU_ baris",
-                    "zeroRecords": "Tidak ada pengajuan",
-                    "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ pengajuan",
-                    "infoEmpty": "Tidak ada data",
-                    "infoFiltered": "(difilter dari _MAX_ total pengajuan)"
-                },
-                "pageLength": 10,
-                "responsive": true,
-                "order": [[5, "desc"]], // Sort by tanggal
-                "columnDefs": [
-                    { "orderable": false, "targets": 6 } // Disable sorting on Action column
-                ]
-            });
-        });
-
-        // Delete confirmation
-        function confirmDelete(id) {
-            Swal.fire({
-                title: 'Hapus Pengajuan?',
-                text: 'Data yang dihapus tidak dapat dikembalikan!',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Hapus!',
-                cancelButtonText: 'Batal',
-                confirmButtonColor: '#d33'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Create form and submit
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = `{{ url($url_menu) }}/${id}`;
-
-                    const csrfToken = document.createElement('input');
-                    csrfToken.type = 'hidden';
-                    csrfToken.name = '_token';
-                    csrfToken.value = '{{ csrf_token() }}';
-
-                    const methodField = document.createElement('input');
-                    methodField.type = 'hidden';
-                    methodField.name = '_method';
-                    methodField.value = 'DELETE';
-
-                    form.appendChild(csrfToken);
-                    form.appendChild(methodField);
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-        }
-    </script>
-@endpush

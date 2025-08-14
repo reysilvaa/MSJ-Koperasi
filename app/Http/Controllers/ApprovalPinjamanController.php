@@ -7,6 +7,9 @@ use App\Helpers\Function_Helper;
 use App\Models\PengajuanPinjaman;
 use App\Models\ApprovalHistory;
 use App\Models\Pinjaman;
+use App\Models\Anggotum;
+use App\Models\MasterPaketPinjaman;
+use App\Models\PeriodePencairan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -15,51 +18,98 @@ use Illuminate\Support\Facades\Validator;
 class ApprovalPinjamanController extends Controller
 {
     /**
-     * Display a listing of the resource - KOP202
+     * Display a listing of the resource - KOP202/list
      */
     public function index($data)
     {
-        // function helper
+        // Export handling
+        if (request()->has('export') || request()->has('pdf')) {
+            $exportType = request()->input('export');
+            return $this->exportData($data['dmenu'], $exportType, request());
+        }
+
+        // Function helper
         $syslog = new Function_Helper;
         $data['format'] = new Format_Helper;
+
+        // Get table structure data
+        $data['table_header'] = DB::table('sys_table')
+            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'list' => '1'])
+            ->orderBy('urut')
+            ->get();
+
+        $data['table_primary'] = DB::table('sys_table')
+            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'primary' => '1'])
+            ->orderBy('urut')
+            ->get();
 
         // Get user role for filtering
         $user_role = $data['user_login']->idroles;
 
-        // Filter pengajuan based on role and status
-        $query = DB::table('pengajuan_pinjaman as pp')
-            ->leftJoin('anggota as a', 'pp.anggota_id', '=', 'a.id')
-            ->leftJoin('master_paket_pinjaman as mpp', 'pp.paket_pinjaman_id', '=', 'mpp.id')
-            ->select(
-                'pp.*',
-                'a.nomor_anggota',
-                'a.nama_lengkap'
-            )
-            ->where('pp.isactive', '1');
+        // Filter pengajuan based on role and status using Eloquent
+        $query = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
+            ->where('isactive', '1');
 
         // Role-based filtering sesuai activity diagram
         switch ($user_role) {
             case 'akredt': // Admin Kredit
-                $query->whereIn('pp.status_pengajuan', ['diajukan', 'review_admin']);
+                $query->whereIn('status_pengajuan', ['diajukan', 'review_admin']);
                 break;
             case 'kadmin': // Ketua Admin - review panitia
-                $query->whereIn('pp.status_pengajuan', ['review_admin', 'review_panitia']);
+                $query->whereIn('status_pengajuan', ['review_admin', 'review_panitia']);
                 break;
             case 'ketuum': // Ketua Umum - final approval
-                $query->whereIn('pp.status_pengajuan', ['review_panitia', 'review_ketua']);
+                $query->whereIn('status_pengajuan', ['review_panitia', 'review_ketua']);
                 break;
             default:
-                $query->whereIn('pp.status_pengajuan', ['diajukan', 'review_admin', 'review_panitia', 'review_ketua']);
+                $query->whereIn('status_pengajuan', ['diajukan', 'review_admin', 'review_panitia', 'review_ketua']);
         }
 
-        $data['pengajuan_list'] = $query->orderBy('pp.created_at', 'desc')->get();
+        // Search functionality
+        $search = request('search');
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('nomor_pengajuan', 'like', "%$search%")
+                  ->orWhereHas('anggota', function($q) use ($search) {
+                      $q->where('nama_lengkap', 'like', "%$search%")
+                        ->orWhere('nomor_anggota', 'like', "%$search%");
+                  });
+            });
+        }
+
+        // Check authorization rules
+        if ($data['authorize']->rules == '1') {
+            $roles = $data['users_rules'];
+            $query->where(function ($q) use ($roles) {
+                foreach ($roles as $role) {
+                    $q->orWhereRaw("FIND_IN_SET(?, REPLACE(rules, ' ', ''))", [$role]);
+                }
+            });
+        }
+
+        $collectionData = $query->orderBy('created_at', 'desc')->get();
+
+        // Pagination
+        $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+        $perPage = 10;
+        $currentItems = $collectionData->slice(($currentPage - 1) * $perPage, $perPage)->all();
+        $data['list'] = new \Illuminate\Pagination\LengthAwarePaginator(
+            $currentItems,
+            $collectionData->count(),
+            $perPage,
+            $currentPage,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
 
         // Get statistics
         $data['stats'] = [
-            'pending_review' => $data['pengajuan_list']->whereIn('status_pengajuan', ['diajukan', 'review_admin', 'review_panitia'])->count(),
-            'need_final_approval' => $data['pengajuan_list']->where('status_pengajuan', 'review_ketua')->count(),
-            'total_amount' => $data['pengajuan_list']->sum('jumlah_pinjaman'),
+            'pending_review' => $collectionData->whereIn('status_pengajuan', ['diajukan', 'review_admin', 'review_panitia'])->count(),
+            'need_final_approval' => $collectionData->where('status_pengajuan', 'review_ketua')->count(),
+            'total_amount' => $collectionData->sum('jumlah_pinjaman'),
         ];
+
+        // Log access
+        $syslog->log_insert('R', $data['dmenu'], 'Approval Pinjaman List Accessed', '1');
 
         return view('KOP002.approvalPinjaman.list', $data);
     }
@@ -69,9 +119,20 @@ class ApprovalPinjamanController extends Controller
      */
     public function show($data)
     {
-        // function helper
+        // Function helper
         $syslog = new Function_Helper;
         $data['format'] = new Format_Helper;
+
+        // Get table structure data
+        $data['table_header'] = DB::table('sys_table')
+            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu']])
+            ->orderBy('urut')
+            ->get();
+
+        $data['table_primary'] = DB::table('sys_table')
+            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'primary' => '1'])
+            ->orderBy('urut')
+            ->get();
 
         // Decrypt ID
         try {
@@ -82,77 +143,9 @@ class ApprovalPinjamanController extends Controller
             return redirect($data['url_menu']);
         }
 
-        // Get pengajuan detail
-        $data['pengajuan'] = DB::table('pengajuan_pinjaman as pp')
-            ->leftJoin('anggota as a', 'pp.anggota_id', '=', 'a.id')
-            ->leftJoin('master_paket_pinjaman as mpp', 'pp.paket_pinjaman_id', '=', 'mpp.id')
-            ->leftJoin('periode_pencairan as pc', 'pp.periode_pencairan_id', '=', 'pc.id')
-            ->select(
-                'pp.*',
-                'a.nomor_anggota',
-                'a.nama_lengkap',
-                'a.email',
-                'a.no_telepon',
-                'a.alamat',
-                'pc.nama_periode'
-            )
-            ->where('pp.id', $id)
-            ->first();
-
-        if (!$data['pengajuan']) {
-            Session::flash('message', 'Data pengajuan tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
-        }
-
-        // Get approval history
-        $data['approval_history'] = DB::table('approval_history as ah')
-            ->leftJoin('users as u', 'ah.approved_by', '=', 'u.username')
-            ->select('ah.*', 'u.firstname', 'u.lastname')
-            ->where('ah.pengajuan_pinjaman_id', $id)
-            ->orderBy('ah.created_at', 'desc')
-            ->get();
-
-        // Get member's loan history
-        $data['loan_history'] = DB::table('pinjaman as p')
-            ->leftJoin('master_paket_pinjaman as mpp', 'p.paket_pinjaman_id', '=', 'mpp.id')
-            ->select('p.*', 'mpp.nama_paket')
-            ->where('p.anggota_id', $data['pengajuan']->anggota_id)
-            ->orderBy('p.created_at', 'desc')
-            ->limit(5)
-            ->get();
-
-        return view('KOP002.approvalPinjaman.show', $data);
-    }
-
-    /**
-     * Process approval - KOP202/store
-     */
-    public function store($data)
-    {
-        // function helper
-        $syslog = new Function_Helper;
-
-        // Validation
-        $validator = Validator::make(request()->all(), [
-            'pengajuan_id' => 'required|exists:pengajuan_pinjaman,id',
-            'action' => 'required|in:approve,reject',
-            'catatan' => 'nullable|string|max:500',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $pengajuan_id = request('pengajuan_id');
-        $action = request('action');
-        $catatan = request('catatan');
-        $user_role = $data['user_login']->idroles;
-
-        // Get pengajuan
-        $pengajuan = PengajuanPinjaman::find($pengajuan_id);
+        // Get pengajuan detail using Eloquent
+        $pengajuan = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
+            ->find($id);
 
         if (!$pengajuan) {
             Session::flash('message', 'Data pengajuan tidak ditemukan!');
@@ -160,57 +153,156 @@ class ApprovalPinjamanController extends Controller
             return redirect($data['url_menu']);
         }
 
-        // Determine next status based on current status and user role
-        $next_status = $this->getNextStatus($pengajuan->status_pengajuan, $user_role, $action);
+        // Check authorization
+        if ($data['authorize']->rules == '1') {
+            $roles = $data['users_rules'];
+            $hasAccess = false;
+            foreach ($roles as $role) {
+                if (in_array($role, explode(',', str_replace(' ', '', $pengajuan->rules ?? '')))) {
+                    $hasAccess = true;
+                    break;
+                }
+            }
+            if (!$hasAccess) {
+                Session::flash('message', 'Anda tidak memiliki akses untuk data ini!');
+                Session::flash('class', 'danger');
+                return redirect($data['url_menu']);
+            }
+        }
 
-        if (!$next_status) {
-            Session::flash('message', 'Anda tidak memiliki wewenang untuk approval ini!');
-            Session::flash('class', 'warning');
+        $data['pengajuan'] = $pengajuan;
+        $data['list'] = $pengajuan; // For view compatibility
+
+        // Get approval history using Eloquent
+        $data['approval_history'] = ApprovalHistory::with('user')
+            ->where('pengajuan_pinjaman_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get member's loan history using Eloquent
+        $data['loan_history'] = Pinjaman::with('paketPinjaman')
+            ->where('anggota_id', $pengajuan->anggota_id)
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        // Log access
+        $syslog->log_insert('R', $data['dmenu'], 'Approval Pinjaman Detail Accessed: ' . $pengajuan->nomor_pengajuan, '1');
+
+        return view('KOP002.approvalPinjaman.show', $data);
+    }
+
+    /**
+     * Process approval - KOP202/update
+     */
+    public function update($data)
+    {
+        // Function helper
+        $syslog = new Function_Helper;
+        $data['format'] = new Format_Helper;
+
+        // Validate input
+        $validator = Validator::make(request()->all(), [
+            'action' => 'required|in:approve,reject',
+            'catatan' => 'required|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        // Decrypt ID
+        try {
+            $id = decrypt($data['idencrypt']);
+        } catch (\Exception $e) {
+            Session::flash('message', 'ID tidak valid!');
+            Session::flash('class', 'danger');
             return redirect($data['url_menu']);
         }
 
-        // Update pengajuan status
-        $update_result = DB::table('pengajuan_pinjaman')
-            ->where('id', $pengajuan_id)
-            ->update([
-                'status_pengajuan' => $next_status,
-                'catatan_approval' => $catatan,
-                'approved_by' => session('username'),
-                'tanggal_approval' => now(),
-                'user_update' => session('username'),
+        // Get pengajuan using Eloquent
+        $pengajuan = PengajuanPinjaman::find($id);
+
+        if (!$pengajuan) {
+            Session::flash('message', 'Data pengajuan tidak ditemukan!');
+            Session::flash('class', 'danger');
+            return redirect($data['url_menu']);
+        }
+
+        // Check authorization
+        if ($data['authorize']->edit == '0') {
+            Session::flash('message', 'Anda tidak memiliki akses untuk melakukan approval!');
+            Session::flash('class', 'danger');
+            return redirect($data['url_menu']);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $action = request('action');
+            $catatan = request('catatan');
+            $user_role = $data['user_login']->idroles;
+            $approved_by = $data['user_login']->username;
+
+            // Determine next status based on role and action
+            $status_map = [
+                'akredt' => ['approve' => 'review_admin', 'reject' => 'ditolak'],
+                'kadmin' => ['approve' => 'review_panitia', 'reject' => 'ditolak'],
+                'ketuum' => ['approve' => 'disetujui', 'reject' => 'ditolak'],
+            ];
+
+            $new_status = $status_map[$user_role][$action] ?? 'ditolak';
+
+            // Update pengajuan status
+            $pengajuan->update([
+                'status_pengajuan' => $new_status,
                 'updated_at' => now(),
             ]);
 
-        // Insert approval history
-        DB::table('approval_history')->insert([
-            'pengajuan_pinjaman_id' => $pengajuan_id,
-            'status_sebelum' => $pengajuan->status_pengajuan,
-            'status_sesudah' => $next_status,
-            'catatan' => $catatan,
-            'approved_by' => session('username'),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            // Create approval history
+            ApprovalHistory::create([
+                'pengajuan_pinjaman_id' => $id,
+                'status_sebelum' => $pengajuan->getOriginal('status_pengajuan'),
+                'status_sesudah' => $new_status,
+                'catatan' => $catatan,
+                'approved_by' => $approved_by,
+                'created_at' => now(),
+            ]);
 
-        // If final approval, create pinjaman record
-        if ($next_status === 'disetujui') {
-            $this->createPinjamanRecord($pengajuan);
-        }
+            // If final approval, create pinjaman record
+            if ($new_status === 'disetujui') {
+                Pinjaman::create([
+                    'anggota_id' => $pengajuan->anggota_id,
+                    'pengajuan_pinjaman_id' => $id,
+                    'paket_pinjaman_id' => $pengajuan->paket_pinjaman_id,
+                    'nomor_pinjaman' => $data['format']->IDFormat('KOP301'),
+                    'jumlah_pinjaman' => $pengajuan->jumlah_pinjaman,
+                    'tenor_pinjaman' => $pengajuan->tenor_pinjaman,
+                    'bunga_per_bulan' => $pengajuan->bunga_per_bulan,
+                    'cicilan_per_bulan' => $pengajuan->cicilan_per_bulan,
+                    'total_pembayaran' => $pengajuan->total_pembayaran,
+                    'tanggal_pinjaman' => now(),
+                    'status_pinjaman' => 'aktif',
+                    'isactive' => '1',
+                    'created_at' => now(),
+                ]);
+            }
 
-        // If rejected, release stock
-        if ($action === 'reject') {
-            DB::table('master_paket_pinjaman')
-                ->where('id', $pengajuan->paket_pinjaman_id)
-                ->decrement('stock_terpakai', $pengajuan->jumlah_paket_dipilih);
-        }
+            DB::commit();
 
-        if ($update_result) {
-            $syslog->log_insert('U', $data['dmenu'], 'Approval: ' . $pengajuan->nomor_pengajuan . ' - ' . $next_status, '1');
+            // Log success
+            $syslog->log_insert('U', $data['dmenu'], 'Approval Processed: ' . $pengajuan->nomor_pengajuan . ' - ' . $new_status, '1');
+
             Session::flash('message', 'Approval berhasil diproses!');
             Session::flash('class', 'success');
-        } else {
-            $syslog->log_insert('E', $data['dmenu'], 'Approval Error', '0');
-            Session::flash('message', 'Gagal memproses approval!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            // Log error
+            $syslog->log_insert('E', $data['dmenu'], 'Approval Process Error: ' . $e->getMessage(), '0');
+
+            Session::flash('message', 'Gagal memproses approval: ' . $e->getMessage());
             Session::flash('class', 'danger');
         }
 
@@ -218,7 +310,7 @@ class ApprovalPinjamanController extends Controller
     }
 
     /**
-     * Get next status based on current status and user role
+     * Helper method to get next status based on current status and user role
      */
     private function getNextStatus($current_status, $user_role, $action)
     {
@@ -242,14 +334,12 @@ class ApprovalPinjamanController extends Controller
     }
 
     /**
-     * Create pinjaman record when approved
+     * Helper method to create pinjaman record when approved
      */
-    private function createPinjamanRecord($pengajuan)
+    private function createPinjamanRecord($pengajuan, $format)
     {
-        $format = new Format_Helper;
-
-        DB::table('pinjaman')->insert([
-            'nomor_pinjaman' => $format->IDFormat('KOP203'),
+        return Pinjaman::create([
+            'nomor_pinjaman' => $format->IDFormat('KOP301'),
             'pengajuan_pinjaman_id' => $pengajuan->id,
             'anggota_id' => $pengajuan->anggota_id,
             'paket_pinjaman_id' => $pengajuan->paket_pinjaman_id,
@@ -260,9 +350,20 @@ class ApprovalPinjamanController extends Controller
             'tenor_bulan' => (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT),
             'tanggal_pencairan' => now(),
             'status_pinjaman' => 'aktif',
-            'user_create' => session('username'),
+            'isactive' => '1',
+            'user_create' => $pengajuan->user_create ?? 'system',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    /**
+     * Export data functionality following MSJ Framework standard
+     */
+    private function exportData($dmenu, $exportType, $request)
+    {
+        // Implementation for export functionality
+        // This would follow MSJ Framework export standards
+        return response()->json(['message' => 'Export functionality not implemented yet']);
     }
 }
