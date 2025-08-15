@@ -89,7 +89,7 @@ class PinjamanController extends Controller
             'total_terbayar' => $data['pinjaman_list']->sum('total_terbayar'),
         ];
 
-        return view('KOP002.pinjaman.list', $data);
+        return view($data['url'], $data);
     }
 
     /**
@@ -105,9 +105,11 @@ class PinjamanController extends Controller
         try {
             $id = decrypt($data['idencrypt']);
         } catch (\Exception $e) {
-            Session::flash('message', 'ID tidak valid!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'ID tidak valid!';
+            return view("pages.errorpages", $data);
         }
 
         // Get pinjaman detail with all relationships
@@ -130,9 +132,11 @@ class PinjamanController extends Controller
             ->first();
 
         if (!$data['pinjaman']) {
-            Session::flash('message', 'Data pinjaman tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Data pinjaman tidak ditemukan!';
+            return view("pages.errorpages", $data);
         }
 
         // Get cicilan schedule
@@ -150,7 +154,7 @@ class PinjamanController extends Controller
             'sisa_pembayaran' => $data['pinjaman']->total_angsuran - $data['cicilan_list']->where('status', 'lunas')->sum('nominal_dibayar'),
         ];
 
-        return redirect($data['url_menu'], $data);
+        return view($data['url'], $data);
     }
 
     /**
@@ -177,7 +181,7 @@ class PinjamanController extends Controller
             })
             ->get();
 
-        return redirect($data['url_menu'], $data);
+        return view($data['url'], $data);
     }
 
     /**
@@ -209,24 +213,30 @@ class PinjamanController extends Controller
             ->first();
 
         if (!$pinjaman) {
-            Session::flash('message', 'Data pinjaman tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Data pinjaman tidak ditemukan!';
+            return view("pages.errorpages", $data);
         }
 
         // Check if pinjaman is active
         if ($pinjaman->status != 'aktif') {
-            Session::flash('message', 'Hanya pinjaman dengan status aktif yang dapat dibuatkan jadwal cicilan!');
-            Session::flash('class', 'warning');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Hanya pinjaman dengan status aktif yang dapat dibuatkan jadwal cicilan!';
+            return view("pages.errorpages", $data);
         }
 
         // Check if cicilan already exists
         $existing_cicilan = DB::table('cicilan_pinjaman')->where('pinjaman_id', $pinjaman_id)->count();
         if ($existing_cicilan > 0) {
-            Session::flash('message', 'Jadwal cicilan sudah ada untuk pinjaman ini!');
-            Session::flash('class', 'warning');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Jadwal cicilan sudah ada untuk pinjaman ini!';
+            return view("pages.errorpages", $data);
         }
 
         // Generate cicilan schedule
@@ -297,9 +307,11 @@ class PinjamanController extends Controller
         try {
             $id = decrypt($data['idencrypt']);
         } catch (\Exception) {
-            Session::flash('message', 'ID tidak valid!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'ID tidak valid!';
+            return view("pages.errorpages", $data);
         }
 
         // Get pinjaman data with cicilan yang belum dibayar
@@ -320,9 +332,11 @@ class PinjamanController extends Controller
             ->first();
 
         if (!$data['pinjaman']) {
-            Session::flash('message', 'Data pinjaman tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Data pinjaman tidak ditemukan!';
+            return view("pages.errorpages", $data);
         }
 
         // Get cicilan yang belum dibayar
@@ -349,7 +363,7 @@ class PinjamanController extends Controller
             'sisa_pembayaran' => $data['pinjaman']->nominal_pinjaman - DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->where('status', 'lunas')->sum('nominal_dibayar'),
         ];
 
-        return redirect($data['url_menu'], $data);
+        return view($data['url'], $data);
     }
 
 
@@ -387,9 +401,11 @@ class PinjamanController extends Controller
         $cicilan = DB::table('cicilan_pinjaman')->where('id', $cicilan_id)->first();
 
         if (!$cicilan || $cicilan->status == 'lunas') {
-            Session::flash('message', 'Cicilan tidak ditemukan atau sudah lunas!');
-            Session::flash('class', 'danger');
-            return redirect()->back();
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Cicilan tidak ditemukan atau sudah lunas!';
+            return view("pages.errorpages", $data);
         }
 
         // Update cicilan status

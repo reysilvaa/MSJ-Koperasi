@@ -61,8 +61,8 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-control-label">Anggota <span class="text-danger">*</span></label>
-                                        @if($is_anggota_koperasi && $current_anggota)
-                                            {{-- For anggota_koperasi role, show member name directly --}}
+                                        @if($is_anggota_biasa && $current_anggota)
+                                            {{-- For anggota biasa role, show member name directly --}}
                                             <div class="form-control-static bg-light p-2 border rounded">
                                                 <strong>{{ $current_anggota->nomor_anggota }} - {{ $current_anggota->nama_lengkap }}</strong>
                                             </div>
@@ -91,9 +91,11 @@
                                             @foreach($paket_list as $paket)
                                                 <option value="{{ $paket->id }}"
                                                         data-bunga="1.0"
+                                                        @if(!isset($hide_stock_info) || !$hide_stock_info)
                                                         data-stock="{{ $paket->stock_limit - $paket->stock_terpakai }}"
                                                         data-stock-limit="{{ $paket->stock_limit }}"
                                                         data-stock-terpakai="{{ $paket->stock_terpakai }}"
+                                                        @endif
                                                         {{ $pengajuan->paket_pinjaman_id == $paket->id ? 'selected' : '' }}>
                                                     {{ $paket->periode }} (Bunga: 1% per bulan)
                                                 </option>
@@ -197,11 +199,7 @@
                             <small class="text-muted">Total Pembayaran:</small>
                             <p class="mb-2" id="display-total">{{ $format->CurrencyFormat($pengajuan->total_pembayaran) }}</p>
                         </div>
-                        <hr>
-                        <div class="info-item">
-                            <small class="text-muted">Stock Tersedia:</small>
-                            <p class="mb-0" id="display-stock">-</p>
-                        </div>
+                        {{-- Stock information hidden as per koperasi system preferences --}}
                     </div>
                 </div>
             </div>

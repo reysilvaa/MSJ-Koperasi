@@ -17,6 +17,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class PengajuanPinjamanController extends Controller
 {
+
     /**
      * Display a listing of the resource - KOP201/list
      */
@@ -94,7 +95,7 @@ class PengajuanPinjamanController extends Controller
         // Log access
         $syslog->log_insert('R', $data['dmenu'], 'Pengajuan Pinjaman List Accessed', '1');
 
-        return view('KOP002.pengajuanPinjaman.list', $data);
+        return view($data['url'], $data);
     }
 
     /**
@@ -117,12 +118,14 @@ class PengajuanPinjamanController extends Controller
             ->orderBy('urut')
             ->get();
 
-        // Check if user is anggota_koperasi and get their anggota data
+        // Check if user is anggota (regular member) and get their anggota data
         $data['current_anggota'] = null;
-        $data['is_anggota_koperasi'] = false;
+        $data['is_anggota_biasa'] = false;
+        $data['hide_stock_info'] = false;
 
-        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggota_koperasi') !== false) {
-            $data['is_anggota_koperasi'] = true;
+        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggot') !== false) {
+            $data['is_anggota_biasa'] = true;
+            $data['hide_stock_info'] = true; // Hide stock information for regular members
             $data['current_anggota'] = Anggotum::where('email', $data['user_login']->email)
                                               ->orWhere('user_create', $data['user_login']->username)
                                               ->where('status_keanggotaan', 'aktif')
@@ -152,7 +155,7 @@ class PengajuanPinjamanController extends Controller
             ->select('id', 'nama_periode')
             ->get();
 
-        return view('KOP002.pengajuanPinjaman.add', $data);
+        return view($data['url'], $data);
     }
 
     /**
@@ -167,8 +170,8 @@ class PengajuanPinjamanController extends Controller
         // Handle role-based anggota_id assignment
         $anggotaId = request('anggota_id');
 
-        // Check if user is anggota_koperasi and auto-assign anggota_id
-        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggota_koperasi') !== false) {
+        // Check if user is anggota (regular member) and auto-assign anggota_id
+        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggot') !== false) {
             // Find anggota by email or username matching
             $anggota = Anggotum::where('email', $data['user_login']->email)
                               ->orWhere('user_create', $data['user_login']->username)
@@ -181,16 +184,20 @@ class PengajuanPinjamanController extends Controller
                 // Override request with the found anggota_id
                 request()->merge(['anggota_id' => $anggotaId]);
             } else {
-                Session::flash('message', 'Data anggota Anda tidak ditemukan. Silakan hubungi admin.');
-                Session::flash('class', 'danger');
-                return redirect()->back()->withInput();
+                $data['url_menu'] = 'error';
+                $data['title_group'] = 'Error';
+                $data['title_menu'] = 'Error';
+                $data['errorpages'] = 'Data anggota Anda tidak ditemukan. Silakan hubungi admin.';
+                return view("pages.errorpages", $data);
             }
         }
 
         if (!$anggotaId) {
-            Session::flash('message', 'Anggota harus dipilih.');
-            Session::flash('class', 'danger');
-            return redirect()->back()->withInput();
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Anggota harus dipilih.';
+            return view("pages.errorpages", $data);
         }
 
         // Check if anggota already has pending application (any status that's still in process)
@@ -208,9 +215,11 @@ class PengajuanPinjamanController extends Controller
                 'review_ketua' => 'Review Ketua'
             ];
             $currentStatus = $statusText[$existingPending->status_pengajuan] ?? $existingPending->status_pengajuan;
-            Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status "' . $currentStatus . '". Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
-            Session::flash('class', 'danger');
-            return redirect()->back()->withInput();
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Anggota masih memiliki pengajuan pinjaman dengan status "' . $currentStatus . '". Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.';
+            return view("pages.errorpages", $data);
         }
 
         // Automatic eligibility check and set jenis_pengajuan
@@ -243,11 +252,11 @@ class PengajuanPinjamanController extends Controller
             request()->merge(['jenis_pengajuan' => $jenis_pengajuan]);
         }
 
-        // Validation rules sesuai business logic
+        // Validation rules - Range validation removed as per koperasi system preferences
         $validator = Validator::make(request()->all(), [
             'anggota_id' => 'required|exists:anggota,id',
             'paket_pinjaman_id' => 'required|exists:master_paket_pinjaman,id',
-            'jumlah_paket_dipilih' => 'required|integer|min:1|max:40',
+            'jumlah_paket_dipilih' => 'required|integer|min:1', // max removed for flexibility
             'tenor_pinjaman' => 'required|string|in:6 bulan,10 bulan,12 bulan',
             'tujuan_pinjaman' => 'required|string|max:500',
             'jenis_pengajuan' => 'required|in:baru,top_up',
@@ -262,9 +271,14 @@ class PengajuanPinjamanController extends Controller
 
         // Check authorization
         if ($data['authorize']->add == '0') {
-            Session::flash('message', 'Anda tidak memiliki akses untuk menambah data!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = $data['url_menu'];
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Not Authorized!';
+            //insert log
+            $syslog->log_insert('E', $data['url_menu'], 'Not Authorized!' . ' - Add -' . $data['url_menu'], '0');
+            //return error page
+            return view("pages.errorpages", $data);
         }
 
         DB::beginTransaction();
@@ -288,13 +302,9 @@ class PengajuanPinjamanController extends Controller
             $cicilan_per_bulan = $cicilan_pokok + $bunga_flat;
             $total_pembayaran = $cicilan_per_bulan * $tenor_bulan;
 
-            // Check stock availability
-            $stock_available = $paket->stock_limit - $paket->stock_terpakai;
-            if ($stock_available < $jumlah_paket) {
-                Session::flash('message', 'Stock paket tidak mencukupi! Tersedia: ' . $stock_available . ' paket');
-                Session::flash('class', 'danger');
-                return redirect()->back()->withInput();
-            }
+            // Stock validation removed as per koperasi system preferences
+            // Stock information is for display only, no blocking validation
+            // This follows the preference: "auto-approve loan applications without stock validation"
 
             // Create pengajuan using Eloquent
             $pengajuan = PengajuanPinjaman::create([
@@ -318,8 +328,10 @@ class PengajuanPinjamanController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Update stock terpakai using Eloquent
-            $paket->increment('stock_terpakai', $jumlah_paket);
+            // Update stock terpakai using Eloquent (only for non-regular members)
+            if (!$isAnggotaBiasa) {
+                $paket->increment('stock_terpakai', $jumlah_paket);
+            }
 
             DB::commit();
 
@@ -367,9 +379,11 @@ class PengajuanPinjamanController extends Controller
         try {
             $id = decrypt($data['idencrypt']);
         } catch (\Exception $e) {
-            Session::flash('message', 'ID tidak valid!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'ID tidak valid!';
+            return view("pages.errorpages", $data);
         }
 
         // Get pengajuan detail using Eloquent with relationships
@@ -377,9 +391,11 @@ class PengajuanPinjamanController extends Controller
             ->find($id);
 
         if (!$pengajuan) {
-            Session::flash('message', 'Data pengajuan tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Data pengajuan tidak ditemukan!';
+            return view("pages.errorpages", $data);
         }
 
         // Check authorization
@@ -393,9 +409,14 @@ class PengajuanPinjamanController extends Controller
                 }
             }
             if (!$hasAccess) {
-                Session::flash('message', 'Anda tidak memiliki akses untuk data ini!');
-                Session::flash('class', 'danger');
-                return redirect($data['url_menu']);
+                $data['url_menu'] = $data['url_menu'];
+                $data['title_group'] = 'Error';
+                $data['title_menu'] = 'Error';
+                $data['errorpages'] = 'Not Authorized!';
+                //insert log
+                $syslog->log_insert('E', $data['url_menu'], 'Not Authorized!' . ' - Show -' . $data['url_menu'], '0');
+                //return error page
+                return view("pages.errorpages", $data);
             }
         }
 
@@ -440,7 +461,7 @@ class PengajuanPinjamanController extends Controller
         // Log access
         $syslog->log_insert('R', $data['dmenu'], 'Pengajuan Pinjaman Detail Accessed: ID ' . $pengajuan->id, '1');
 
-        return view('KOP002.pengajuanPinjaman.show', $data);
+        return view($data['url'], $data);
     }
 
     /**
@@ -467,42 +488,55 @@ class PengajuanPinjamanController extends Controller
         try {
             $id = decrypt($data['idencrypt']);
         } catch (\Exception $e) {
-            Session::flash('message', 'ID tidak valid!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'ID tidak valid!';
+            return view("pages.errorpages", $data);
         }
 
         // Get pengajuan data using Eloquent
         $pengajuan = PengajuanPinjaman::find($id);
 
         if (!$pengajuan) {
-            Session::flash('message', 'Data pengajuan tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Data pengajuan tidak ditemukan!';
+            return view("pages.errorpages", $data);
         }
 
         // Check authorization
         if ($data['authorize']->edit == '0') {
-            Session::flash('message', 'Anda tidak memiliki akses untuk edit data!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = $data['url_menu'];
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Not Authorized!';
+            //insert log
+            $syslog->log_insert('E', $data['url_menu'], 'Not Authorized!' . ' - Edit -' . $data['url_menu'], '0');
+            //return error page
+            return view("pages.errorpages", $data);
         }
 
         // Check if editable (only draft and diajukan status)
         if (!in_array($pengajuan->status_pengajuan, ['draft', 'diajukan'])) {
-            Session::flash('message', 'Pengajuan tidak dapat diedit pada status ini!');
-            Session::flash('class', 'warning');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Pengajuan tidak dapat diedit pada status ini!';
+            return view("pages.errorpages", $data);
         }
 
         $data['pengajuan'] = $pengajuan;
 
-        // Check if user is anggota_koperasi and get their anggota data
+        // Check if user is anggota (regular member) and get their anggota data
         $data['current_anggota'] = null;
-        $data['is_anggota_koperasi'] = false;
+        $data['is_anggota_biasa'] = false;
+        $data['hide_stock_info'] = false;
 
-        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggota_koperasi') !== false) {
-            $data['is_anggota_koperasi'] = true;
+        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggot') !== false) {
+            $data['is_anggota_biasa'] = true;
+            $data['hide_stock_info'] = true; // Hide stock information for regular members
             $data['current_anggota'] = Anggotum::where('email', $data['user_login']->email)
                                               ->orWhere('user_create', $data['user_login']->username)
                                               ->where('status_keanggotaan', 'aktif')
@@ -521,7 +555,6 @@ class PengajuanPinjamanController extends Controller
             ->select('id', 'periode', 'stock_limit', 'stock_terpakai')
             ->get();
 
-        // Static tenor options since we removed master_tenor table
         $data['tenor_list'] = collect([
             (object) ['id' => '6 bulan', 'nama_tenor' => '6 bulan', 'tenor_bulan' => 6],
             (object) ['id' => '10 bulan', 'nama_tenor' => '10 bulan', 'tenor_bulan' => 10],
@@ -533,7 +566,7 @@ class PengajuanPinjamanController extends Controller
             ->select('id', 'nama_periode')
             ->get();
 
-        return view('KOP002.pengajuanPinjaman.edit', $data);
+        return view($data['url'], $data);
     }
 
     /**
@@ -548,8 +581,8 @@ class PengajuanPinjamanController extends Controller
         // Handle role-based anggota_id assignment
         $anggotaId = request('anggota_id');
 
-        // Check if user is anggota_koperasi and auto-assign anggota_id
-        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggota_koperasi') !== false) {
+        // Check if user is anggota (regular member) and auto-assign anggota_id
+        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggot') !== false) {
             // Find anggota by email or username matching
             $anggota = Anggotum::where('email', $data['user_login']->email)
                               ->orWhere('user_create', $data['user_login']->username)
@@ -562,25 +595,31 @@ class PengajuanPinjamanController extends Controller
                 // Override request with the found anggota_id
                 request()->merge(['anggota_id' => $anggotaId]);
             } else {
-                Session::flash('message', 'Data anggota Anda tidak ditemukan. Silakan hubungi admin.');
-                Session::flash('class', 'danger');
-                return redirect()->back()->withInput();
+                $data['url_menu'] = 'error';
+                $data['title_group'] = 'Error';
+                $data['title_menu'] = 'Error';
+                $data['errorpages'] = 'Data anggota Anda tidak ditemukan. Silakan hubungi admin.';
+                return view("pages.errorpages", $data);
             }
         }
 
         if (!$anggotaId) {
-            Session::flash('message', 'Anggota harus dipilih.');
-            Session::flash('class', 'danger');
-            return redirect()->back()->withInput();
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Anggota harus dipilih.';
+            return view("pages.errorpages", $data);
         }
 
         // Decrypt ID first to get current pengajuan
         try {
             $id = decrypt($data['idencrypt']);
         } catch (\Exception $e) {
-            Session::flash('message', 'ID tidak valid!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'ID tidak valid!';
+            return view("pages.errorpages", $data);
         }
 
         // Check if anggota has other pending applications (excluding current one)
@@ -599,9 +638,11 @@ class PengajuanPinjamanController extends Controller
                 'review_ketua' => 'Review Ketua'
             ];
             $currentStatus = $statusText[$existingPending->status_pengajuan] ?? $existingPending->status_pengajuan;
-            Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman lain dengan status "' . $currentStatus . '". Tidak dapat mengupdate pengajuan ini selama masih ada pengajuan dalam proses persetujuan.');
-            Session::flash('class', 'danger');
-            return redirect()->back()->withInput();
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Anggota masih memiliki pengajuan pinjaman lain dengan status "' . $currentStatus . '". Tidak dapat mengupdate pengajuan ini selama masih ada pengajuan dalam proses persetujuan.';
+            return view("pages.errorpages", $data);
         }
 
         // Automatic eligibility check and set jenis_pengajuan
@@ -634,11 +675,11 @@ class PengajuanPinjamanController extends Controller
             request()->merge(['jenis_pengajuan' => $jenis_pengajuan]);
         }
 
-        // Validation rules
+        // Validation rules - Range validation removed as per koperasi system preferences
         $validator = Validator::make(request()->all(), [
             'anggota_id' => 'required|exists:anggota,id',
             'paket_pinjaman_id' => 'required|exists:master_paket_pinjaman,id',
-            'jumlah_paket_dipilih' => 'required|integer|min:1|max:40',
+            'jumlah_paket_dipilih' => 'required|integer|min:1', // max removed for flexibility
             'tenor_pinjaman' => 'required|string|in:6 bulan,10 bulan,12 bulan',
             'tujuan_pinjaman' => 'required|string|max:500',
             'jenis_pengajuan' => 'required|in:baru,top_up',
@@ -653,9 +694,14 @@ class PengajuanPinjamanController extends Controller
 
         // Check authorization
         if ($data['authorize']->edit == '0') {
-            Session::flash('message', 'Anda tidak memiliki akses untuk edit data!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = $data['url_menu'];
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Not Authorized!';
+            //insert log
+            $syslog->log_insert('E', $data['url_menu'], 'Not Authorized!' . ' - Edit -' . $data['url_menu'], '0');
+            //return error page
+            return view("pages.errorpages", $data);
         }
 
         DB::beginTransaction();
@@ -665,16 +711,20 @@ class PengajuanPinjamanController extends Controller
             $pengajuan = PengajuanPinjaman::find($id);
 
             if (!$pengajuan) {
-                Session::flash('message', 'Data pengajuan tidak ditemukan!');
-                Session::flash('class', 'danger');
-                return redirect($data['url_menu']);
+                $data['url_menu'] = 'error';
+                $data['title_group'] = 'Error';
+                $data['title_menu'] = 'Error';
+                $data['errorpages'] = 'Data pengajuan tidak ditemukan!';
+                return view("pages.errorpages", $data);
             }
 
             // Check if editable
             if (!in_array($pengajuan->status_pengajuan, ['draft', 'diajukan'])) {
-                Session::flash('message', 'Pengajuan tidak dapat diedit pada status ini!');
-                Session::flash('class', 'warning');
-                return redirect($data['url_menu']);
+                $data['url_menu'] = 'error';
+                $data['title_group'] = 'Error';
+                $data['title_menu'] = 'Error';
+                $data['errorpages'] = 'Pengajuan tidak dapat diedit pada status ini!';
+                return view("pages.errorpages", $data);
             }
 
             // Get paket data for calculation
@@ -693,21 +743,13 @@ class PengajuanPinjamanController extends Controller
             $cicilan_per_bulan = $cicilan_pokok + $bunga_flat;
             $total_pembayaran = $cicilan_per_bulan * $tenor_bulan;
 
-            // Update stock if paket changed
+            // Update stock tracking (for information only, no validation)
             if ($pengajuan->paket_pinjaman_id != request('paket_pinjaman_id') || $pengajuan->jumlah_paket_dipilih != $jumlah_paket) {
-                // Restore old stock
+                // Restore old stock count
                 $old_paket = MasterPaketPinjaman::find($pengajuan->paket_pinjaman_id);
                 $old_paket->decrement('stock_terpakai', $pengajuan->jumlah_paket_dipilih);
 
-                // Check new stock availability
-                $stock_available = $paket->stock_limit - $paket->stock_terpakai;
-                if ($stock_available < $jumlah_paket) {
-                    Session::flash('message', 'Stock paket tidak mencukupi! Tersedia: ' . $stock_available . ' paket');
-                    Session::flash('class', 'danger');
-                    return redirect()->back()->withInput();
-                }
-
-                // Reserve new stock
+                // Update new stock count (no validation, just tracking)
                 $paket->increment('stock_terpakai', $jumlah_paket);
             }
 
@@ -762,16 +804,23 @@ class PengajuanPinjamanController extends Controller
         try {
             $id = decrypt($data['idencrypt']);
         } catch (\Exception $e) {
-            Session::flash('message', 'ID tidak valid!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'ID tidak valid!';
+            return view("pages.errorpages", $data);
         }
 
         // Check authorization
         if ($data['authorize']->delete == '0') {
-            Session::flash('message', 'Anda tidak memiliki akses untuk hapus data!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = $data['url_menu'];
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Not Authorized!';
+            //insert log
+            $syslog->log_insert('E', $data['url_menu'], 'Not Authorized!' . ' - Delete -' . $data['url_menu'], '0');
+            //return error page
+            return view("pages.errorpages", $data);
         }
 
         DB::beginTransaction();
@@ -781,16 +830,20 @@ class PengajuanPinjamanController extends Controller
             $pengajuan = PengajuanPinjaman::find($id);
 
             if (!$pengajuan) {
-                Session::flash('message', 'Data pengajuan tidak ditemukan!');
-                Session::flash('class', 'danger');
-                return redirect($data['url_menu']);
+                $data['url_menu'] = 'error';
+                $data['title_group'] = 'Error';
+                $data['title_menu'] = 'Error';
+                $data['errorpages'] = 'Data pengajuan tidak ditemukan!';
+                return view("pages.errorpages", $data);
             }
 
             // Check if deletable (only draft status)
             if ($pengajuan->status_pengajuan !== 'draft') {
-                Session::flash('message', 'Hanya pengajuan dengan status draft yang dapat dihapus!');
-                Session::flash('class', 'warning');
-                return redirect($data['url_menu']);
+                $data['url_menu'] = 'error';
+                $data['title_group'] = 'Error';
+                $data['title_menu'] = 'Error';
+                $data['errorpages'] = 'Hanya pengajuan dengan status draft yang dapat dihapus!';
+                return view("pages.errorpages", $data);
             }
 
             // Restore stock
@@ -832,18 +885,31 @@ class PengajuanPinjamanController extends Controller
     {
         $action = request('action');
 
+        // Check if user is regular member (anggota biasa)
+        $user = session('user');
+        $hideStockInfo = false;
+        if ($user && isset($user->idroles) && strpos($user->idroles, 'anggot') !== false) {
+            $hideStockInfo = true;
+        }
+
         switch ($action) {
             case 'get_paket_info':
                 $paket = MasterPaketPinjaman::find(request('paket_id'));
                 if ($paket) {
+                    $responseData = [
+                        'bunga_per_bulan' => 1.0, // Fixed 1% per bulan
+                    ];
+
+                    // Only include stock information for non-regular members
+                    if (!$hideStockInfo) {
+                        $responseData['stock_available'] = $paket->stock_limit - $paket->stock_terpakai;
+                        $responseData['stock_limit'] = $paket->stock_limit;
+                        $responseData['stock_terpakai'] = $paket->stock_terpakai;
+                    }
+
                     return response()->json([
                         'success' => true,
-                        'data' => [
-                            'bunga_per_bulan' => 1.0, // Fixed 1% per bulan
-                            'stock_available' => $paket->stock_limit - $paket->stock_terpakai,
-                            'stock_limit' => $paket->stock_limit,
-                            'stock_terpakai' => $paket->stock_terpakai,
-                        ]
+                        'data' => $responseData
                     ]);
                 }
                 break;

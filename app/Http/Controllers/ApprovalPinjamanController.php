@@ -105,7 +105,7 @@ class ApprovalPinjamanController extends Controller
         // Log access
         $syslog->log_insert('R', $data['dmenu'], 'Approval Pinjaman List Accessed', '1');
 
-        return view('KOP002.approvalPinjaman.list', $data);
+        return view($data['url'], $data);
     }
 
     /**
@@ -130,9 +130,11 @@ class ApprovalPinjamanController extends Controller
 
         // Check if idencrypt parameter exists
         if (!isset($data['idencrypt']) || empty($data['idencrypt'])) {
-            Session::flash('message', 'Parameter ID tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Parameter ID tidak ditemukan!';
+            return view("pages.errorpages", $data);
         }
 
         // Decrypt ID
@@ -142,9 +144,11 @@ class ApprovalPinjamanController extends Controller
             // Log the actual error for debugging
             $syslog->log_insert('E', $data['dmenu'], 'ID Decryption Error: ' . $e->getMessage() . ' - ID: ' . $data['idencrypt'], '0');
 
-            Session::flash('message', 'ID tidak valid! Silakan coba lagi atau hubungi administrator.');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'ID tidak valid! Silakan coba lagi atau hubungi administrator.';
+            return view("pages.errorpages", $data);
         }
 
         // Get pengajuan detail using Eloquent
@@ -152,9 +156,11 @@ class ApprovalPinjamanController extends Controller
             ->find($id);
 
         if (!$pengajuan) {
-            Session::flash('message', 'Data pengajuan tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Data pengajuan tidak ditemukan!';
+            return view("pages.errorpages", $data);
         }
 
         // Check authorization - Skip rules check for pengajuan_pinjaman
@@ -185,7 +191,7 @@ class ApprovalPinjamanController extends Controller
         // Log access
         $syslog->log_insert('R', $data['dmenu'], 'Approval Pinjaman Detail Accessed: ID ' . $pengajuan->id, '1');
 
-        return view('KOP002.approvalPinjaman.show', $data);
+        return view($data['url'], $data);
     }
 
 
@@ -222,32 +228,43 @@ class ApprovalPinjamanController extends Controller
                 // Log the actual error for debugging
                 $syslog->log_insert('E', $data['dmenu'], 'ID Decryption Error: ' . $e->getMessage() . ' - ID: ' . $data['idencrypt'], '0');
 
-                Session::flash('message', 'ID tidak valid! Silakan coba lagi atau hubungi administrator.');
-                Session::flash('class', 'danger');
-                return redirect($data['url_menu']);
+                $data['url_menu'] = 'error';
+                $data['title_group'] = 'Error';
+                $data['title_menu'] = 'Error';
+                $data['errorpages'] = 'ID tidak valid! Silakan coba lagi atau hubungi administrator.';
+                return view("pages.errorpages", $data);
             }
         }
 
         if (!$id) {
-            Session::flash('message', 'Parameter ID tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Parameter ID tidak ditemukan!';
+            return view("pages.errorpages", $data);
         }
 
         // Get pengajuan using Eloquent
         $pengajuan = PengajuanPinjaman::find($id);
 
         if (!$pengajuan) {
-            Session::flash('message', 'Data pengajuan tidak ditemukan!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = 'error';
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Data pengajuan tidak ditemukan!';
+            return view("pages.errorpages", $data);
         }
 
         // Check authorization
         if ($data['authorize']->edit == '0') {
-            Session::flash('message', 'Anda tidak memiliki akses untuk melakukan approval!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
+            $data['url_menu'] = $data['url_menu'];
+            $data['title_group'] = 'Error';
+            $data['title_menu'] = 'Error';
+            $data['errorpages'] = 'Not Authorized!';
+            //insert log
+            $syslog->log_insert('E', $data['url_menu'], 'Not Authorized!' . ' - Edit -' . $data['url_menu'], '0');
+            //return error page
+            return view("pages.errorpages", $data);
         }
 
         DB::beginTransaction();

@@ -64,8 +64,8 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-control-label">Anggota <span class="text-danger">*</span></label>
-                                        @if($is_anggota_koperasi && $current_anggota)
-                                            {{-- For anggota_koperasi role, show member name directly --}}
+                                        @if($is_anggota_biasa && $current_anggota)
+                                            {{-- For anggota biasa role, show member name directly --}}
                                             <div class="form-control-static bg-light p-2 border rounded">
                                                 <strong>{{ $current_anggota->nomor_anggota }} - {{ $current_anggota->nama_lengkap }}</strong>
                                             </div>
@@ -108,9 +108,11 @@
                                             @foreach($paket_list as $paket)
                                                 <option value="{{ $paket->id }}"
                                                         data-bunga="1.0"
+                                                        @if(!isset($hide_stock_info) || !$hide_stock_info)
                                                         data-stock="{{ $paket->stock_limit - $paket->stock_terpakai }}"
                                                         data-stock-limit="{{ $paket->stock_limit }}"
                                                         data-stock-terpakai="{{ $paket->stock_terpakai }}"
+                                                        @endif
                                                         {{ old('paket_pinjaman_id') == $paket->id ? 'selected' : '' }}>
                                                     {{ $paket->periode }} (1% per bulan)
                                                 </option>
@@ -220,17 +222,8 @@
                     </div>
                 </div>
 
-                {{-- Stock Information --}}
-                <div class="card mt-3">
-                    <div class="card-header pb-0">
-                        <h6>Informasi Stock</h6>
-                    </div>
-                    <div class="card-body">
-                        <div id="stock-display">
-                            <p class="text-sm text-secondary">Pilih paket untuk melihat stock tersedia</p>
-                        </div>
-                    </div>
-                </div>
+                {{-- Stock Information - Completely hidden as per koperasi system preferences --}}
+                {{-- Stock validation disabled - no stock information displayed --}}
             </div>
         </div>
     </div>
