@@ -1,454 +1,435 @@
 @extends('layouts.app', ['class' => 'g-sidenav-show bg-gray-100'])
-{{-- section content --}}
+
 @section('content')
-    @include('layouts.navbars.auth.topnav', ['title' => ''])
+    @include('layouts.navbars.auth.topnav', ['title' => $title_menu])
+
+    {{-- Header Navigation --}}
     <div class="card shadow-lg mx-4">
         <div class="card-body p-3">
             <div class="row gx-4">
-                <div class="col-lg">
+                <div class="col-lg-6">
                     <div class="nav-wrapper">
-                        {{-- button back --}}
-                        <button class="btn btn-secondary mb-0" onclick="history.back()"><i class="fas fa-circle-left me-1">
-                            </i><span class="font-weight-bold">Kembali</button>
-                        {{-- check authorize edi --}}
-                        @if ($authorize->edit == '1')
-                            {{-- button save --}}
-                            <button class="btn btn-primary mb-0" id="{{ $dmenu }}-save"
-                                onclick="event.preventDefault(); document.getElementById('{{ $dmenu }}-form').submit();"><i
-                                    class="fas fa-floppy-disk me-1"> </i><span class="font-weight-bold">Simpan</button>
-                        @endif
+                        <button class="btn btn-secondary mb-0" onclick="history.back()">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            <span class="font-weight-bold">Kembali</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-end">
+                    <h6 class="mb-0 text-dark">Pembayaran Cicilan Pinjaman</h6>
+                    <p class="text-sm mb-0 text-secondary">Kelola pembayaran cicilan anggota</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            {{-- Info Pinjaman --}}
+            <div class="col-lg-4 col-md-6">
+                <div class="card h-100">
+                    <div class="card-header pb-0 bg-gradient-primary">
+                        <div class="d-flex align-items-center">
+                            <div class="icon icon-lg icon-shape bg-white shadow text-center border-radius-xl">
+                                <i class="fas fa-file-invoice-dollar text-primary text-lg opacity-10"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="mb-0 text-white">Informasi Pinjaman</h6>
+                                <p class="text-sm mb-0 text-white opacity-8">Detail data pinjaman</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {{-- Data Pinjaman --}}
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="info-item mb-3">
+                                    <label class="text-xs text-uppercase text-secondary font-weight-bolder opacity-7">Nomor Pinjaman</label>
+                                    <h6 class="mb-0 font-weight-bold text-dark">{{ $pinjaman->nomor_pinjaman }}</h6>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="info-item mb-3">
+                                    <label class="text-xs text-uppercase text-secondary font-weight-bolder opacity-7">Anggota</label>
+                                    <h6 class="mb-0 text-dark">{{ $pinjaman->nama_lengkap }}</h6>
+                                    <span class="text-xs text-secondary">{{ $pinjaman->nomor_anggota }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="info-item mb-3">
+                                    <label class="text-xs text-uppercase text-secondary font-weight-bolder opacity-7">Nominal Pinjaman</label>
+                                    <h5 class="mb-0 font-weight-bold text-success">{{ $format->CurrencyFormat($pinjaman->nominal_pinjaman) }}</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="info-item mb-3">
+                                    <label class="text-xs text-uppercase text-secondary font-weight-bolder opacity-7">Status</label>
+                                    <br>
+                                    @php
+                                        $statusClass = match($pinjaman->status) {
+                                            'aktif' => 'bg-gradient-success',
+                                            'lunas' => 'bg-gradient-info',
+                                            'bermasalah' => 'bg-gradient-warning',
+                                            default => 'bg-gradient-secondary'
+                                        };
+                                    @endphp
+                                    <span class="badge {{ $statusClass }} px-3 py-2">
+                                        <i class="fas fa-circle me-1"></i>{{ ucfirst($pinjaman->status) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="horizontal dark">
+
+                        {{-- Summary Cicilan --}}
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <h4 class="font-weight-bolder text-info">{{ $summary['total_cicilan'] }}</h4>
+                                    <span class="text-sm text-secondary">Total Cicilan</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <h4 class="font-weight-bolder text-success">{{ $summary['cicilan_lunas'] }}</h4>
+                                    <span class="text-sm text-secondary">Sudah Lunas</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <h4 class="font-weight-bolder text-warning">{{ $summary['cicilan_pending'] }}</h4>
+                                    <span class="text-sm text-secondary">Belum Bayar</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <h5 class="font-weight-bolder text-danger">{{ $format->CurrencyFormat($summary['sisa_pembayaran']) }}</h5>
+                                    <span class="text-sm text-secondary">Sisa Bayar</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Progress Bar --}}
+                        @php
+                            $progress = $summary['total_cicilan'] > 0 ? ($summary['cicilan_lunas'] / $summary['total_cicilan']) * 100 : 0;
+                        @endphp
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-xs font-weight-bold">Progress Pembayaran</span>
+                                <span class="text-xs font-weight-bold">{{ number_format($progress, 1) }}%</span>
+                            </div>
+                            <div class="progress mt-2">
+                                <div class="progress-bar bg-gradient-success" role="progressbar"
+                                     style="width: {{ $progress }}%" aria-valuenow="{{ $progress }}"
+                                     aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="container-fluid py-4">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card">
-                    <form role="form" method="POST" action="{{ URL::to($url_menu . '/' . $idencrypt) }}"
-                        enctype="multipart/form-data" id="{{ $dmenu }}-form">
-                        @csrf
-                        @method('PUT')
-                        <div class="card-body">
-                            <p class="text-uppercase text-sm">Edit {{ $title_menu }}</p>
-                            <hr class="horizontal dark mt-0">
-                            <div class="row">
-                                {{-- retrieve table header --}}
-                                @foreach ($table_header as $header)
-                                    @php
-                                        $primary = false;
-                                        $generateid = false;
-                                        foreach ($table_primary as $p) {
-                                            $primary == false
-                                                ? ($p->field == $header->field
-                                                    ? ($primary = true)
-                                                    : ($primary = false))
-                                                : '';
-                                            $generateid == false
-                                                ? ($p->generateid == $header->field
-                                                    ? ($generateid = true)
-                                                    : ($generateid = false))
-                                                : '';
-                                        }
-                                    @endphp
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            {{-- display label alias on type field not hidden --}}
-                                            @if ($header->type != 'hidden')
-                                                <label for="example-text-input"
-                                                    class="form-control-label">{{ $header->alias }}</label>
-                                            @endif
-                                            {{-- field type char and string --}}
-                                            @if ($header->type == 'char' || $header->type == 'string')
-                                                @if ($primary)
-                                                    <br>
-                                                    <span for="example-text-input" style="margin: 10px;"
-                                                        class="form-control-label">{{ $list->{$header->field} }}</span>
-                                                @endif
-                                                <input class="form-control {{ $header->class }}"
-                                                    {{ $primary ? ' key=true type=hidden' : ' type=text' }}
-                                                    value="{{ $list ? $list->{$header->field} : old($header->field) }}"
-                                                    name="{{ $header->field }}" maxlength="{{ $header->length }}">
-                                                @if ($header->note != '')
-                                                    <p class='text-secondary text-xs pt-1 px-1'>
-                                                        {{ '*) ' . $header->note }}
-                                                    </p>
-                                                @endif
-                                                {{-- field type email --}}
-                                            @elseif ($header->type == 'email')
-                                                @if ($primary)
-                                                    <br>
-                                                    <span for="example-text-input" style="margin: 10px;"
-                                                        class="form-control-label">{{ $list->{$header->field} }}</span>
-                                                @endif
-                                                <input class="form-control {{ $header->class }}"
-                                                    {{ $primary ? ' key=true type=hidden' : ' type=email' }}
-                                                    value="{{ $list ? $list->{$header->field} : old($header->field) }}"
-                                                    name="{{ $header->field }}" maxlength="{{ $header->length }}">
-                                                @if ($header->note != '')
-                                                    <p class='text-secondary text-xs pt-1 px-1'>
-                                                        {{ '*) ' . $header->note }}
-                                                    </p>
-                                                @endif
-                                                {{-- field type text --}}
-                                            @elseif ($header->type == 'text')
-                                                <textarea class="form-control" name="{{ $header->field }}" maxlength="{{ $header->length }}">{{ $list ? $list->{$header->field} : old($header->field) }}</textarea>
-                                                @if ($header->note != '')
-                                                    <p class='text-secondary text-xs pt-1 px-1'>
-                                                        {{ '*) ' . $header->note }}
-                                                    </p>
-                                                @endif
-                                                {{-- field type number --}}
-                                            @elseif ($header->type == 'number')
-                                                @if ($primary)
-                                                    <br>
-                                                    <span for="example-text-input" style="margin: 10px;"
-                                                        class="form-control-label">{{ $list->{$header->field} }}</span>
-                                                @endif
-                                                <input class="form-control {{ $header->class }}"
-                                                    {{ $primary ? ' key=true type=hidden' : ' type=number' }}
-                                                    value="{{ $list ? $list->{$header->field} : old($header->field) }}"
-                                                    name="{{ $header->field }}" max="{{ $header->length }}">
-                                                @if ($header->note != '')
-                                                    <p class='text-secondary text-xs pt-1 px-1'>
-                                                        {{ '*) ' . $header->note }}
-                                                    </p>
-                                                @endif
-                                                {{-- field type currency --}}
-                                            @elseif ($header->type == 'currency')
-                                                @if ($primary)
-                                                    <br>
-                                                    <span for="example-text-input" style="margin: 10px;"
-                                                        class="form-control-label">{{ $list->{$header->field} }}</span>
-                                                @endif
-                                                <input class="form-control {{ $header->class }}"
-                                                    {{ $primary ? ' key=true type=hidden' : ' type=number' }}
-                                                    value="{{ $list ? $list->{$header->field} : old($header->field) }}"
-                                                    name="{{ $header->field }}" max="{{ $header->length }}">
-                                                @if ($header->note != '')
-                                                    <p class='text-secondary text-xs pt-1 px-1'>
-                                                        {{ '*) ' . $header->note }}
-                                                    </p>
-                                                @endif
-                                                {{-- field type password --}}
-                                            @elseif ($header->type == 'password')
-                                                <div class="flex flex-col mb-2 input-group pass">
-                                                    <input class="form-control {{ $header->class }}"
-                                                        {{ $primary ? ' key=true type=hidden' : ($header->filter == '1' ? ' type=password' : ' type=hidden') }}
-                                                        value="{{ $list ? '' : $header->default }}"
-                                                        name="{{ $header->field }}" max="{{ $header->length }}">
-                                                    <span class="input-group-text" id="button-addon"
-                                                        style="border-color:#d2d6da;"><i class="fas fa-eye showpass"
-                                                            style="cursor: pointer;"></i></span>
-                                                </div>
-                                                <p class='text-primary text-xs pt-1'>Default Password :
-                                                    <b>{{ $header->default }}</b>
-                                                </p>
-                                                {{-- field type file --}}
-                                            @elseif ($header->type == 'file')
-                                                <input class="form-control {{ $header->class }}" type="file"
-                                                    id="{{ $header->field }}edit"
-                                                    value="{{ $list ? $list->{$header->field} : old($header->field) }}"
-                                                    name="{{ $header->field }}">
-                                                <p class='text-info text-xs pt-1 px-1 mb-1'>
-                                                    {{ $list ? $list->{$header->field} : old($header->field) }}
-                                                </p>
-                                                <p class='text-primary text-xs pt-3 mb-0'>Maksimal Size :
-                                                    <b>{{ $header->length }} KB</b>
-                                                </p>
-                                                @if ($header->note != '')
-                                                    <p class='text-primary text-xs pt-1'>
-                                                        {{ $header->note }}
-                                                    </p>
-                                                @else
-                                                    <p class='text-primary text-xs pt-1'>Format File :
-                                                        <b>pdf,xls,xlsx</b>
-                                                    </p>
-                                                @endif
-                                                {{-- field type date --}}
-                                            @elseif ($header->type == 'date')
-                                                @if ($primary)
-                                                    <br>
-                                                    <span for="example-text-input" style="margin: 10px;"
-                                                        class="form-control-label">{{ $list->{$header->field} }}</span>
-                                                @endif
-                                                <input class="form-control {{ $header->class }}"
-                                                    {{ $primary ? ' key=true type=hidden' : ' type=date' }}
-                                                    value="{{ $list ? $list->{$header->field} : old($header->field) }}"
-                                                    name="{{ $header->field }}">
-                                                @if ($header->note != '')
-                                                    <p class='text-secondary text-xs pt-1 px-1'>
-                                                        {{ '*) ' . $header->note }}
-                                                    </p>
-                                                @endif
-                                                {{-- field type hidden --}}
-                                            @elseif ($header->type == 'hidden')
-                                                <input class="form-control {{ $header->class }}" type="hidden"
-                                                    value="{{ $header->default }}" name="{{ $header->field }}"
-                                                    max="{{ $header->length }}">
-                                                {{-- field type search --}}
-                                            @elseif ($header->type == 'search')
-                                                <div class="flex flex-col mb-2 input-group">
-                                                    <input {{ $primary ? ' key=true type=hidden' : ' type=text' }}
-                                                        name="{{ $header->field }}"
-                                                        class="form-control {{ $header->class }}"
-                                                        value="{{ $list ? $list->{$header->field} : old($header->field) }}">
-                                                    <span class="input-group-text bg-primary text-light"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#searchModal{{ $header->field }}"
-                                                        style="border-color:#d2d6da;border-left:3px solid #d2d6da;cursor: pointer;"><i
-                                                            class="fas fa-search"></i></span>
-                                                </div>
-                                                <!-- Modal -->
-                                                <div class="modal fade" id="searchModal{{ $header->field }}"
-                                                    tabindex="-1" role="dialog" aria-labelledby="searchModalLabel"
-                                                    aria-hidden="true">
-                                                    <div class="modal-dialog modal-dialog-centered" role="document">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title" id="searchModalLabel">
-                                                                    List Data
-                                                                </h5>
-                                                                <button type="button" class="btn-close"
-                                                                    data-bs-dismiss="modal" aria-label="Close">
-                                                                    <span aria-hidden="true">&times;</span>
-                                                                </button>
-                                                            </div>
-                                                            @if ($header->query != '')
-                                                                @php
-                                                                    $table_result = DB::select($header->query);
-                                                                @endphp
-                                                            @endif
-                                                            <div class="modal-body">
-                                                                <table class="table display"
-                                                                    id="list_{{ $dmenu }}">
-                                                                    @if ($table_result)
-                                                                        <thead class="thead-light"
-                                                                            style="background-color: #00b7bd4f;">
-                                                                            <tr>
-                                                                                <th width="20px">Action</th>
-                                                                                @foreach ($table_result as $result)
-                                                                                    @php
-                                                                                        $sAsArray = array_keys(
-                                                                                            (array) $result,
-                                                                                        );
-                                                                                    @endphp
-                                                                                @endforeach
-                                                                                @foreach ($sAsArray as $modal_h)
-                                                                                    <th>{{ $modal_h }}</th>
-                                                                                @endforeach
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            @foreach ($table_result as $modal_d)
-                                                                                <tr>
-                                                                                    @foreach ($table_result as $result)
-                                                                                        @php
-                                                                                            $field = array_keys(
-                                                                                                (array) $result,
-                                                                                            );
-                                                                                        @endphp
-                                                                                    @endforeach
-                                                                                    <td width="20px"><span
-                                                                                            class="btn badge bg-primary badge-lg"
-                                                                                            onclick="select_modal('{{ $modal_d->{$field[0]} }}')"><i
-                                                                                                class="bi bi-check-circle me-1"></i>
-                                                                                            Select</span>
-                                                                                    </td>
-                                                                                    @foreach ($field as $header_field)
-                                                                                        @php
-                                                                                            $string = $header_field;
-                                                                                        @endphp
-                                                                                        <td
-                                                                                            class="text-sm font-weight-normal">
-                                                                                            {{ $modal_d->$string }}
-                                                                                        </td>
-                                                                                    @endforeach
-                                                                                </tr>
-                                                                            @endforeach
-                                                                        </tbody>
-                                                                    @endif
-                                                                </table>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                @if ($header->note != '')
-                                                    <p class='text-secondary text-xs pt-1 px-1'>
-                                                        {{ '*) ' . $header->note }}
-                                                    </p>
-                                                @endif
-                                                <script>
-                                                    function select_modal(id, name) {
-                                                        $('input[name="{{ $header->field }}"]').val(id);
-                                                        $('#searchModal{{ $header->field }}').modal('hide');
-                                                    }
-                                                </script>
-                                                {{-- field type image --}}
-                                            @elseif ($header->type == 'image')
-                                                <div class="col-sm-auto">
-                                                    <div class="position-relative">
-                                                        <div>
-                                                            <label for="file-input" style="left: -5px !important;"
-                                                                id="{{ $header->field }}edit"
-                                                                class="btn btn-xxl btn-icon-only bg-gradient-primary position-absolute bottom-0 mb-n2">
-                                                                <i class="fa fa-pen top-0" data-bs-toggle="tooltip"
-                                                                    data-bs-placement="top" title=""
-                                                                    aria-hidden="true" data-bs-original-title="Edit Image"
-                                                                    aria-label="Edit Image"></i>
-                                                                <span class="sr-only">Edit Image</span>
-                                                            </label>
-                                                            <span
-                                                                class="h-12 w-12 rounded-full overflow-hidden bg-gray-100">
-                                                                <img src="{{ asset('/storage' . '/' . $list->{$header->field}) }}"
-                                                                    id="{{ $header->field }}preview" alt="image"
-                                                                    data-bs-toggle="modal" data-bs-target="#imageModal"
-                                                                    class="w-30 border-radius-lg shadow-sm">
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <input class="form-control {{ $header->class }}" type="file"
-                                                    value="{{ $list ? $list->{$header->field} : old($header->field) }}"
-                                                    id="{{ $header->field }}" name="{{ $header->field }}"
-                                                    style="display: none;">
-                                                <p class='text-primary text-xs pt-3 mb-0'>Maksimal Size :
-                                                    <b>{{ $header->length }} KB</b>
-                                                </p>
-                                                @if ($header->note != '')
-                                                    <p class='text-primary text-xs pt-1'>
-                                                        {{ $header->note }}
-                                                    </p>
-                                                @else
-                                                    <p class='text-primary text-xs pt-1'>Format Image :
-                                                        <b>PNG,JPG,JPEG</b>
-                                                    </p>
-                                                @endif
-                                                <!-- Modal -->
-                                                <div class="modal fade" id="imageModal" tabindex="-1" role="dialog"
-                                                    aria-labelledby="imageModalLabel" aria-hidden="true">
-                                                    <div class="modal-dialog modal-dialog-centered" role="document">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title" id="imageModalLabel">Preview Image
-                                                                </h5>
-                                                                <button type="button" class="btn-close"
-                                                                    data-bs-dismiss="modal" aria-label="Close">
-                                                                    <span aria-hidden="true">&times;</span>
-                                                                </button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <img src="{{ asset('/storage' . '/' . $list->{$header->field}) }}"
-                                                                    alt="image"
-                                                                    class="w-100 border-radius-lg shadow-sm">
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <script>
-                                                    {{ $header->field }}.onchange = evt => {
-                                                        const [file] = {{ $header->field }}.files
-                                                        if (file) {
-                                                            {{ $header->field . 'preview' }}.src = URL.createObjectURL(file)
-                                                        }
-                                                    }
-                                                    $('#{{ $header->field }}edit').click(function() {
-                                                        $('input[name="{{ $header->field }}"]').click();
 
-                                                    });
-                                                </script>
-                                                {{-- field type enum --}}
-                                            @elseif ($header->type == 'enum')
-                                                @if ($primary)
-                                                    <br>
-                                                    <span for="example-text-input" style="margin: 10px;"
-                                                        class="form-control-label">{{ $list->{$header->field} }}</span>
-                                                @elseif ($generateid)
-                                                    <br>
-                                                    <span for="example-text-input" style="margin: 10px;"
-                                                        class="form-control-label">{{ $list->{$header->field} }}</span>
-                                                @endif
-                                                <select class="form-select {{ $header->class }}"
-                                                    name="{{ $header->field }}{{ Str::contains($header->class, 'select-multiple') ? '[]' : '' }}"
-                                                    {{ Str::contains($header->class, 'select-multiple') ? 'multiple' : '' }}
-                                                    {{ $primary ? ' key=true style=display:none' : ($generateid ? ' style=display:none' : '') }}>
-                                                    <option value=""></option>
-                                                    @if ($header->query != '')
-                                                        @php
-                                                            $data_query = DB::select($header->query);
-                                                        @endphp
-                                                        @if (Str::contains($header->class, 'select-multiple'))
-                                                            <?php $multiple = array_map('trim', explode(',', $list->{$header->field})); ?>
-                                                            @foreach ($data_query as $q)
-                                                                <?php $sAsArray = array_values((array) $q); ?>
-                                                                <option value="{{ $sAsArray[0] }}"
-                                                                    {{ in_array($sAsArray[0], $multiple) ? 'selected' : '' }}>
-                                                                    {{ $sAsArray[1] }}
-                                                                </option>
-                                                            @endforeach
-                                                        @else
-                                                            @foreach ($data_query as $q)
-                                                                <?php $sAsArray = array_values((array) $q); ?>
-                                                                <option value="{{ $sAsArray[0] }}"
-                                                                    {{ $sAsArray[0] == $list->{$header->field} ? 'selected' : '' }}>
-                                                                    {{ $sAsArray[1] }}
-                                                                </option>
-                                                            @endforeach
-                                                        @endif
-                                                    @endif
-                                                </select>
-                                                @if ($header->note != '')
-                                                    <p class='text-secondary text-xs pt-1 px-1'>
-                                                        {{ '*) ' . $header->note }}
-                                                    </p>
-                                                @endif
-                                                <script>
-                                                    $(this).val('{{ $list->{$header->field} }}')
-                                                </script>
-                                            @endif
-                                            @error($header->field)
-                                                <p class='text-danger text-xs pt-1'> {{ $message }} </p>
-                                            @enderror
+            {{-- Form Pembayaran Cicilan --}}
+            <div class="col-lg-8 col-md-6">
+                <div class="card h-100">
+                    <div class="card-header pb-0 bg-gradient-info">
+                        <div class="d-flex align-items-center">
+                            <div class="icon icon-lg icon-shape bg-white shadow text-center border-radius-xl">
+                                <i class="fas fa-money-bill-wave text-info text-lg opacity-10"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="mb-0 text-white">Pembayaran Cicilan</h6>
+                                <p class="text-sm mb-0 text-white opacity-8">Proses pembayaran cicilan pinjaman</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {{-- Alert Messages --}}
+                        @include('components.alert')
+
+                        @if($cicilan_pending->count() > 0)
+                            <form role="form" method="POST" action="{{ url($url_menu . '/' . $idencrypt) }}" id="pembayaran-form">
+                                @csrf
+                                @method('PUT')
+
+                                {{-- Pilih Cicilan --}}
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label class="form-control-label text-dark font-weight-bold">
+                                                <i class="fas fa-list-ol me-1"></i>Pilih Cicilan
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="form-control border px-3" name="cicilan_id" id="cicilan_id" required>
+                                                <option value="">-- Pilih Cicilan yang akan dibayar --</option>
+                                                @foreach($cicilan_pending as $cicilan)
+                                                    <option value="{{ $cicilan->id }}"
+                                                            data-nominal="{{ $cicilan->total_bayar }}"
+                                                            data-jatuh-tempo="{{ date('d/m/Y', strtotime($cicilan->tanggal_jatuh_tempo)) }}">
+                                                        Cicilan ke-{{ $cicilan->angsuran_ke }} - {{ $format->CurrencyFormat($cicilan->total_bayar) }}
+                                                        (Jatuh Tempo: {{ date('d/m/Y', strtotime($cicilan->tanggal_jatuh_tempo)) }})
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>Pilih cicilan yang akan dibayar
+                                            </small>
                                         </div>
                                     </div>
-                                @endforeach
-                            </div>
-                            <hr class="horizontal dark">
-                        </div>
-                        <div class="card-footer align-items-center pt-0 pb-2">
+                                </div>
 
-                        </div>
-                    </form>
+                                {{-- Nominal dan Tanggal --}}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-control-label text-dark font-weight-bold">
+                                                <i class="fas fa-money-bill me-1"></i>Nominal Dibayar
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">Rp</span>
+                                                <input class="form-control border" type="number" name="nominal_dibayar" id="nominal_dibayar"
+                                                       step="0.01" min="1" placeholder="0" required>
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calculator me-1"></i>Nominal akan terisi otomatis saat pilih cicilan
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-control-label text-dark font-weight-bold">
+                                                <i class="fas fa-calendar me-1"></i>Tanggal Bayar
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            <input class="form-control border" type="date" name="tanggal_bayar"
+                                                   value="{{ date('Y-m-d') }}" required>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>Tanggal pembayaran cicilan
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Metode Pembayaran --}}
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label class="form-control-label text-dark font-weight-bold">
+                                                <i class="fas fa-credit-card me-1"></i>Metode Pembayaran
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="form-control border px-3" name="metode_pembayaran" required>
+                                                <option value="">-- Pilih Metode Pembayaran --</option>
+                                                <option value="tunai">
+                                                    <i class="fas fa-money-bill"></i> Tunai
+                                                </option>
+                                                <option value="transfer">
+                                                    <i class="fas fa-university"></i> Transfer Bank
+                                                </option>
+                                                <option value="potong_gaji">
+                                                    <i class="fas fa-cut"></i> Potong Gaji
+                                                </option>
+                                            </select>
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>Pilih cara pembayaran cicilan
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Keterangan --}}
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label class="form-control-label text-dark font-weight-bold">
+                                                <i class="fas fa-sticky-note me-1"></i>Keterangan
+                                                <span class="text-muted">(Opsional)</span>
+                                            </label>
+                                            <textarea class="form-control border" name="keterangan" rows="3"
+                                                      placeholder="Masukkan keterangan tambahan jika diperlukan..."></textarea>
+                                            <small class="text-muted">
+                                                <i class="fas fa-edit me-1"></i>Catatan tambahan untuk pembayaran ini
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Action Buttons --}}
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-shield-alt me-1"></i>
+                                                    Pastikan data sudah benar sebelum memproses
+                                                </small>
+                                            </div>
+                                            <div>
+                                                <button type="button" class="btn btn-outline-secondary me-2" onclick="resetForm()">
+                                                    <i class="fas fa-undo me-1"></i>Reset
+                                                </button>
+                                                <button type="submit" class="btn btn-success btn-lg">
+                                                    <i class="fas fa-money-bill-wave me-2"></i>
+                                                    Proses Pembayaran
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        @else
+                            {{-- No Pending Cicilan Alert --}}
+                            <div class="alert alert-success border-0 text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon icon-shape bg-white shadow text-center border-radius-xl me-3">
+                                        <i class="fas fa-check-circle text-success text-lg opacity-10"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-white mb-0">Semua Cicilan Sudah Lunas!</h6>
+                                        <p class="text-white opacity-8 mb-0">
+                                            Tidak ada cicilan yang perlu dibayar. Pinjaman ini telah diselesaikan.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
                 </div>
+
+                {{-- History Pembayaran --}}
+                @if($cicilan_lunas->count() > 0)
+                    <div class="card mt-4">
+                        <div class="card-header pb-0 bg-gradient-success">
+                            <div class="d-flex align-items-center">
+                                <div class="icon icon-lg icon-shape bg-white shadow text-center border-radius-xl">
+                                    <i class="fas fa-history text-success text-lg opacity-10"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <h6 class="mb-0 text-white">History Pembayaran</h6>
+                                    <p class="text-sm mb-0 text-white opacity-8">5 pembayaran cicilan terakhir</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body px-0 pt-0 pb-2">
+                            <div class="table-responsive p-0">
+                                <table class="table align-items-center mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Cicilan</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Nominal</th>
+                                            <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Tanggal</th>
+                                            <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Metode</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($cicilan_lunas as $cicilan)
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex px-2 py-1">
+                                                        <div class="d-flex flex-column justify-content-center">
+                                                            <h6 class="mb-0 text-sm">Cicilan ke-{{ $cicilan->angsuran_ke }}</h6>
+                                                            <p class="text-xs text-secondary mb-0">
+                                                                {{ date('d M Y', strtotime($cicilan->tanggal_jatuh_tempo)) }}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <p class="text-xs font-weight-bold mb-0">{{ $format->CurrencyFormat($cicilan->nominal_dibayar) }}</p>
+                                                    <p class="text-xs text-secondary mb-0">Dibayar</p>
+                                                </td>
+                                                <td class="align-middle text-center text-sm">
+                                                    <span class="text-secondary text-xs font-weight-bold">
+                                                        {{ date('d/m/Y', strtotime($cicilan->tanggal_bayar)) }}
+                                                    </span>
+                                                </td>
+                                                <td class="align-middle text-center">
+                                                    @php
+                                                        $metodeClass = match($cicilan->metode_pembayaran) {
+                                                            'tunai' => 'bg-gradient-success',
+                                                            'transfer' => 'bg-gradient-info',
+                                                            'potong_gaji' => 'bg-gradient-warning',
+                                                            default => 'bg-gradient-secondary'
+                                                        };
+                                                        $metodeIcon = match($cicilan->metode_pembayaran) {
+                                                            'tunai' => 'fas fa-money-bill',
+                                                            'transfer' => 'fas fa-university',
+                                                            'potong_gaji' => 'fas fa-cut',
+                                                            default => 'fas fa-credit-card'
+                                                        };
+                                                    @endphp
+                                                    <span class="badge {{ $metodeClass }} px-2 py-1">
+                                                        <i class="{{ $metodeIcon }} me-1"></i>
+                                                        {{ ucfirst(str_replace('_', ' ', $cicilan->metode_pembayaran)) }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
-    {{-- check flag js on dmenu --}}
-    @if ($jsmenu == '1')
-        @if (view()->exists("js.{$dmenu}"))
-            @push('addjs')
-                {{-- file js in folder (resources/views/js) --}}
-                @include('js.' . $dmenu);
-            @endpush
-        @else
-            @push('addjs')
-                <script>
-                    Swal.fire({
-                        title: 'JS Not Found!!',
-                        text: 'Please Create File JS',
-                        icon: 'error',
-                        confirmButtonColor: '#028284'
-                    });
-                </script>
-            @endpush
-        @endif
-    @endif
+
 @endsection
-@push('js')
-    <script>
-        $(document).ready(function() {});
-    </script>
+
+@push('addjs')
+<script>
+$(document).ready(function() {
+    // Auto fill nominal when cicilan selected
+    $('#cicilan_id').on('change', function() {
+        var selectedOption = $(this).find('option:selected');
+        var nominal = selectedOption.data('nominal');
+
+        if (nominal) {
+            $('#nominal_dibayar').val(nominal);
+        } else {
+            $('#nominal_dibayar').val('');
+        }
+    });
+
+    // Reset form function
+    window.resetForm = function() {
+        $('#pembayaran-form')[0].reset();
+        $('#nominal_dibayar').val('');
+    };
+
+    // Form validation
+    $('#pembayaran-form').on('submit', function(e) {
+        var cicilan_id = $('#cicilan_id').val();
+        var nominal = $('#nominal_dibayar').val();
+
+        if (!cicilan_id) {
+            e.preventDefault();
+            alert('Pilih cicilan yang akan dibayar!');
+            return false;
+        }
+
+        if (!nominal || nominal <= 0) {
+            e.preventDefault();
+            alert('Masukkan nominal pembayaran yang valid!');
+            return false;
+        }
+
+        return confirm('Apakah Anda yakin ingin memproses pembayaran cicilan ini?');
+    });
+});
+</script>
 @endpush

@@ -48,8 +48,8 @@
                                     <input class="form-control" type="text" value="{{ $pengajuan->anggotum->email ?? 'N/A' }}" readonly>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-control-label">No. Telepon</label>
-                                    <input class="form-control" type="text" value="{{ $pengajuan->anggotum->no_telepon ?? 'N/A' }}" readonly>
+                                    <label class="form-control-label">No. HP</label>
+                                    <input class="form-control" type="text" value="{{ $pengajuan->anggotum->no_hp ?? 'N/A' }}" readonly>
                                 </div>
                             </div>
 
@@ -199,10 +199,10 @@
                                         </span>
                                         <div class="timeline-content">
                                             <h6 class="text-dark text-sm font-weight-bold mb-0">
-                                                {{ $history->firstname }} {{ $history->lastname }}
+                                                {{ $history->approver_name }} ({{ $history->approver_jabatan }})
                                             </h6>
                                             <p class="text-secondary font-weight-bold text-xs mt-1 mb-0">
-                                                {{ ucfirst(str_replace('_', ' ', $history->status_sesudah)) }}
+                                                {{ ucfirst(str_replace('_', ' ', $history->status_approval)) }}
                                             </p>
                                             <p class="text-sm mt-3 mb-2">
                                                 {{ $history->catatan ?: 'Tidak ada catatan' }}
@@ -232,10 +232,10 @@
                                         <p class="text-xs text-secondary mb-0">{{ $loan->periode }}</p>
                                     </div>
                                     <div class="text-end">
-                                        <span class="badge badge-sm bg-{{ $loan->status_pinjaman == 'lunas' ? 'success' : ($loan->status_pinjaman == 'aktif' ? 'info' : 'warning') }}">
-                                            {{ ucfirst($loan->status_pinjaman) }}
+                                        <span class="badge badge-sm bg-{{ $loan->status == 'lunas' ? 'success' : ($loan->status == 'aktif' ? 'info' : 'warning') }}">
+                                            {{ ucfirst($loan->status) }}
                                         </span>
-                                        <p class="text-xs text-secondary mb-0">Rp {{ number_format($loan->jumlah_pinjaman, 0, ',', '.') }}</p>
+                                        <p class="text-xs text-secondary mb-0">Rp {{ number_format($loan->nominal_pinjaman, 0, ',', '.') }}</p>
                                     </div>
                                 </div>
                             @endforeach

@@ -43,12 +43,9 @@ class ApprovalHistory extends Model
 
 	protected $fillable = [
 		'pengajuan_pinjaman_id',
-		'status_sebelum',
-		'status_sesudah',
 		'level_approval',
 		'approver_name',
 		'approver_jabatan',
-		'approved_by',
 		'status_approval',
 		'catatan',
 		'tanggal_approval',
@@ -65,6 +62,6 @@ class ApprovalHistory extends Model
 
 	public function user()
 	{
-		return $this->belongsTo(User::class, 'approved_by', 'username');
+		return $this->belongsTo(User::class, 'approver_name', 'username');
 	}
 }

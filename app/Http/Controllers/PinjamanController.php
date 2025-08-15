@@ -48,12 +48,45 @@ class PinjamanController extends Controller
                 round(($pinjaman->cicilan_lunas / $pinjaman->total_cicilan) * 100, 2) : 0;
         }
 
+        // Get cicilan yang siap untuk dipotong gaji (jatuh tempo bulan ini atau sebelumnya)
+        $bulan_ini = date('Y-m-01'); // Awal bulan ini
+        $akhir_bulan_ini = date('Y-m-t'); // Akhir bulan ini
+
+        $data['cicilan_potong_gaji'] = DB::table('cicilan_pinjaman as cp')
+            ->leftJoin('pinjaman as p', 'cp.pinjaman_id', '=', 'p.id')
+            ->leftJoin('anggota as a', 'p.anggota_id', '=', 'a.id')
+            ->select(
+                'cp.*',
+                'p.nomor_pinjaman',
+                'a.nama_lengkap',
+                'a.nomor_anggota',
+                DB::raw('DATE_FORMAT(cp.tanggal_jatuh_tempo, "%Y-%m") as bulan_tempo'),
+                DB::raw('DATE_FORMAT(cp.tanggal_jatuh_tempo, "%M %Y") as nama_bulan')
+            )
+            ->where('cp.status', 'belum_bayar')
+            ->where('cp.tanggal_jatuh_tempo', '<=', $akhir_bulan_ini)
+            ->where('p.status', 'aktif')
+            ->where('p.isactive', '1')
+            ->orderBy('cp.tanggal_jatuh_tempo')
+            ->orderBy('a.nama_lengkap')
+            ->get();
+
+        // Group cicilan by month untuk tampilan
+        $data['cicilan_by_month'] = $data['cicilan_potong_gaji']->groupBy('bulan_tempo');
+
+        // Summary untuk potong gaji
+        $data['summary_potong_gaji'] = [
+            'total_cicilan' => $data['cicilan_potong_gaji']->count(),
+            'total_nominal' => $data['cicilan_potong_gaji']->sum('nominal_angsuran'),
+            'jumlah_anggota' => $data['cicilan_potong_gaji']->unique('nama_lengkap')->count(),
+        ];
+
         // Get summary statistics
         $data['stats'] = [
-            'total_pinjaman_aktif' => $data['pinjaman_list']->where('status_pinjaman', 'aktif')->count(),
-            'total_nilai_pinjaman' => $data['pinjaman_list']->sum('jumlah_pinjaman'),
+            'total_pinjaman_aktif' => $data['pinjaman_list']->where('status', 'aktif')->count(),
+            'total_cicilan_pending' => $data['cicilan_potong_gaji']->count(),
+            'total_cicilan_lunas' => $data['pinjaman_list']->sum('cicilan_lunas'),
             'total_terbayar' => $data['pinjaman_list']->sum('total_terbayar'),
-            'pinjaman_bermasalah' => $data['pinjaman_list']->where('status_pinjaman', 'bermasalah')->count(),
         ];
 
         return view('KOP002.pinjaman.list', $data);
@@ -87,7 +120,7 @@ class PinjamanController extends Controller
                 'a.nomor_anggota',
                 'a.nama_lengkap',
                 'a.email',
-                'a.no_telepon',
+                'a.no_hp',
                 'a.alamat',
                 'mpp.periode',
                 'pp.id as pengajuan_id',
@@ -117,7 +150,7 @@ class PinjamanController extends Controller
             'sisa_pembayaran' => $data['pinjaman']->total_angsuran - $data['cicilan_list']->where('status', 'lunas')->sum('nominal_dibayar'),
         ];
 
-        return view('KOP002.pinjaman.show', $data);
+        return redirect($data['url_menu'], $data);
     }
 
     /**
@@ -144,7 +177,7 @@ class PinjamanController extends Controller
             })
             ->get();
 
-        return view('KOP002.pinjaman.add', $data);
+        return redirect($data['url_menu'], $data);
     }
 
     /**
@@ -161,15 +194,19 @@ class PinjamanController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+            Session::flash('message', 'Data tidak valid: ' . $validator->errors()->first());
+            Session::flash('class', 'danger');
+            return redirect()->back()->withInput();
         }
 
         $pinjaman_id = request('pinjaman_id');
 
-        // Get pinjaman data
-        $pinjaman = Pinjaman::find($pinjaman_id);
+        // Get pinjaman data with relationships
+        $pinjaman = DB::table('pinjaman as p')
+            ->leftJoin('anggota as a', 'p.anggota_id', '=', 'a.id')
+            ->select('p.*', 'a.nama_lengkap', 'a.nomor_anggota')
+            ->where('p.id', $pinjaman_id)
+            ->first();
 
         if (!$pinjaman) {
             Session::flash('message', 'Data pinjaman tidak ditemukan!');
@@ -177,8 +214,15 @@ class PinjamanController extends Controller
             return redirect($data['url_menu']);
         }
 
+        // Check if pinjaman is active
+        if ($pinjaman->status != 'aktif') {
+            Session::flash('message', 'Hanya pinjaman dengan status aktif yang dapat dibuatkan jadwal cicilan!');
+            Session::flash('class', 'warning');
+            return redirect($data['url_menu']);
+        }
+
         // Check if cicilan already exists
-        $existing_cicilan = CicilanPinjaman::where('pinjaman_id', $pinjaman_id)->count();
+        $existing_cicilan = DB::table('cicilan_pinjaman')->where('pinjaman_id', $pinjaman_id)->count();
         if ($existing_cicilan > 0) {
             Session::flash('message', 'Jadwal cicilan sudah ada untuk pinjaman ini!');
             Session::flash('class', 'warning');
@@ -189,44 +233,66 @@ class PinjamanController extends Controller
         $tenor_bulan = $pinjaman->tenor_bulan;
         $tanggal_mulai = $pinjaman->tanggal_pencairan;
 
-        // Calculate per cicilan amounts
-        $nominal_pokok = $pinjaman->nominal_pinjaman / $tenor_bulan;
-        $nominal_bunga = ($pinjaman->nominal_pinjaman * (1.0 / 100)); // Fixed 1% per bulan
-        $total_bayar = $nominal_pokok + $nominal_bunga;
+        // Use existing calculated amounts from pinjaman table
+        $angsuran_pokok = $pinjaman->angsuran_pokok;
+        $angsuran_bunga = $pinjaman->angsuran_bunga;
+        $total_angsuran = $pinjaman->total_angsuran;
 
-        for ($i = 1; $i <= $tenor_bulan; $i++) {
-            $tanggal_jatuh_tempo = date('Y-m-d', strtotime($tanggal_mulai . " +{$i} month"));
+        try {
+            DB::beginTransaction();
 
-            DB::table('cicilan_pinjaman')->insert([
-                'pinjaman_id' => $pinjaman_id,
-                'angsuran_ke' => $i,
-                'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
-                'nominal_pokok' => $nominal_pokok,
-                'nominal_bunga' => $nominal_bunga,
-                'nominal_denda' => 0,
-                'total_bayar' => $total_bayar,
-                'nominal_dibayar' => 0,
-                'sisa_bayar' => $total_bayar,
-                'status' => 'belum_bayar',
-                'hari_terlambat' => 0,
-                'user_create' => session('username'),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            for ($i = 1; $i <= $tenor_bulan; $i++) {
+                // Untuk potong gaji, set tanggal jatuh tempo di akhir bulan
+                // Memberikan fleksibilitas untuk pembayaran kapan saja dalam bulan tersebut
+                $tanggal_jatuh_tempo = date('Y-m-t', strtotime($tanggal_mulai . " +{$i} month")); // Akhir bulan
+
+                DB::table('cicilan_pinjaman')->insert([
+                    'pinjaman_id' => $pinjaman_id,
+                    'angsuran_ke' => $i,
+                    'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
+                    'nominal_pokok' => round($angsuran_pokok, 2),
+                    'nominal_bunga' => round($angsuran_bunga, 2),
+                    'nominal_denda' => 0,
+                    'total_bayar' => round($total_angsuran, 2),
+                    'nominal_dibayar' => 0,
+                    'sisa_bayar' => round($total_angsuran, 2),
+                    'status' => 'belum_bayar',
+                    'hari_terlambat' => 0,
+                    'metode_pembayaran' => null, // Akan diisi saat pembayaran
+                    'keterangan' => 'Cicilan bulan ' . date('M Y', strtotime($tanggal_jatuh_tempo)),
+                    'user_create' => $data['user_login']->username,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            DB::commit();
+
+            $syslog->log_insert('C', $data['dmenu'], 'Cicilan Schedule Generated: ' . $pinjaman->nomor_pinjaman . ' (' . $tenor_bulan . ' cicilan)', '1');
+
+            Session::flash('message', 'Jadwal cicilan berhasil dibuat untuk ' . $tenor_bulan . ' bulan!');
+            Session::flash('class', 'success');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            $syslog->log_insert('E', $data['dmenu'], 'Error Generate Cicilan: ' . $e->getMessage(), '0');
+
+            Session::flash('message', 'Gagal membuat jadwal cicilan: ' . $e->getMessage());
+            Session::flash('class', 'danger');
         }
-
-        $syslog->log_insert('C', $data['dmenu'], 'Cicilan Schedule Generated: ' . $pinjaman->nomor_pinjaman, '1');
-        Session::flash('message', 'Jadwal cicilan berhasil dibuat!');
-        Session::flash('class', 'success');
 
         return redirect($data['url_menu']);
     }
 
     /**
-     * Update pinjaman status - KOP203/edit
+     * Edit pinjaman untuk pembayaran cicilan - KOP203/edit
      */
     public function edit($data)
     {
+        // function helper
+        $data['format'] = new Format_Helper;
+
         // Decrypt ID
         try {
             $id = decrypt($data['idencrypt']);
@@ -236,8 +302,22 @@ class PinjamanController extends Controller
             return redirect($data['url_menu']);
         }
 
-        // Get pinjaman data
-        $data['pinjaman'] = Pinjaman::with(['anggotum', 'masterPaketPinjaman'])->find($id);
+        // Get pinjaman data with cicilan yang belum dibayar
+        $data['pinjaman'] = DB::table('pinjaman as p')
+            ->leftJoin('anggota as a', 'p.anggota_id', '=', 'a.id')
+            ->leftJoin('pengajuan_pinjaman as pp', 'p.pengajuan_pinjaman_id', '=', 'pp.id')
+            ->leftJoin('master_paket_pinjaman as mpp', 'pp.paket_pinjaman_id', '=', 'mpp.id')
+            ->select(
+                'p.*',
+                'a.nomor_anggota',
+                'a.nama_lengkap',
+                'a.email',
+                'a.no_hp',
+                'mpp.periode',
+                'pp.id as pengajuan_id'
+            )
+            ->where('p.id', $id)
+            ->first();
 
         if (!$data['pinjaman']) {
             Session::flash('message', 'Data pinjaman tidak ditemukan!');
@@ -245,64 +325,201 @@ class PinjamanController extends Controller
             return redirect($data['url_menu']);
         }
 
-        // Status options
-        $data['status_options'] = [
-            'aktif' => 'Aktif',
-            'lunas' => 'Lunas',
-            'bermasalah' => 'Bermasalah',
-            'ditutup' => 'Ditutup',
+        // Get cicilan yang belum dibayar
+        $data['cicilan_pending'] = DB::table('cicilan_pinjaman')
+            ->where('pinjaman_id', $id)
+            ->where('status', 'belum_bayar')
+            ->orderBy('angsuran_ke')
+            ->get();
+
+        // Get cicilan yang sudah dibayar (untuk history)
+        $data['cicilan_lunas'] = DB::table('cicilan_pinjaman')
+            ->where('pinjaman_id', $id)
+            ->where('status', 'lunas')
+            ->orderBy('angsuran_ke', 'desc')
+            ->limit(5)
+            ->get();
+
+        // Calculate summary
+        $data['summary'] = [
+            'total_cicilan' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->count(),
+            'cicilan_lunas' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->where('status', 'lunas')->count(),
+            'cicilan_pending' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->where('status', 'belum_bayar')->count(),
+            'total_terbayar' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->where('status', 'lunas')->sum('nominal_dibayar'),
+            'sisa_pembayaran' => $data['pinjaman']->nominal_pinjaman - DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->where('status', 'lunas')->sum('nominal_dibayar'),
         ];
 
-        return view('KOP002.pinjaman.edit', $data);
+        return redirect($data['url_menu'], $data);
     }
 
+
+
     /**
-     * Update pinjaman status - KOP203/update
+     * Update - Proses pembayaran cicilan - KOP203/update
      */
     public function update($data)
     {
         // function helper
         $syslog = new Function_Helper;
 
-        // Decrypt ID
-        try {
-            $id = decrypt($data['idencrypt']);
-        } catch (\Exception) {
-            Session::flash('message', 'ID tidak valid!');
-            Session::flash('class', 'danger');
-            return redirect($data['url_menu']);
-        }
-
-        // Validation
+        // Validate input
         $validator = Validator::make(request()->all(), [
-            'status' => 'required|in:aktif,lunas,bermasalah,hapus_buku',
-            'keterangan' => 'nullable|string|max:500',
+            'cicilan_id' => 'required|exists:cicilan_pinjaman,id',
+            'nominal_dibayar' => 'required|numeric|min:1',
+            'tanggal_bayar' => 'required|date',
+            'metode_pembayaran' => 'required|in:tunai,transfer,potong_gaji',
+            'keterangan' => 'nullable|string|max:255'
         ]);
 
         if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+            Session::flash('message', 'Data tidak valid: ' . $validator->errors()->first());
+            Session::flash('class', 'danger');
+            return redirect()->back()->withInput();
         }
 
-        // Update pinjaman
-        $result = DB::table('pinjaman')
-            ->where('id', $id)
+        $cicilan_id = request('cicilan_id');
+        $nominal_dibayar = request('nominal_dibayar');
+        $tanggal_bayar = request('tanggal_bayar');
+        $metode_pembayaran = request('metode_pembayaran');
+        $keterangan = request('keterangan');
+
+        // Get cicilan data
+        $cicilan = DB::table('cicilan_pinjaman')->where('id', $cicilan_id)->first();
+
+        if (!$cicilan || $cicilan->status == 'lunas') {
+            Session::flash('message', 'Cicilan tidak ditemukan atau sudah lunas!');
+            Session::flash('class', 'danger');
+            return redirect()->back();
+        }
+
+        // Update cicilan status
+        $updated = DB::table('cicilan_pinjaman')
+            ->where('id', $cicilan_id)
             ->update([
-                'status' => request('status'),
-                'keterangan' => request('keterangan'),
-                'user_update' => session('username'),
+                'status' => 'lunas',
+                'nominal_dibayar' => $nominal_dibayar,
+                'tanggal_bayar' => $tanggal_bayar,
+                'metode_pembayaran' => $metode_pembayaran,
+                'keterangan' => $keterangan,
+                'sisa_bayar' => 0,
                 'updated_at' => now(),
+                'user_update' => $data['user_login']->username
             ]);
 
-        if ($result) {
-            $pinjaman = Pinjaman::find($id);
-            $syslog->log_insert('U', $data['dmenu'], 'Pinjaman Status Updated: ' . $pinjaman->nomor_pinjaman, '1');
-            Session::flash('message', 'Status pinjaman berhasil diupdate!');
+        if ($updated) {
+            // Check if all cicilan sudah lunas
+            $remaining_cicilan = DB::table('cicilan_pinjaman')
+                ->where('pinjaman_id', $cicilan->pinjaman_id)
+                ->where('status', 'belum_bayar')
+                ->count();
+
+            // If all cicilan lunas, update pinjaman status
+            if ($remaining_cicilan == 0) {
+                DB::table('pinjaman')
+                    ->where('id', $cicilan->pinjaman_id)
+                    ->update([
+                        'status' => 'lunas',
+                        'updated_at' => now(),
+                        'user_update' => $data['user_login']->username
+                    ]);
+            }
+
+            //insert log
+            $syslog->log_insert('U', $data['dmenu'], 'Pembayaran Cicilan ID: ' . $cicilan_id . ' Nominal: ' . number_format($nominal_dibayar), '1');
+
+            Session::flash('message', 'Pembayaran cicilan berhasil diproses!');
             Session::flash('class', 'success');
         } else {
-            $syslog->log_insert('E', $data['dmenu'], 'Pinjaman Update Error', '0');
-            Session::flash('message', 'Gagal mengupdate status pinjaman!');
+            Session::flash('message', 'Gagal memproses pembayaran cicilan!');
+            Session::flash('class', 'danger');
+        }
+
+        return redirect($data['url_menu']);
+    }
+
+    /**
+     * Potong gaji bulanan - KOP203/potong_gaji
+     */
+    public function potong_gaji($data)
+    {
+        // function helper
+        $syslog = new Function_Helper;
+
+        // Validasi input
+        $validator = Validator::make(request()->all(), [
+            'bulan_potong' => 'required|date_format:Y-m',
+            'cicilan_ids' => 'required|array|min:1',
+            'cicilan_ids.*' => 'exists:cicilan_pinjaman,id'
+        ]);
+
+        if ($validator->fails()) {
+            Session::flash('message', 'Data tidak valid: ' . $validator->errors()->first());
+            Session::flash('class', 'danger');
+            return redirect()->back();
+        }
+
+        $bulan_potong = request('bulan_potong');
+        $cicilan_ids = request('cicilan_ids');
+        $tanggal_potong = date('Y-m-t', strtotime($bulan_potong . '-01')); // Akhir bulan
+
+        $berhasil = 0;
+        $gagal = 0;
+
+        DB::beginTransaction();
+        try {
+            foreach ($cicilan_ids as $cicilan_id) {
+                $cicilan = DB::table('cicilan_pinjaman')->where('id', $cicilan_id)->first();
+
+                if ($cicilan && $cicilan->status == 'belum_bayar') {
+                    // Update cicilan menjadi lunas dengan potong gaji
+                    DB::table('cicilan_pinjaman')
+                        ->where('id', $cicilan_id)
+                        ->update([
+                            'status' => 'lunas',
+                            'nominal_dibayar' => $cicilan->nominal_angsuran,
+                            'tanggal_dibayar' => $tanggal_potong,
+                            'metode_pembayaran' => 'potong_gaji',
+                            'keterangan' => 'Potong gaji bulan ' . date('F Y', strtotime($bulan_potong . '-01')),
+                            'updated_at' => now(),
+                            'user_update' => $data['user_login']->username
+                        ]);
+
+                    // Check if all cicilan sudah lunas untuk update status pinjaman
+                    $remaining_cicilan = DB::table('cicilan_pinjaman')
+                        ->where('pinjaman_id', $cicilan->pinjaman_id)
+                        ->where('status', 'belum_bayar')
+                        ->count();
+
+                    if ($remaining_cicilan == 0) {
+                        DB::table('pinjaman')
+                            ->where('id', $cicilan->pinjaman_id)
+                            ->update([
+                                'status' => 'lunas',
+                                'updated_at' => now(),
+                                'user_update' => $data['user_login']->username
+                            ]);
+                    }
+
+                    $berhasil++;
+                } else {
+                    $gagal++;
+                }
+            }
+
+            DB::commit();
+
+            // Log activity
+            $syslog->log_insert('U', $data['dmenu'],
+                'Potong Gaji Bulanan: ' . $berhasil . ' cicilan berhasil, ' . $gagal . ' gagal', '1');
+
+            Session::flash('message',
+                "Potong gaji berhasil diproses! {$berhasil} cicilan berhasil" .
+                ($gagal > 0 ? ", {$gagal} cicilan gagal" : ""));
+            Session::flash('class', 'success');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            Session::flash('message', 'Gagal memproses potong gaji: ' . $e->getMessage());
             Session::flash('class', 'danger');
         }
 

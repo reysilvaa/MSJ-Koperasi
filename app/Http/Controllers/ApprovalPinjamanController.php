@@ -128,11 +128,21 @@ class ApprovalPinjamanController extends Controller
             ->orderBy('urut')
             ->get();
 
+        // Check if idencrypt parameter exists
+        if (!isset($data['idencrypt']) || empty($data['idencrypt'])) {
+            Session::flash('message', 'Parameter ID tidak ditemukan!');
+            Session::flash('class', 'danger');
+            return redirect($data['url_menu']);
+        }
+
         // Decrypt ID
         try {
             $id = decrypt($data['idencrypt']);
         } catch (\Exception $e) {
-            Session::flash('message', 'ID tidak valid!');
+            // Log the actual error for debugging
+            $syslog->log_insert('E', $data['dmenu'], 'ID Decryption Error: ' . $e->getMessage() . ' - ID: ' . $data['idencrypt'], '0');
+
+            Session::flash('message', 'ID tidak valid! Silakan coba lagi atau hubungi administrator.');
             Session::flash('class', 'danger');
             return redirect($data['url_menu']);
         }
@@ -159,10 +169,16 @@ class ApprovalPinjamanController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Get member's loan history using Eloquent
-        $data['loan_history'] = Pinjaman::with('master_paket_pinjaman')
-            ->where('anggota_id', $pengajuan->anggota_id)
-            ->orderBy('created_at', 'desc')
+        // Get member's loan history using query bertingkat
+        $data['loan_history'] = DB::table('pinjaman as p')
+            ->leftJoin('pengajuan_pinjaman as pp', 'p.pengajuan_pinjaman_id', '=', 'pp.id')
+            ->leftJoin('master_paket_pinjaman as mpp', 'pp.paket_pinjaman_id', '=', 'mpp.id')
+            ->select(
+                'p.*',
+                'mpp.periode'
+            )
+            ->where('p.anggota_id', $pengajuan->anggota_id)
+            ->orderBy('p.created_at', 'desc')
             ->limit(5)
             ->get();
 
@@ -172,10 +188,11 @@ class ApprovalPinjamanController extends Controller
         return view('KOP002.approvalPinjaman.show', $data);
     }
 
+
     /**
      * Process approval - KOP202/update
      */
-    public function update($data)
+    public function store($data)
     {
         // Function helper
         $syslog = new Function_Helper;
@@ -191,11 +208,28 @@ class ApprovalPinjamanController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        // Decrypt ID
-        try {
-            $id = decrypt($data['idencrypt']);
-        } catch (\Exception $e) {
-            Session::flash('message', 'ID tidak valid!');
+        // Get ID from form data (pengajuan_id) or from URL parameter (idencrypt)
+        $id = null;
+
+        if (request()->has('pengajuan_id') && !empty(request('pengajuan_id'))) {
+            // ID from form submission
+            $id = request('pengajuan_id');
+        } elseif (isset($data['idencrypt']) && !empty($data['idencrypt'])) {
+            // ID from URL parameter (encrypted)
+            try {
+                $id = decrypt($data['idencrypt']);
+            } catch (\Exception $e) {
+                // Log the actual error for debugging
+                $syslog->log_insert('E', $data['dmenu'], 'ID Decryption Error: ' . $e->getMessage() . ' - ID: ' . $data['idencrypt'], '0');
+
+                Session::flash('message', 'ID tidak valid! Silakan coba lagi atau hubungi administrator.');
+                Session::flash('class', 'danger');
+                return redirect($data['url_menu']);
+            }
+        }
+
+        if (!$id) {
+            Session::flash('message', 'Parameter ID tidak ditemukan!');
             Session::flash('class', 'danger');
             return redirect($data['url_menu']);
         }
@@ -239,32 +273,65 @@ class ApprovalPinjamanController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Create approval history
+            // Create approval history with correct column names
+            $level_map = [
+                'kadmin' => 'Ketua Admin',
+                'akredt' => 'Admin Kredit',
+                'ketuum' => 'Ketua Umum'
+            ];
+
+            $status_approval = $action === 'approve' ? 'approved' : 'rejected';
+            $level_approval = $level_map[$user_role] ?? $user_role;
+
             ApprovalHistory::create([
                 'pengajuan_pinjaman_id' => $id,
-                'status_sebelum' => $pengajuan->getOriginal('status_pengajuan'),
-                'status_sesudah' => $new_status,
+                'level_approval' => $level_approval,
+                'approver_name' => $approved_by,
+                'approver_jabatan' => $level_approval,
+                'status_approval' => $status_approval,
                 'catatan' => $catatan,
-                'approved_by' => $approved_by,
-                'created_at' => now(),
+                'tanggal_approval' => now(),
+                'urutan' => $this->getApprovalOrder($user_role),
+                'isactive' => '1',
+                'user_create' => $approved_by,
             ]);
 
             // If final approval, create pinjaman record
             if ($new_status === 'disetujui') {
+                // Calculate tenor in months from string like "6 bulan"
+                $tenor_bulan = (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
+
+                // Calculate angsuran details
+                $nominal_pinjaman = $pengajuan->jumlah_pinjaman;
+                $bunga_per_bulan = $pengajuan->bunga_per_bulan;
+                $angsuran_pokok = $nominal_pinjaman / $tenor_bulan;
+                $angsuran_bunga = $nominal_pinjaman * ($bunga_per_bulan / 100);
+                $total_angsuran = $angsuran_pokok + $angsuran_bunga;
+
+                // Calculate dates
+                $tanggal_pencairan = now();
+                $tanggal_jatuh_tempo = now()->addMonths($tenor_bulan);
+                $tanggal_angsuran_pertama = now()->addMonth();
+
                 Pinjaman::create([
-                    'anggota_id' => $pengajuan->anggota_id,
-                    'pengajuan_pinjaman_id' => $id,
-                    'paket_pinjaman_id' => $pengajuan->paket_pinjaman_id,
                     'nomor_pinjaman' => $data['format']->IDFormat('KOP301'),
-                    'jumlah_pinjaman' => $pengajuan->jumlah_pinjaman,
-                    'tenor_pinjaman' => $pengajuan->tenor_pinjaman,
-                    'bunga_per_bulan' => 1.0, // Fixed 1% per bulan
-                    'cicilan_per_bulan' => $pengajuan->cicilan_per_bulan,
-                    'total_pembayaran' => $pengajuan->total_pembayaran,
-                    'tanggal_pinjaman' => now(),
-                    'status_pinjaman' => 'aktif',
+                    'pengajuan_pinjaman_id' => $id,
+                    'anggota_id' => $pengajuan->anggota_id,
+                    'nominal_pinjaman' => $nominal_pinjaman,
+                    'bunga_per_bulan' => $bunga_per_bulan,
+                    'tenor_bulan' => $tenor_bulan,
+                    'angsuran_pokok' => $angsuran_pokok,
+                    'angsuran_bunga' => $angsuran_bunga,
+                    'total_angsuran' => $total_angsuran,
+                    'tanggal_pencairan' => $tanggal_pencairan,
+                    'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
+                    'tanggal_angsuran_pertama' => $tanggal_angsuran_pertama,
+                    'status' => 'aktif',
+                    'sisa_pokok' => $nominal_pinjaman,
+                    'total_dibayar' => 0,
+                    'angsuran_ke' => 0,
                     'isactive' => '1',
-                    'created_at' => now(),
+                    'user_create' => $approved_by,
                 ]);
             }
 
@@ -287,6 +354,20 @@ class ApprovalPinjamanController extends Controller
         }
 
         return redirect($data['url_menu']);
+    }
+
+    /**
+     * Helper method to get approval order based on user role
+     */
+    private function getApprovalOrder($user_role)
+    {
+        $order_map = [
+            'kadmin' => 1, // Ketua Admin - first approval
+            'akredt' => 2, // Admin Kredit - second approval
+            'ketuum' => 3, // Ketua Umum - final approval
+        ];
+
+        return $order_map[$user_role] ?? 0;
     }
 
     /**
@@ -318,22 +399,40 @@ class ApprovalPinjamanController extends Controller
      */
     private function createPinjamanRecord($pengajuan, $format)
     {
+        // Calculate tenor in months from string like "6 bulan"
+        $tenor_bulan = (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
+
+        // Calculate angsuran details
+        $nominal_pinjaman = $pengajuan->jumlah_pinjaman;
+        $bunga_per_bulan = $pengajuan->bunga_per_bulan;
+        $angsuran_pokok = $nominal_pinjaman / $tenor_bulan;
+        $angsuran_bunga = $nominal_pinjaman * ($bunga_per_bulan / 100);
+        $total_angsuran = $angsuran_pokok + $angsuran_bunga;
+
+        // Calculate dates
+        $tanggal_pencairan = now();
+        $tanggal_jatuh_tempo = now()->addMonths($tenor_bulan);
+        $tanggal_angsuran_pertama = now()->addMonth();
+
         return Pinjaman::create([
             'nomor_pinjaman' => $format->IDFormat('KOP301'),
             'pengajuan_pinjaman_id' => $pengajuan->id,
             'anggota_id' => $pengajuan->anggota_id,
-            'paket_pinjaman_id' => $pengajuan->paket_pinjaman_id,
-            'jumlah_pinjaman' => $pengajuan->jumlah_pinjaman,
-            'bunga_per_bulan' => 1.0, // Fixed 1% per bulan
-            'cicilan_per_bulan' => $pengajuan->cicilan_per_bulan,
-            'total_pembayaran' => $pengajuan->total_pembayaran,
-            'tenor_bulan' => (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT),
-            'tanggal_pencairan' => now(),
-            'status_pinjaman' => 'aktif',
+            'nominal_pinjaman' => $nominal_pinjaman,
+            'bunga_per_bulan' => $bunga_per_bulan,
+            'tenor_bulan' => $tenor_bulan,
+            'angsuran_pokok' => $angsuran_pokok,
+            'angsuran_bunga' => $angsuran_bunga,
+            'total_angsuran' => $total_angsuran,
+            'tanggal_pencairan' => $tanggal_pencairan,
+            'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
+            'tanggal_angsuran_pertama' => $tanggal_angsuran_pertama,
+            'status' => 'aktif',
+            'sisa_pokok' => $nominal_pinjaman,
+            'total_dibayar' => 0,
+            'angsuran_ke' => 0,
             'isactive' => '1',
             'user_create' => $pengajuan->user_create ?? 'system',
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
     }
 

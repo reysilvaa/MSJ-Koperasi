@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Pinjaman
- * 
+ *
  * @property int $id
  * @property string $nomor_pinjaman
  * @property int $pengajuan_pinjaman_id
@@ -36,7 +36,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property Carbon $updated_at
  * @property string|null $user_create
  * @property string|null $user_update
- * 
+ *
  * @property Anggotum $anggotum
  * @property PengajuanPinjaman $pengajuan_pinjaman
  * @property Collection|CicilanPinjaman[] $cicilan_pinjamen
@@ -101,4 +101,5 @@ class Pinjaman extends Model
 	{
 		return $this->hasMany(CicilanPinjaman::class);
 	}
+
 }

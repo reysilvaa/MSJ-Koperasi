@@ -4,7 +4,7 @@
     @include('layouts.navbars.auth.topnav', ['title' => $title_menu])
 
     <div class="container-fluid py-4">
-        {{-- Statistics Cards --}}
+        {{-- Statistics Cards for Cicilan --}}
         <div class="row mb-4">
             <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
                 <div class="card">
@@ -13,12 +13,13 @@
                             <div class="col-8">
                                 <div class="numbers">
                                     <p class="text-sm mb-0 text-capitalize font-weight-bold">Pinjaman Aktif</p>
-                                    <h5 class="font-weight-bolder mb-0">{{ $stats['total_pinjaman_aktif'] }}</h5>
+                                    <h5 class="font-weight-bolder mb-0">{{ $stats['total_pinjaman_aktif'] ?? 0 }}</h5>
+                                    <span class="text-sm text-success">Memiliki cicilan</span>
                                 </div>
                             </div>
                             <div class="col-4 text-end">
                                 <div class="icon icon-shape bg-gradient-success shadow text-center border-radius-md">
-                                    <i class="fas fa-money-check-alt text-lg opacity-10"></i>
+                                    <i class="fas fa-file-invoice-dollar text-lg opacity-10"></i>
                                 </div>
                             </div>
                         </div>
@@ -31,13 +32,14 @@
                         <div class="row">
                             <div class="col-8">
                                 <div class="numbers">
-                                    <p class="text-sm mb-0 text-capitalize font-weight-bold">Total Nilai</p>
-                                    <h5 class="font-weight-bolder mb-0">Rp {{ number_format($stats['total_nilai_pinjaman'], 0, ',', '.') }}</h5>
+                                    <p class="text-sm mb-0 text-capitalize font-weight-bold">Cicilan Pending</p>
+                                    <h5 class="font-weight-bolder mb-0">{{ $stats['total_cicilan_pending'] ?? 0 }}</h5>
+                                    <span class="text-sm text-warning">Belum dibayar</span>
                                 </div>
                             </div>
                             <div class="col-4 text-end">
-                                <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
-                                    <i class="fas fa-coins text-lg opacity-10"></i>
+                                <div class="icon icon-shape bg-gradient-warning shadow text-center border-radius-md">
+                                    <i class="fas fa-clock text-lg opacity-10"></i>
                                 </div>
                             </div>
                         </div>
@@ -50,13 +52,14 @@
                         <div class="row">
                             <div class="col-8">
                                 <div class="numbers">
-                                    <p class="text-sm mb-0 text-capitalize font-weight-bold">Total Terbayar</p>
-                                    <h5 class="font-weight-bolder mb-0">Rp {{ number_format($stats['total_terbayar'], 0, ',', '.') }}</h5>
+                                    <p class="text-sm mb-0 text-capitalize font-weight-bold">Cicilan Lunas</p>
+                                    <h5 class="font-weight-bolder mb-0">{{ $stats['total_cicilan_lunas'] ?? 0 }}</h5>
+                                    <span class="text-sm text-success">Sudah dibayar</span>
                                 </div>
                             </div>
                             <div class="col-4 text-end">
-                                <div class="icon icon-shape bg-gradient-info shadow text-center border-radius-md">
-                                    <i class="fas fa-hand-holding-usd text-lg opacity-10"></i>
+                                <div class="icon icon-shape bg-gradient-success shadow text-center border-radius-md">
+                                    <i class="fas fa-check-circle text-lg opacity-10"></i>
                                 </div>
                             </div>
                         </div>
@@ -69,13 +72,14 @@
                         <div class="row">
                             <div class="col-8">
                                 <div class="numbers">
-                                    <p class="text-sm mb-0 text-capitalize font-weight-bold">Bermasalah</p>
-                                    <h5 class="font-weight-bolder mb-0">{{ $stats['pinjaman_bermasalah'] }}</h5>
+                                    <p class="text-sm mb-0 text-capitalize font-weight-bold">Total Terkumpul</p>
+                                    <h5 class="font-weight-bolder mb-0">{{ $format->CurrencyFormat($stats['total_terbayar'] ?? 0) }}</h5>
+                                    <span class="text-sm text-info">Pembayaran cicilan</span>
                                 </div>
                             </div>
                             <div class="col-4 text-end">
-                                <div class="icon icon-shape bg-gradient-danger shadow text-center border-radius-md">
-                                    <i class="fas fa-exclamation-triangle text-lg opacity-10"></i>
+                                <div class="icon icon-shape bg-gradient-info shadow text-center border-radius-md">
+                                    <i class="fas fa-money-bill-wave text-lg opacity-10"></i>
                                 </div>
                             </div>
                         </div>
@@ -90,12 +94,22 @@
                 <div class="card mb-4">
                     <div class="card-header pb-0">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6>{{ $title_menu }}</h6>
-                            @if($authorize->add == '1')
-                                <a href="{{ url($url_menu . '/add') }}" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-plus me-1"></i> Generate Cicilan
-                                </a>
-                            @endif
+                            <div>
+                                <h6 class="mb-0">{{ $title_menu }}</h6>
+                                <p class="text-sm mb-0 text-secondary">Kelola pembayaran cicilan pinjaman anggota</p>
+                            </div>
+                            <div class="btn-group" role="group">
+                                @if($authorize->add == '1')
+                                    <a href="{{ url($url_menu . '/add') }}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-calendar-plus me-1"></i> Generate Jadwal
+                                    </a>
+                                @endif
+                                @if($authorize->edit == '1' && isset($summary_potong_gaji) && $summary_potong_gaji['total_cicilan'] > 0)
+                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#potongGajiModal">
+                                        <i class="fas fa-cut me-1"></i> Potong Gaji ({{ $summary_potong_gaji['total_cicilan'] }})
+                                    </button>
+                                @endif
+                            </div>
                         </div>
                     </div>
                     <div class="card-body px-0 pt-0 pb-2">
@@ -139,8 +153,8 @@
                                                 <p class="text-xs text-secondary mb-0">{{ $pinjaman->tenor_bulan }} bulan</p>
                                             </td>
                                             <td>
-                                                <p class="text-xs font-weight-bold mb-0">Rp {{ number_format($pinjaman->jumlah_pinjaman, 0, ',', '.') }}</p>
-                                                <p class="text-xs text-secondary mb-0">Cicilan: Rp {{ number_format($pinjaman->cicilan_per_bulan, 0, ',', '.') }}</p>
+                                                <p class="text-xs font-weight-bold mb-0">Rp {{ number_format($pinjaman->nominal_pinjaman, 0, ',', '.') }}</p>
+                                                <p class="text-xs text-secondary mb-0">Cicilan: Rp {{ number_format($pinjaman->total_angsuran, 0, ',', '.') }}</p>
                                             </td>
                                             <td class="align-middle">
                                                 <div class="d-flex align-items-center">
@@ -187,7 +201,6 @@
         </div>
     </div>
 @endsection
-
 @push('js')
     <script>
         $(document).ready(function() {
