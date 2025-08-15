@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('master_paket_pinjaman', function (Blueprint $table) {
             $table->id();
             $table->string('periode', 7); // Format: 2025-08 (tahun-bulan)
-            $table->decimal('bunga_per_bulan', 5, 2)->default(1.00); // 1% per bulan
             $table->integer('stock_limit')->default(100); // Total limit untuk bulan ini
             $table->integer('stock_terpakai')->default(0); // Yang sudah digunakan
 

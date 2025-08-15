@@ -98,7 +98,7 @@
                                 <div class="form-group">
                                     <label class="form-control-label">Paket Pinjaman</label>
                                     <input type="text" class="form-control"
-                                           value="{{ $pengajuan->paketPinjaman->periode ?? 'N/A' }} ({{ $pengajuan->bunga_per_bulan }}% per bulan)" readonly>
+                                           value="{{ $pengajuan->paketPinjaman->periode ?? 'N/A' }} (1% per bulan)" readonly>
                                 </div>
                             </div>
 
@@ -175,7 +175,7 @@
                                 <div class="col-12">
                                     <div class="info-item mb-3">
                                         <label class="text-sm font-weight-bold">Bunga per Bulan:</label>
-                                        <h6 class="text-info mb-0">{{ $pengajuan->bunga_per_bulan }}%</h6>
+                                        <h6 class="text-info mb-0">1%</h6>
                                     </div>
                                 </div>
                                 <div class="col-12">

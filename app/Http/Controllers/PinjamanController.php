@@ -191,7 +191,7 @@ class PinjamanController extends Controller
 
         // Calculate per cicilan amounts
         $nominal_pokok = $pinjaman->nominal_pinjaman / $tenor_bulan;
-        $nominal_bunga = ($pinjaman->nominal_pinjaman * ($pinjaman->bunga_per_bulan / 100));
+        $nominal_bunga = ($pinjaman->nominal_pinjaman * (1.0 / 100)); // Fixed 1% per bulan
         $total_bayar = $nominal_pokok + $nominal_bunga;
 
         for ($i = 1; $i <= $tenor_bulan; $i++) {

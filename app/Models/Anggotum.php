@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Anggotum
- * 
+ *
  * @property int $id
  * @property string $nomor_anggota
  * @property string $nik
@@ -41,11 +41,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property Carbon $updated_at
  * @property string|null $user_create
  * @property string|null $user_update
- * 
+ *
  * @property Collection|IuranAnggotum[] $iuran_anggota
  * @property Collection|Notifikasi[] $notifikasis
  * @property Collection|PengajuanPinjaman[] $pengajuan_pinjamen
- * @property Collection|Pinjaman[] $pinjamen
+ * @property Collection|Pinjaman[] $pinjaman
  *
  * @package App\Models
  */
@@ -107,7 +107,7 @@ class Anggotum extends Model
 		return $this->hasMany(PengajuanPinjaman::class, 'anggota_id');
 	}
 
-	public function pinjamen()
+	public function pinjaman()
 	{
 		return $this->hasMany(Pinjaman::class, 'anggota_id');
 	}

@@ -48,16 +48,15 @@
                                     </div>
                                 </div>
 
-                                {{-- Jenis Pengajuan --}}
+                                {{-- Jenis Pengajuan (Auto Detected) --}}
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-control-label">Jenis Pengajuan <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="jenis_pengajuan" id="jenis_pengajuan" required>
-                                            <option value="">Pilih Jenis Pengajuan</option>
-                                            <option value="baru" {{ old('jenis_pengajuan') == 'baru' ? 'selected' : '' }}>Pinjaman Baru</option>
-                                            <option value="top_up" {{ old('jenis_pengajuan') == 'top_up' ? 'selected' : '' }}>Top Up</option>
-                                        </select>
-                                        <p class="text-secondary text-xs pt-1 px-1">*) Top Up hanya untuk anggota dengan sisa cicilan ≤ 2</p>
+                                        <label class="form-control-label">Jenis Pengajuan</label>
+                                        <input type="text" class="form-control" id="jenis_pengajuan_display" value="Pinjaman Baru" readonly>
+                                        <input type="hidden" name="jenis_pengajuan" id="jenis_pengajuan" value="baru">
+                                        <p class="text-secondary text-xs pt-1 px-1" id="jenis_pengajuan_info">
+                                            *) Sistem akan otomatis mendeteksi jenis pengajuan berdasarkan status anggota
+                                        </p>
                                     </div>
                                 </div>
 
@@ -65,14 +64,38 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-control-label">Anggota <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="anggota_id" id="anggota_id" required>
-                                            <option value="">Pilih Anggota</option>
-                                            @foreach($anggota_list as $anggota)
-                                                <option value="{{ $anggota->id }}" {{ old('anggota_id') == $anggota->id ? 'selected' : '' }}>
-                                                    {{ $anggota->nomor_anggota }} - {{ $anggota->nama_lengkap }}
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        @if($is_anggota_koperasi && $current_anggota)
+                                            {{-- For anggota_koperasi role, show member name directly --}}
+                                            <div class="form-control-static bg-light p-2 border rounded">
+                                                <strong>{{ $current_anggota->nomor_anggota }} - {{ $current_anggota->nama_lengkap }}</strong>
+                                            </div>
+                                            <input type="hidden" name="anggota_id" value="{{ $current_anggota->id }}">
+                                            <small class="text-muted">Nama anggota diambil otomatis dari akun login Anda</small>
+                                        @else
+                                                @if(!empty($is_anggota_role) && $is_anggota_role)
+                                                    @if(!empty($anggota_not_found) && $anggota_not_found)
+                                                        <div class="alert alert-danger">Data anggota Anda tidak ditemukan. Silakan hubungi admin.</div>
+                                                    @else
+                                                        <select class="form-control" name="anggota_id" id="anggota_id" required disabled>
+                                                            @foreach($anggota_list as $anggota)
+                                                                <option value="{{ $anggota->id }}" selected>
+                                                                    {{ $anggota->nomor_anggota }} - {{ $anggota->nama_lengkap }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                        <input type="hidden" name="anggota_id" value="{{ $anggota_list[0]->id ?? '' }}">
+                                                    @endif
+                                                @else
+                                                    <select class="form-control" name="anggota_id" id="anggota_id" required>
+                                                        <option value="">Pilih Anggota</option>
+                                                        @foreach($anggota_list as $anggota)
+                                                            <option value="{{ $anggota->id }}" {{ old('anggota_id') == $anggota->id ? 'selected' : '' }}>
+                                                                {{ $anggota->nomor_anggota }} - {{ $anggota->nama_lengkap }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                @endif
+                                        @endif
                                     </div>
                                 </div>
 
@@ -84,12 +107,12 @@
                                             <option value="">Pilih Paket Pinjaman</option>
                                             @foreach($paket_list as $paket)
                                                 <option value="{{ $paket->id }}"
-                                                        data-bunga="{{ $paket->bunga_per_bulan }}"
+                                                        data-bunga="1.0"
                                                         data-stock="{{ $paket->stock_limit - $paket->stock_terpakai }}"
                                                         data-stock-limit="{{ $paket->stock_limit }}"
                                                         data-stock-terpakai="{{ $paket->stock_terpakai }}"
                                                         {{ old('paket_pinjaman_id') == $paket->id ? 'selected' : '' }}>
-                                                    {{ $paket->periode }} ({{ $paket->bunga_per_bulan }}% per bulan)
+                                                    {{ $paket->periode }} (1% per bulan)
                                                 </option>
                                             @endforeach
                                         </select>
@@ -177,7 +200,7 @@
                                 <div class="col-12">
                                     <div class="info-item mb-3">
                                         <label class="text-sm font-weight-bold">Bunga per Bulan:</label>
-                                        <h6 class="text-info mb-0" id="display-bunga">0%</h6>
+                                        <h6 class="text-info mb-0" id="display-bunga">1%</h6>
                                     </div>
                                 </div>
                                 <div class="col-12">
@@ -190,14 +213,6 @@
                                     <div class="info-item mb-3">
                                         <label class="text-sm font-weight-bold">Total Pembayaran:</label>
                                         <h5 class="text-danger mb-0" id="display-total">Rp 0</h5>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="alert alert-info text-sm">
-                                        <strong>Formula:</strong><br>
-                                        • Jumlah Pinjaman = Jumlah Paket × Rp 500.000<br>
-                                        • Cicilan = (Jumlah Pinjaman × (1 + Bunga%)) ÷ Tenor<br>
-                                        • Total = Cicilan × Tenor Bulan
                                     </div>
                                 </div>
                             </div>

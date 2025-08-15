@@ -61,14 +61,24 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-control-label">Anggota <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="anggota_id" id="anggota_id" required>
-                                            <option value="">Pilih Anggota</option>
-                                            @foreach($anggota_list as $anggota)
-                                                <option value="{{ $anggota->id }}" {{ $pengajuan->anggota_id == $anggota->id ? 'selected' : '' }}>
-                                                    {{ $anggota->nomor_anggota }} - {{ $anggota->nama_lengkap }}
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        @if($is_anggota_koperasi && $current_anggota)
+                                            {{-- For anggota_koperasi role, show member name directly --}}
+                                            <div class="form-control-static bg-light p-2 border rounded">
+                                                <strong>{{ $current_anggota->nomor_anggota }} - {{ $current_anggota->nama_lengkap }}</strong>
+                                            </div>
+                                            <input type="hidden" name="anggota_id" value="{{ $current_anggota->id }}">
+                                            <small class="text-muted">Nama anggota diambil otomatis dari akun login Anda</small>
+                                        @else
+                                            {{-- For admin roles, show dropdown --}}
+                                            <select class="form-control" name="anggota_id" id="anggota_id" required>
+                                                <option value="">Pilih Anggota</option>
+                                                @foreach($anggota_list as $anggota)
+                                                    <option value="{{ $anggota->id }}" {{ $pengajuan->anggota_id == $anggota->id ? 'selected' : '' }}>
+                                                        {{ $anggota->nomor_anggota }} - {{ $anggota->nama_lengkap }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -80,12 +90,12 @@
                                             <option value="">Pilih Paket Pinjaman</option>
                                             @foreach($paket_list as $paket)
                                                 <option value="{{ $paket->id }}"
-                                                        data-bunga="{{ $paket->bunga_per_bulan }}"
+                                                        data-bunga="1.0"
                                                         data-stock="{{ $paket->stock_limit - $paket->stock_terpakai }}"
                                                         data-stock-limit="{{ $paket->stock_limit }}"
                                                         data-stock-terpakai="{{ $paket->stock_terpakai }}"
                                                         {{ $pengajuan->paket_pinjaman_id == $paket->id ? 'selected' : '' }}>
-                                                    {{ $paket->periode }} (Bunga: {{ $paket->bunga_per_bulan }}% per bulan)
+                                                    {{ $paket->periode }} (Bunga: 1% per bulan)
                                                 </option>
                                             @endforeach
                                         </select>
@@ -137,14 +147,16 @@
                                     </div>
                                 </div>
 
-                                {{-- Jenis Pengajuan --}}
+                                {{-- Jenis Pengajuan (Auto Detected) --}}
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-control-label">Jenis Pengajuan <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="jenis_pengajuan" id="jenis_pengajuan" required>
-                                            <option value="baru" {{ $pengajuan->jenis_pengajuan == 'baru' ? 'selected' : '' }}>Pinjaman Baru</option>
-                                            <option value="top_up" {{ $pengajuan->jenis_pengajuan == 'top_up' ? 'selected' : '' }}>Top Up</option>
-                                        </select>
+                                        <label class="form-control-label">Jenis Pengajuan</label>
+                                        <input type="text" class="form-control" id="jenis_pengajuan_display"
+                                               value="{{ $pengajuan->jenis_pengajuan == 'top_up' ? 'Top Up' : 'Pinjaman Baru' }}" readonly>
+                                        <input type="hidden" name="jenis_pengajuan" id="jenis_pengajuan" value="{{ $pengajuan->jenis_pengajuan }}">
+                                        <p class="text-secondary text-xs pt-1 px-1" id="jenis_pengajuan_info">
+                                            *) Sistem akan otomatis mendeteksi jenis pengajuan berdasarkan status anggota
+                                        </p>
                                     </div>
                                 </div>
 

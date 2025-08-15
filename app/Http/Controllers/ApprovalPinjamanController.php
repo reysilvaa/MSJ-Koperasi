@@ -258,7 +258,7 @@ class ApprovalPinjamanController extends Controller
                     'nomor_pinjaman' => $data['format']->IDFormat('KOP301'),
                     'jumlah_pinjaman' => $pengajuan->jumlah_pinjaman,
                     'tenor_pinjaman' => $pengajuan->tenor_pinjaman,
-                    'bunga_per_bulan' => $pengajuan->bunga_per_bulan,
+                    'bunga_per_bulan' => 1.0, // Fixed 1% per bulan
                     'cicilan_per_bulan' => $pengajuan->cicilan_per_bulan,
                     'total_pembayaran' => $pengajuan->total_pembayaran,
                     'tanggal_pinjaman' => now(),
@@ -324,7 +324,7 @@ class ApprovalPinjamanController extends Controller
             'anggota_id' => $pengajuan->anggota_id,
             'paket_pinjaman_id' => $pengajuan->paket_pinjaman_id,
             'jumlah_pinjaman' => $pengajuan->jumlah_pinjaman,
-            'bunga_per_bulan' => $pengajuan->bunga_per_bulan,
+            'bunga_per_bulan' => 1.0, // Fixed 1% per bulan
             'cicilan_per_bulan' => $pengajuan->cicilan_per_bulan,
             'total_pembayaran' => $pengajuan->total_pembayaran,
             'tenor_bulan' => (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT),

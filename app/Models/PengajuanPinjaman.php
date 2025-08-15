@@ -47,7 +47,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property PengajuanPinjaman|null $pengajuan_pinjaman
  * @property Collection|ApprovalHistory[] $approval_histories
  * @property Collection|PengajuanPinjaman[] $pengajuan_pinjamen
- * @property Collection|Pinjaman[] $pinjamen
+ * @property Collection|Pinjaman[] $pinjaman
  *
  * @package App\Models
  */
@@ -140,7 +140,7 @@ class PengajuanPinjaman extends Model
 		return $this->hasMany(PengajuanPinjaman::class, 'pinjaman_asal_id');
 	}
 
-	public function pinjamen()
+	public function pinjaman()
 	{
 		return $this->hasMany(Pinjaman::class);
 	}

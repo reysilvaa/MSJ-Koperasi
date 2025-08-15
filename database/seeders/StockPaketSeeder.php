@@ -26,7 +26,6 @@ class StockPaketSeeder extends Seeder
         $masterPaketData = [
             [
                 'periode' => $currentPeriod,
-                'bunga_per_bulan' => 1.00,
                 'stock_limit' => 100, // Total 100 unit untuk bulan ini
                 'stock_terpakai' => 0,
                 'isactive' => 1,

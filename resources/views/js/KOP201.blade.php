@@ -43,6 +43,16 @@ $(document).ready(function() {
 
     // === ADD PAGE FUNCTIONALITY ===
     function initializeAddPage() {
+        // Auto-check eligibility when anggota selected (only if dropdown exists)
+        if ($('#anggota_id').is('select')) {
+            $('#anggota_id').on('change', function() {
+                // Just reset to default without AJAX call
+                $('#jenis_pengajuan').val('baru');
+                $('#jenis_pengajuan_display').val('Pinjaman Baru');
+                $('#jenis_pengajuan_info').html('*) Jenis pengajuan akan ditentukan sistem saat menyimpan data');
+            });
+        }
+
         // Real-time calculation
         $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', calculateLoan);
 
@@ -72,6 +82,16 @@ $(document).ready(function() {
 
     // === EDIT PAGE FUNCTIONALITY ===
     function initializeEditPage() {
+        // Auto-check eligibility when anggota selected (for edit page, only if dropdown exists)
+        if ($('#anggota_id').is('select')) {
+            $('#anggota_id').on('change', function() {
+                // Just reset to default without AJAX call
+                $('#jenis_pengajuan').val('baru');
+                $('#jenis_pengajuan_display').val('Pinjaman Baru');
+                $('#jenis_pengajuan_info').html('*) Jenis pengajuan akan ditentukan sistem saat menyimpan data');
+            });
+        }
+
         // Real-time calculation for edit page
         $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', calculateLoanEdit);
 
@@ -318,6 +338,25 @@ $(document).ready(function() {
                 form.submit();
             }
         });
+    }
+
+    // === ANGGOTA ELIGIBILITY CHECK ===
+    // This function is no longer used - eligibility check now happens during form submission
+    function checkAnggotaEligibility() {
+        const anggotaId = $('#anggota_id').val();
+
+        if (!anggotaId) {
+            // Reset to default
+            $('#jenis_pengajuan').val('baru');
+            $('#jenis_pengajuan_display').val('Pinjaman Baru');
+            $('#jenis_pengajuan_info').html('*) Jenis pengajuan akan ditentukan sistem saat menyimpan data');
+            return;
+        }
+
+        // Set default without AJAX call
+        $('#jenis_pengajuan').val('baru');
+        $('#jenis_pengajuan_display').val('Pinjaman Baru');
+        $('#jenis_pengajuan_info').html('*) Jenis pengajuan akan ditentukan sistem saat menyimpan data');
     }
 
     console.log('PengajuanPinjaman JavaScript initialized for:',

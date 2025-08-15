@@ -97,13 +97,7 @@ class KoperasiDataSeeder extends Seeder
         DB::table('periode_pencairan')->insert([
             [
                 'nama_periode' => 'Pencairan Agustus 2025 - Periode 1',
-                'tanggal_mulai' => '2025-08-01',
-                'tanggal_selesai' => '2025-08-15',
                 'tanggal_pencairan' => '2025-08-10',
-                'maksimal_aplikasi' => 50,
-                'total_dana_tersedia' => 500000000.00, // 500 juta
-                'total_dana_terpakai' => 0.00,
-                'keterangan' => 'Periode pencairan pertama bulan Agustus 2025',
                 'isactive' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -112,13 +106,7 @@ class KoperasiDataSeeder extends Seeder
             ],
             [
                 'nama_periode' => 'Pencairan Agustus 2025 - Periode 2',
-                'tanggal_mulai' => '2025-08-16',
-                'tanggal_selesai' => '2025-08-31',
                 'tanggal_pencairan' => '2025-08-25',
-                'maksimal_aplikasi' => 30,
-                'total_dana_tersedia' => 300000000.00, // 300 juta
-                'total_dana_terpakai' => 0.00,
-                'keterangan' => 'Periode pencairan kedua bulan Agustus 2025',
                 'isactive' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
