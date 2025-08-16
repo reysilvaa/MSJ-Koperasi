@@ -170,6 +170,20 @@ class PengajuanPinjamanController extends Controller
             return redirect()->back()->withInput();
         }
 
+        // Validate anggota status - check if member is active
+        $anggota = Anggotum::find($anggotaId);
+        if (!$anggota) {
+            Session::flash('message', 'Data anggota tidak ditemukan. Silakan hubungi admin untuk verifikasi data keanggotaan.');
+            Session::flash('class', 'danger');
+            return redirect()->back()->withInput();
+        }
+
+        if ($anggota->isactive == '0') {
+            Session::flash('message', 'Status keanggotaan Anda tidak aktif. Anda tidak dapat membuat pengajuan pinjaman. Silakan hubungi admin untuk mengaktifkan kembali keanggotaan Anda.');
+            Session::flash('class', 'danger');
+            return redirect()->back()->withInput();
+        }
+
         // Check for existing pending application using model method
         if (PengajuanPinjaman::hasExistingPendingApplication($anggotaId)) {
             Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status \'Diajukan\'. Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
@@ -207,9 +221,8 @@ class PengajuanPinjamanController extends Controller
         DB::beginTransaction();
 
         try {
-            // Get basic data
+            // Get basic data (anggota already retrieved and validated above)
             $paket = MasterPaketPinjaman::find(request('paket_pinjaman_id'));
-            $anggota = Anggotum::find(request('anggota_id'));
             $tenor_pinjaman = request('tenor_pinjaman');
             $tenor_bulan = PengajuanPinjaman::getTenorBulan($tenor_pinjaman);
             $jumlah_paket = request('jumlah_paket_dipilih');
@@ -504,6 +517,20 @@ class PengajuanPinjamanController extends Controller
         if (!$anggotaId) {
             Session::flash('message', 'Anggota harus dipilih untuk melanjutkan pengajuan pinjaman.');
             Session::flash('class', 'warning');
+            return redirect()->back()->withInput();
+        }
+
+        // Validate anggota status - check if member is active
+        $anggota = Anggotum::find($anggotaId);
+        if (!$anggota) {
+            Session::flash('message', 'Data anggota tidak ditemukan. Silakan hubungi admin untuk verifikasi data keanggotaan.');
+            Session::flash('class', 'danger');
+            return redirect()->back()->withInput();
+        }
+
+        if ($anggota->isactive == '0') {
+            Session::flash('message', 'Status keanggotaan Anda tidak aktif. Anda tidak dapat mengedit pengajuan pinjaman. Silakan hubungi admin untuk mengaktifkan kembali keanggotaan Anda.');
+            Session::flash('class', 'danger');
             return redirect()->back()->withInput();
         }
 
