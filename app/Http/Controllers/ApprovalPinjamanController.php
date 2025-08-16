@@ -48,6 +48,13 @@ class ApprovalPinjamanController extends Controller
         $user_role = PengajuanPinjaman::getUserRole($data);
         $current_username = PengajuanPinjaman::getCurrentUsername($data);
 
+        // Check basic approval permission
+        if ($data['authorize']->approval != '1') {
+            Session::flash('message', 'Anda tidak memiliki akses approval untuk modul ini, Hubungi Admin.');
+            Session::flash('class', 'warning');
+            return redirect()->back();
+        }
+
         // Apply role-based filtering using model method
         $query = PengajuanPinjaman::filterByRole($user_role, $current_username);
 
@@ -256,6 +263,13 @@ class ApprovalPinjamanController extends Controller
         // Get user role and username using model helper methods
         $user_role = PengajuanPinjaman::getUserRole($data);
         $current_username = PengajuanPinjaman::getCurrentUsername($data);
+
+        // Check basic approval permission
+        if ($data['authorize']->approval != '1') {
+            Session::flash('message', 'Anda tidak memiliki akses approval untuk modul ini, Hubungi Admin.');
+            Session::flash('class', 'warning');
+            return redirect()->back();
+        }
 
         // Check if this user has already approved this application at their role level
         if (ApprovalHistory::hasExistingApproval($id, $current_username, $user_role)) {

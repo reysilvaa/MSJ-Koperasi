@@ -140,49 +140,69 @@
 
             {{-- Approval Panel --}}
             <div class="col-md-4">
-                {{-- Form Approval --}}
-                <div class="card">
-                    <div class="card-header pb-0">
-                        <h6>Form Approval</h6>
-                        <p class="text-sm mb-0">Proses persetujuan pengajuan</p>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ url($url_menu) }}" id="approval-form">
-                            @csrf
-                            <input type="hidden" name="pengajuan_id" value="{{ $pengajuan->id }}">
+                @if($authorize->approval == '1')
+                    {{-- Form Approval --}}
+                    <div class="card">
+                        <div class="card-header pb-0">
+                            <h6>Form Approval</h6>
+                            <p class="text-sm mb-0">Proses persetujuan pengajuan</p>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url($url_menu) }}" id="approval-form">
+                                @csrf
+                                <input type="hidden" name="pengajuan_id" value="{{ $pengajuan->id }}">
 
-                            <div class="form-group">
-                                <label class="form-control-label">Keputusan <span class="text-danger">*</span></label>
-                                <div class="d-flex gap-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="action" value="approve" id="approve" required>
-                                        <label class="form-check-label text-success" for="approve">
-                                            <i class="fas fa-check-circle me-1"></i> Setujui
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="action" value="reject" id="reject" required>
-                                        <label class="form-check-label text-danger" for="reject">
-                                            <i class="fas fa-times-circle me-1"></i> Tolak
-                                        </label>
+                                <div class="form-group">
+                                    <label class="form-control-label">Keputusan <span class="text-danger">*</span></label>
+                                    <div class="d-flex gap-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="action" value="approve" id="approve" required>
+                                            <label class="form-check-label text-success" for="approve">
+                                                <i class="fas fa-check-circle me-1"></i> Setujui
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="action" value="reject" id="reject" required>
+                                            <label class="form-check-label text-danger" for="reject">
+                                                <i class="fas fa-times-circle me-1"></i> Tolak
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="form-group">
-                                <label class="form-control-label">Catatan</label>
-                                <textarea class="form-control" name="catatan" rows="4"
-                                          placeholder="Berikan catatan untuk keputusan Anda..."></textarea>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-control-label">Catatan</label>
+                                    <textarea class="form-control" name="catatan" rows="4"
+                                              placeholder="Berikan catatan untuk keputusan Anda..."></textarea>
+                                </div>
 
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-paper-plane me-1"></i> Proses Approval
-                                </button>
-                            </div>
-                        </form>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane me-1"></i> Proses Approval
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
+                @else
+                    {{-- No Approval Permission --}}
+                    <div class="card">
+                        <div class="card-header pb-0">
+                            <h6>Form Approval</h6>
+                            <p class="text-sm mb-0">Status akses approval</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Akses Terbatas</strong><br>
+                                <small>
+                                    Anda tidak memiliki wewenang untuk melakukan approval pada pengajuan ini.
+                                    Silakan hubungi administrator untuk mendapatkan akses approval.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Approval History --}}
                 <div class="card mt-3">
