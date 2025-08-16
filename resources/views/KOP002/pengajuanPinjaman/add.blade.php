@@ -76,24 +76,27 @@
                                                     @if(!empty($anggota_not_found) && $anggota_not_found)
                                                         <div class="alert alert-danger">Data anggota Anda tidak ditemukan. Silakan hubungi admin.</div>
                                                     @else
-                                                        <select class="form-control" name="anggota_id" id="anggota_id" required disabled>
-                                                            @foreach($anggota_list as $anggota)
-                                                                <option value="{{ $anggota->id }}" selected>
-                                                                    {{ $anggota->nomor_anggota }} - {{ $anggota->nama_lengkap }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        <input type="hidden" name="anggota_id" value="{{ $anggota_list[0]->id ?? '' }}">
+                                                        <div class="input-group">
+                                                            <input type="text" class="form-control" name="anggota_id_display" id="anggota_id_display"
+                                                                   value="{{ $anggota_list[0]->nomor_anggota ?? '' }} - {{ $anggota_list[0]->nama_lengkap ?? '' }}" readonly>
+                                                            <span class="input-group-text bg-secondary text-light">
+                                                                <i class="fas fa-lock"></i>
+                                                            </span>
+                                                        </div>
+                                                        <input type="hidden" name="anggota_id" id="anggota_id" value="{{ $anggota_list[0]->id ?? '' }}">
                                                     @endif
                                                 @else
-                                                    <select class="form-control" name="anggota_id" id="anggota_id" required>
-                                                        <option value="">Pilih Anggota</option>
-                                                        @foreach($anggota_list as $anggota)
-                                                            <option value="{{ $anggota->id }}" {{ old('anggota_id') == $anggota->id ? 'selected' : '' }}>
-                                                                {{ $anggota->nomor_anggota }} - {{ $anggota->nama_lengkap }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" name="anggota_id_display" id="anggota_id_display"
+                                                               value="{{ old('anggota_id') ? ($anggota_list->where('id', old('anggota_id'))->first()->nomor_anggota ?? '') . ' - ' . ($anggota_list->where('id', old('anggota_id'))->first()->nama_lengkap ?? '') : '' }}"
+                                                               placeholder="Pilih Anggota" readonly required>
+                                                        <span class="input-group-text bg-primary text-light icon-modal-search"
+                                                              data-bs-toggle="modal" data-bs-target="#searchModalAnggota"
+                                                              style="cursor: pointer;">
+                                                            <i class="fas fa-search"></i>
+                                                        </span>
+                                                    </div>
+                                                    <input type="hidden" name="anggota_id" id="anggota_id" value="{{ old('anggota_id') }}" required>
                                                 @endif
                                         @endif
                                     </div>
@@ -103,21 +106,17 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-control-label">Paket Pinjaman <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="paket_pinjaman_id" id="paket_pinjaman_id" required>
-                                            <option value="">Pilih Paket Pinjaman</option>
-                                            @foreach($paket_list as $paket)
-                                                <option value="{{ $paket->id }}"
-                                                        data-bunga="1.0"
-                                                        @if(!isset($hide_stock_info) || !$hide_stock_info)
-                                                        data-stock="{{ $paket->stock_limit - $paket->stock_terpakai }}"
-                                                        data-stock-limit="{{ $paket->stock_limit }}"
-                                                        data-stock-terpakai="{{ $paket->stock_terpakai }}"
-                                                        @endif
-                                                        {{ old('paket_pinjaman_id') == $paket->id ? 'selected' : '' }}>
-                                                    {{ $paket->periode }} (1% per bulan)
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" name="paket_pinjaman_id_display" id="paket_pinjaman_id_display"
+                                                   value="{{ old('paket_pinjaman_id') ? ($paket_list->where('id', old('paket_pinjaman_id'))->first()->periode ?? '') . ' (1% per bulan)' : '' }}"
+                                                   placeholder="Pilih Paket Pinjaman" readonly required>
+                                            <span class="input-group-text bg-primary text-light icon-modal-search"
+                                                  data-bs-toggle="modal" data-bs-target="#searchModalPaket"
+                                                  style="cursor: pointer;">
+                                                <i class="fas fa-search"></i>
+                                            </span>
+                                        </div>
+                                        <input type="hidden" name="paket_pinjaman_id" id="paket_pinjaman_id" value="{{ old('paket_pinjaman_id') }}" required>
                                         <p class="text-secondary text-xs pt-1 px-1">*) Pilih paket sesuai kebutuhan</p>
                                     </div>
                                 </div>
@@ -155,16 +154,17 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-control-label">Periode Pencairan <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="periode_pencairan_id" id="periode_pencairan_id" required>
-                                            <option value="">Pilih Periode</option>
-                                            @foreach($periode_list as $periode)
-                                                <option value="{{ $periode->id }}"
-                                                        {{ old('periode_pencairan_id') == $periode->id ? 'selected' : '' }}>
-                                                    {{ $periode->nama_periode }}
-                                                    ({{ \Carbon\Carbon::parse($periode->tanggal_mulai)->format('d M Y') }} - {{ \Carbon\Carbon::parse($periode->tanggal_selesai)->format('d M Y') }})
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" name="periode_pencairan_id_display" id="periode_pencairan_id_display"
+                                                   value="{{ old('periode_pencairan_id') ? ($periode_list->where('id', old('periode_pencairan_id'))->first()->nama_periode ?? '') . ' (' . (\Carbon\Carbon::parse($periode_list->where('id', old('periode_pencairan_id'))->first()->tanggal_mulai ?? now())->format('d M Y')) . ' - ' . (\Carbon\Carbon::parse($periode_list->where('id', old('periode_pencairan_id'))->first()->tanggal_selesai ?? now())->format('d M Y')) . ')' : '' }}"
+                                                   placeholder="Pilih Periode" readonly required>
+                                            <span class="input-group-text bg-primary text-light icon-modal-search"
+                                                  data-bs-toggle="modal" data-bs-target="#searchModalPeriode"
+                                                  style="cursor: pointer;">
+                                                <i class="fas fa-search"></i>
+                                            </span>
+                                        </div>
+                                        <input type="hidden" name="periode_pencairan_id" id="periode_pencairan_id" value="{{ old('periode_pencairan_id') }}" required>
                                     </div>
                                 </div>
 
@@ -232,14 +232,7 @@
                     <div class="card-body">
                         <div id="stock-information-panel" style="display: none;">
                             <div class="row">
-                                <div class="col-12">
-                                    <div class="info-item mb-3">
-                                        <label class="text-sm font-weight-bold">Status Stok:</label>
-                                        <h6 class="mb-1" id="stock-status-badge">
-                                            <span class="badge bg-secondary">Pilih paket terlebih dahulu</span>
-                                        </h6>
-                                    </div>
-                                </div>
+
                                 <div class="col-6">
                                     <div class="info-item mb-3">
                                         <label class="text-sm font-weight-bold">Stok Tersedia:</label>
@@ -278,15 +271,7 @@
                                     </div>
                                 </div>
                             </div>
-                            {{-- Integrated validation feedback area --}}
-                            <div class="row mt-2">
-                                <div class="col-12">
-                                    <div id="stock-validation-feedback" class="alert alert-info alert-dismissible fade show d-none" role="alert" style="padding: 8px 12px; margin-bottom: 0;">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        <span id="stock-validation-message">Informasi validasi stok akan ditampilkan di sini</span>
-                                    </div>
-                                </div>
-                            </div>
+
                         </div>
                         <div id="stock-no-selection" class="text-center py-3">
                             <i class="fas fa-box-open text-muted" style="font-size: 2rem;"></i>
@@ -353,6 +338,150 @@
             @endpush
         @endif
     @endif
+
+    {{-- Search Modals --}}
+    @if(!$is_anggota_biasa || (!empty($is_anggota_role) && !$is_anggota_role))
+    <!-- Anggota Search Modal -->
+    <div class="modal fade" id="searchModalAnggota" tabindex="-1" role="dialog" aria-labelledby="searchModalAnggotaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="searchModalAnggotaLabel">Pilih Anggota</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body table-responsive">
+                    <table class="table display" id="list_anggota_search">
+                        <thead class="thead-light" style="background-color: #00b7bd4f;">
+                            <tr>
+                                <th width="20px">Action</th>
+                                <th>Nomor Anggota</th>
+                                <th>Nama Lengkap</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($anggota_list as $anggota)
+                            <tr>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-primary select-anggota"
+                                            data-id="{{ $anggota->id }}"
+                                            data-display="{{ $anggota->nomor_anggota }} - {{ $anggota->nama_lengkap }}"
+                                            data-bs-dismiss="modal">
+                                        Pilih
+                                    </button>
+                                </td>
+                                <td>{{ $anggota->nomor_anggota }}</td>
+                                <td>{{ $anggota->nama_lengkap }}</td>
+                                <td>{{ $anggota->status_anggota }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Paket Pinjaman Search Modal -->
+    <div class="modal fade" id="searchModalPaket" tabindex="-1" role="dialog" aria-labelledby="searchModalPaketLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="searchModalPaketLabel">Pilih Paket Pinjaman</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body table-responsive">
+                    <table class="table display" id="list_paket_search">
+                        <thead class="thead-light" style="background-color: #00b7bd4f;">
+                            <tr>
+                                <th width="20px">Action</th>
+                                <th>Periode</th>
+                                <th>Bunga</th>
+                                @if(!isset($hide_stock_info) || !$hide_stock_info)
+                                <th>Stok Tersedia</th>
+                                <th>Limit Stok</th>
+                                @endif
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($paket_list as $paket)
+                            <tr>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-primary select-paket"
+                                            data-id="{{ $paket->id }}"
+                                            data-display="{{ $paket->periode }} (1% per bulan)"
+                                            data-bunga="1.0"
+                                            @if(!isset($hide_stock_info) || !$hide_stock_info)
+                                            data-stock="{{ $paket->stock_limit - $paket->stock_terpakai }}"
+                                            data-stock-limit="{{ $paket->stock_limit }}"
+                                            data-stock-terpakai="{{ $paket->stock_terpakai }}"
+                                            @endif
+                                            data-bs-dismiss="modal">
+                                        Pilih
+                                    </button>
+                                </td>
+                                <td>{{ $paket->periode }}</td>
+                                <td>1% per bulan</td>
+                                @if(!isset($hide_stock_info) || !$hide_stock_info)
+                                <td>{{ $paket->stock_limit - $paket->stock_terpakai }}</td>
+                                <td>{{ $paket->stock_limit }}</td>
+                                @endif
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Periode Pencairan Search Modal -->
+    <div class="modal fade" id="searchModalPeriode" tabindex="-1" role="dialog" aria-labelledby="searchModalPeriodeLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="searchModalPeriodeLabel">Pilih Periode Pencairan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body table-responsive">
+                    <table class="table display" id="list_periode_search">
+                        <thead class="thead-light" style="background-color: #00b7bd4f;">
+                            <tr>
+                                <th width="20px">Action</th>
+                                <th>Nama Periode</th>
+                                <th>Tanggal Mulai</th>
+                                <th>Tanggal Selesai</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($periode_list as $periode)
+                            <tr>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-primary select-periode"
+                                            data-id="{{ $periode->id }}"
+                                            data-display="{{ $periode->nama_periode }} ({{ \Carbon\Carbon::parse($periode->tanggal_mulai)->format('d M Y') }} - {{ \Carbon\Carbon::parse($periode->tanggal_selesai)->format('d M Y') }})"
+                                            data-bs-dismiss="modal">
+                                        Pilih
+                                    </button>
+                                </td>
+                                <td>{{ $periode->nama_periode }}</td>
+                                <td>{{ \Carbon\Carbon::parse($periode->tanggal_mulai)->format('d M Y') }}</td>
+                                <td>{{ \Carbon\Carbon::parse($periode->tanggal_selesai)->format('d M Y') }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 

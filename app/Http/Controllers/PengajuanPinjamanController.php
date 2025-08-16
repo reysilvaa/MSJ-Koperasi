@@ -188,7 +188,7 @@ class PengajuanPinjamanController extends Controller
         // Check for existing pending application using model method
         if (PengajuanPinjaman::hasExistingPendingApplication($anggotaId)) {
             Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status \'Diajukan\'. Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
-            Session::flash('class', 'warning');
+            Session::flash('class', 'danger');
             return redirect()->back()->withInput();
         }
 
@@ -608,7 +608,7 @@ class PengajuanPinjamanController extends Controller
         // Check for existing pending application using model method (excluding current one)
         if (PengajuanPinjaman::hasExistingPendingApplication($anggotaId, $id)) {
             Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status \'Diajukan\'. Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
-            Session::flash('class', 'warning');
+            Session::flash('class', 'danger');
             return redirect()->back()->withInput();
         }
 
