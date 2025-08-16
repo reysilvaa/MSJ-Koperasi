@@ -232,7 +232,15 @@
                                         <p class="text-xs text-secondary mb-0">{{ $loan->periode }}</p>
                                     </div>
                                     <div class="text-end">
-                                        <span class="badge badge-sm bg-{{ $loan->status == 'lunas' ? 'success' : ($loan->status == 'aktif' ? 'info' : 'warning') }}">
+                                        @php
+                                            $loan_status_config = match($loan->status) {
+                                                'lunas' => ['class' => 'badge badge-sm bg-success text-white', 'icon' => 'fas fa-check-circle'],
+                                                'aktif' => ['class' => 'badge badge-sm bg-info text-white', 'icon' => 'fas fa-play-circle'],
+                                                default => ['class' => 'badge badge-sm bg-warning text-dark', 'icon' => 'fas fa-exclamation-triangle']
+                                            };
+                                        @endphp
+                                        <span class="{{ $loan_status_config['class'] }}">
+                                            <i class="{{ $loan_status_config['icon'] }} me-1"></i>
                                             {{ ucfirst($loan->status) }}
                                         </span>
                                         <p class="text-xs text-secondary mb-0">Rp {{ number_format($loan->nominal_pinjaman, 0, ',', '.') }}</p>

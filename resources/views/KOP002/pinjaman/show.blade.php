@@ -74,15 +74,15 @@
                                     <label class="text-xs text-uppercase text-secondary font-weight-bolder opacity-7">Status</label>
                                     <br>
                                     @php
-                                        $statusClass = match($pinjaman->status) {
-                                            'aktif' => 'bg-gradient-success',
-                                            'lunas' => 'bg-gradient-info',
-                                            'bermasalah' => 'bg-gradient-warning',
-                                            default => 'bg-gradient-secondary'
+                                        $status_config = match($pinjaman->status) {
+                                            'aktif' => ['class' => 'badge bg-success text-white px-3 py-2', 'icon' => 'fas fa-play-circle'],
+                                            'lunas' => ['class' => 'badge bg-info text-white px-3 py-2', 'icon' => 'fas fa-check-circle'],
+                                            'bermasalah' => ['class' => 'badge bg-warning text-dark px-3 py-2', 'icon' => 'fas fa-exclamation-triangle'],
+                                            default => ['class' => 'badge bg-secondary text-white px-3 py-2', 'icon' => 'fas fa-question']
                                         };
                                     @endphp
-                                    <span class="badge {{ $statusClass }} px-3 py-2">
-                                        <i class="fas fa-circle me-1"></i>{{ ucfirst($pinjaman->status) }}
+                                    <span class="{{ $status_config['class'] }}">
+                                        <i class="{{ $status_config['icon'] }} me-1"></i>{{ ucfirst($pinjaman->status) }}
                                     </span>
                                 </div>
                             </div>

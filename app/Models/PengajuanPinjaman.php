@@ -9,6 +9,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class PengajuanPinjaman
@@ -143,5 +144,65 @@ class PengajuanPinjaman extends Model
 	public function pinjaman()
 	{
 		return $this->hasMany(Pinjaman::class);
+	}
+
+	/**
+	 * Filter pengajuan based on user role and approval status
+	 */
+	public static function filterByRole($role, $username)
+	{
+		$query = self::with(['anggotum', 'master_paket_pinjaman', 'periode_pencairan'])
+			->where('isactive', '1');
+
+		switch ($role) {
+			case 'kadmin': // Ketua Admin - review pertama
+				return $query->where('status_pengajuan', 'diajukan')
+					->whereNotExists(function($subquery) use ($username) {
+						$subquery->select(DB::raw(1))
+								 ->from('approval_history')
+								 ->whereColumn('approval_history.pengajuan_pinjaman_id', 'pengajuan_pinjaman.id')
+								 ->where('approval_history.approver_name', $username)
+								 ->where('approval_history.isactive', '1');
+					});
+
+			case 'akredt': // Admin Kredit - review kedua
+				return $query->where('status_pengajuan', 'review_admin')
+					->whereNotExists(function($subquery) use ($username) {
+						$subquery->select(DB::raw(1))
+								 ->from('approval_history')
+								 ->whereColumn('approval_history.pengajuan_pinjaman_id', 'pengajuan_pinjaman.id')
+								 ->where('approval_history.approver_name', $username)
+								 ->where('approval_history.isactive', '1');
+					});
+
+			case 'ketuum': // Ketua Umum - final approval
+				return $query->where('status_pengajuan', 'review_panitia')
+					->whereNotExists(function($subquery) use ($username) {
+						$subquery->select(DB::raw(1))
+								 ->from('approval_history')
+								 ->whereColumn('approval_history.pengajuan_pinjaman_id', 'pengajuan_pinjaman.id')
+								 ->where('approval_history.approver_name', $username)
+								 ->where('approval_history.isactive', '1');
+					});
+
+			default: // Default: show all pending approvals (for super admin)
+				return $query->whereIn('status_pengajuan', ['diajukan', 'review_admin', 'review_panitia', 'review_ketua']);
+		}
+	}
+
+	/**
+	 * Get current username from session or user login data
+	 */
+	public static function getCurrentUsername($data)
+	{
+		return session('username') ?? $data['user_login']->username;
+	}
+
+	/**
+	 * Get user role from login data
+	 */
+	public static function getUserRole($data)
+	{
+		return $data['user_login']->idroles;
 	}
 }

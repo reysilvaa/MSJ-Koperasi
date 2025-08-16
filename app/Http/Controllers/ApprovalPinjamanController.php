@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Validator;
 
 class ApprovalPinjamanController extends Controller
 {
+
     /**
      * Display a listing of the resource - KOP202/list
      */
@@ -43,27 +44,12 @@ class ApprovalPinjamanController extends Controller
             ->orderBy('urut')
             ->get();
 
-        // Get user role for filtering
-        $user_role = $data['user_login']->idroles;
+        // Get user role and username using model helper methods
+        $user_role = PengajuanPinjaman::getUserRole($data);
+        $current_username = PengajuanPinjaman::getCurrentUsername($data);
 
-        // Filter pengajuan based on role and status using Eloquent
-        $query = PengajuanPinjaman::with(['anggotum', 'master_paket_pinjaman', 'periode_pencairan'])
-            ->where('isactive', '1');
-
-        // Role-based filtering sesuai activity diagram (CORRECTED FLOW)
-        switch ($user_role) {
-            case 'kadmin': // Ketua Admin - review pertama
-                $query->whereIn('status_pengajuan', ['diajukan', 'review_admin']);
-                break;
-            case 'akredt': // Admin Kredit - review kedua
-                $query->whereIn('status_pengajuan', ['review_admin', 'review_panitia']);
-                break;
-            case 'ketuum': // Ketua Umum - final approval
-                $query->whereIn('status_pengajuan', ['review_panitia', 'review_ketua']);
-                break;
-            default: // Default: show all pending approvals
-                $query->whereIn('status_pengajuan', ['diajukan', 'review_admin', 'review_panitia', 'review_ketua']);
-        }
+        // Apply role-based filtering using model method
+        $query = PengajuanPinjaman::filterByRole($user_role, $current_username);
 
         // Search functionality
         $search = request('search');
@@ -207,7 +193,7 @@ class ApprovalPinjamanController extends Controller
         // Validate input
         $validator = Validator::make(request()->all(), [
             'action' => 'required|in:approve,reject',
-            'catatan' => 'required|string|max:500',
+            'catatan' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
@@ -267,22 +253,40 @@ class ApprovalPinjamanController extends Controller
             return view("pages.errorpages", $data);
         }
 
+        // Get user role and username using model helper methods
+        $user_role = PengajuanPinjaman::getUserRole($data);
+        $current_username = PengajuanPinjaman::getCurrentUsername($data);
+
+        // Check if this user has already approved this application at their role level
+        if (ApprovalHistory::hasExistingApproval($id, $current_username, $user_role)) {
+            $current_level = ApprovalHistory::getApprovalLevel($user_role);
+            Session::flash('message', 'Anda sudah melakukan approval untuk pengajuan pinjaman ini sebelumnya pada level ' . $current_level . '. Setiap admin hanya dapat melakukan approval sekali untuk setiap pengajuan.');
+            Session::flash('class', 'warning');
+            return redirect()->back();
+        }
+
+        // Validate workflow permissions using model method
+        $currentStatus = $pengajuan->status_pengajuan;
+
+        // Debug logging
+        $syslog->log_insert('I', $data['dmenu'], 'Approval attempt: User Role=' . $user_role . ', Current Status=' . $currentStatus . ', Pengajuan ID=' . $id, '1');
+
+        if (!ApprovalHistory::validateWorkflowPermissions($currentStatus, $user_role)) {
+            $syslog->log_insert('W', $data['dmenu'], 'Approval denied: User Role=' . $user_role . ' cannot approve status=' . $currentStatus, '0');
+            Session::flash('message', 'Anda tidak memiliki wewenang untuk melakukan approval pada status pengajuan ini. Status saat ini: ' . $currentStatus . '. Role Anda: ' . $user_role);
+            Session::flash('class', 'warning');
+            return redirect()->back();
+        }
+
         DB::beginTransaction();
 
         try {
             $action = request('action');
-            $catatan = request('catatan');
-            $user_role = $data['user_login']->idroles;
-            $approved_by = $data['user_login']->username;
+            $catatan = request('catatan') ?? '';
+            $approved_by = PengajuanPinjaman::getCurrentUsername($data);
 
-            // Determine next status based on role and action (CORRECTED FLOW)
-            $status_map = [
-                'kadmin' => ['approve' => 'review_admin', 'reject' => 'ditolak'],     // Ketua Admin -> review_admin
-                'akredt' => ['approve' => 'review_panitia', 'reject' => 'ditolak'],   // Admin Kredit -> review_panitia
-                'ketuum' => ['approve' => 'disetujui', 'reject' => 'ditolak'],        // Ketua Umum -> disetujui (final)
-            ];
-
-            $new_status = $status_map[$user_role][$action] ?? 'ditolak';
+            // Determine next status based on role and action using model method
+            $new_status = ApprovalHistory::getNextStatus($user_role, $action);
 
             // Update pengajuan status
             $pengajuan->update([
@@ -290,15 +294,9 @@ class ApprovalPinjamanController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Create approval history with correct column names
-            $level_map = [
-                'kadmin' => 'Ketua Admin',
-                'akredt' => 'Admin Kredit',
-                'ketuum' => 'Ketua Umum'
-            ];
-
+            // Create approval history using model methods
             $status_approval = $action === 'approve' ? 'approved' : 'rejected';
-            $level_approval = $level_map[$user_role] ?? $user_role;
+            $level_approval = ApprovalHistory::getApprovalLevel($user_role);
 
             ApprovalHistory::create([
                 'pengajuan_pinjaman_id' => $id,
@@ -308,7 +306,7 @@ class ApprovalPinjamanController extends Controller
                 'status_approval' => $status_approval,
                 'catatan' => $catatan,
                 'tanggal_approval' => now(),
-                'urutan' => $this->getApprovalOrder($user_role),
+                'urutan' => ApprovalHistory::getApprovalOrder($user_role),
                 'isactive' => '1',
                 'user_create' => $approved_by,
             ]);
@@ -373,43 +371,9 @@ class ApprovalPinjamanController extends Controller
         return redirect($data['url_menu']);
     }
 
-    /**
-     * Helper method to get approval order based on user role
-     */
-    private function getApprovalOrder($user_role)
-    {
-        $order_map = [
-            'kadmin' => 1, // Ketua Admin - first approval
-            'akredt' => 2, // Admin Kredit - second approval
-            'ketuum' => 3, // Ketua Umum - final approval
-        ];
 
-        return $order_map[$user_role] ?? 0;
-    }
 
-    /**
-     * Helper method to get next status based on current status and user role (CORRECTED FLOW)
-     */
-    private function getNextStatus($current_status, $user_role, $action)
-    {
-        if ($action === 'reject') {
-            return 'ditolak';
-        }
 
-        $workflow = [
-            'diajukan' => [
-                'kadmin' => 'review_admin', // Ketua Admin (level tertinggi)
-            ],
-            'review_admin' => [
-                'akredt' => 'review_panitia', // Admin Kredit (level menengah)
-            ],
-            'review_panitia' => [
-                'ketuum' => 'disetujui', // Ketua Umum (final approval)
-            ],
-        ];
-
-        return $workflow[$current_status][$user_role] ?? null;
-    }
 
     /**
      * Helper method to create pinjaman record when approved

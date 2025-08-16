@@ -60,18 +60,21 @@
                                     <label class="form-control-label">Status Pengajuan</label>
                                     <div class="mt-2">
                                         @php
-                                            $status_class = match($pengajuan->status_pengajuan) {
-                                                'draft' => 'badge-secondary',
-                                                'diajukan' => 'badge-info',
-                                                'review_admin' => 'badge-warning',
-                                                'review_panitia' => 'badge-warning',
-                                                'review_ketua' => 'badge-primary',
-                                                'disetujui' => 'badge-success',
-                                                'ditolak' => 'badge-danger',
-                                                default => 'badge-secondary'
+                                            $status_config = match($pengajuan->status_pengajuan) {
+                                                'draft' => ['class' => 'badge bg-secondary text-white badge-lg', 'icon' => 'fas fa-edit'],
+                                                'diajukan' => ['class' => 'badge bg-info text-white badge-lg', 'icon' => 'fas fa-paper-plane'],
+                                                'review_admin' => ['class' => 'badge bg-warning text-dark badge-lg', 'icon' => 'fas fa-clock'],
+                                                'review_panitia' => ['class' => 'badge bg-warning text-dark badge-lg', 'icon' => 'fas fa-users'],
+                                                'review_ketua' => ['class' => 'badge bg-primary text-white badge-lg', 'icon' => 'fas fa-user-tie'],
+                                                'disetujui' => ['class' => 'badge bg-success text-white badge-lg', 'icon' => 'fas fa-check-circle'],
+                                                'ditolak' => ['class' => 'badge bg-danger text-white badge-lg', 'icon' => 'fas fa-times-circle'],
+                                                default => ['class' => 'badge bg-secondary text-white badge-lg', 'icon' => 'fas fa-question']
                                             };
                                         @endphp
-                                        <span class="badge {{ $status_class }} badge-lg">{{ ucfirst(str_replace('_', ' ', $pengajuan->status_pengajuan)) }}</span>
+                                        <span class="{{ $status_config['class'] }}">
+                                            <i class="{{ $status_config['icon'] }} me-2"></i>
+                                            {{ ucfirst(str_replace('_', ' ', $pengajuan->status_pengajuan)) }}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

@@ -168,15 +168,18 @@
                                             </td>
                                             <td class="align-middle text-center text-sm">
                                                 @php
-                                                    $status_class = match($pinjaman->status) {
-                                                        'aktif' => 'bg-gradient-success',
-                                                        'lunas' => 'bg-gradient-info',
-                                                        'bermasalah' => 'bg-gradient-danger',
-                                                        'hapus_buku' => 'bg-gradient-dark',
-                                                        default => 'bg-gradient-secondary'
+                                                    $status_config = match($pinjaman->status) {
+                                                        'aktif' => ['class' => 'badge badge-sm bg-success text-white', 'icon' => 'fas fa-play-circle'],
+                                                        'lunas' => ['class' => 'badge badge-sm bg-info text-white', 'icon' => 'fas fa-check-circle'],
+                                                        'bermasalah' => ['class' => 'badge badge-sm bg-danger text-white', 'icon' => 'fas fa-exclamation-triangle'],
+                                                        'hapus_buku' => ['class' => 'badge badge-sm bg-dark text-white', 'icon' => 'fas fa-trash'],
+                                                        default => ['class' => 'badge badge-sm bg-secondary text-white', 'icon' => 'fas fa-question']
                                                     };
                                                 @endphp
-                                                <span class="badge badge-sm {{ $status_class }}">{{ ucfirst(str_replace('_', ' ', $pinjaman->status)) }}</span>
+                                                <span class="{{ $status_config['class'] }}">
+                                                    <i class="{{ $status_config['icon'] }} me-1"></i>
+                                                    {{ ucfirst(str_replace('_', ' ', $pinjaman->status)) }}
+                                                </span>
                                             </td>
                                             <td class="align-middle">
                                                 <a href="{{ url($url_menu . '/show/' . encrypt($pinjaman->id)) }}"

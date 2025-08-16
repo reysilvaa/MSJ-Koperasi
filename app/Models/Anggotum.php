@@ -27,7 +27,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property float $gaji_pokok
  * @property Carbon $tanggal_bergabung
  * @property Carbon|null $tanggal_aktif
- * @property string $status_keanggotaan
  * @property float $simpanan_pokok
  * @property float $simpanan_wajib_bulanan
  * @property float $total_simpanan_wajib
@@ -78,7 +77,6 @@ class Anggotum extends Model
 		'gaji_pokok',
 		'tanggal_bergabung',
 		'tanggal_aktif',
-		'status_keanggotaan',
 		'simpanan_pokok',
 		'simpanan_wajib_bulanan',
 		'total_simpanan_wajib',

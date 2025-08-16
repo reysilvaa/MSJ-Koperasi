@@ -381,7 +381,7 @@ class PinjamanController extends Controller
             'cicilan_id' => 'required|exists:cicilan_pinjaman,id',
             'nominal_dibayar' => 'required|numeric|min:1',
             'tanggal_bayar' => 'required|date',
-            'metode_pembayaran' => 'required|in:tunai,transfer,potong_gaji',
+            'metode_pembayaran' => 'required|in:transfer,potong_gaji',
             'keterangan' => 'nullable|string|max:255'
         ]);
 

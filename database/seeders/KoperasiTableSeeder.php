@@ -54,7 +54,7 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'alamat', 'alias' => 'Alamat', 'type' => 'text', 'length' => '255', 'validate' => 'required'],
                     ['field' => 'jabatan', 'alias' => 'Jabatan', 'type' => 'text', 'length' => '50', 'validate' => 'required'],
                     ['field' => 'departemen', 'alias' => 'Departemen', 'type' => 'text', 'length' => '50', 'validate' => 'required'],
-                    ['field' => 'status_keanggotaan', 'alias' => 'Status Anggota', 'type' => 'enum', 'default' => 'aktif', 'validate' => 'required', 'query' => "select 'aktif' as value, 'Aktif' as name union select 'non_aktif' as value, 'Non Aktif' as name union select 'keluar' as value, 'Keluar' as name"],
+
                     $this->getActiveField()
                 ]
             ],
@@ -78,7 +78,7 @@ class KoperasiTableSeeder extends Seeder
             'KOP201' => [
                 'gmenu' => 'KOP002',
                 'fields' => [
-                    ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where status_keanggotaan = 'aktif' and isactive = '1'"],
+                    ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where isactive = '1'"],
 
                     // Sistem Berbasis Paket (sesuai business logic)
                     ['field' => 'paket_pinjaman_id', 'alias' => 'Paket Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat('Paket ', periode) as name from master_paket_pinjaman where isactive = '1'"],
@@ -119,7 +119,7 @@ class KoperasiTableSeeder extends Seeder
                 'fields' => [
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
                     ['field' => 'nomor_pinjaman', 'alias' => 'Nomor Pinjaman', 'type' => 'text', 'length' => '20', 'validate' => 'required'],
-                    ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where status_keanggotaan = 'aktif' and isactive = '1'"],
+                    ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where isactive = '1'"],
                     ['field' => 'pokok_pinjaman', 'alias' => 'Pokok Pinjaman', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
                     ['field' => 'sisa_pokok', 'alias' => 'Sisa Pokok', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
                     ['field' => 'tenor_bulan', 'alias' => 'Tenor (Bulan)', 'type' => 'number', 'length' => '3', 'validate' => 'required'],
@@ -183,7 +183,7 @@ class KoperasiTableSeeder extends Seeder
                 'fields' => [
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
                     ['field' => 'nomor_transaksi', 'alias' => 'Nomor Transaksi', 'type' => 'text', 'length' => '20', 'validate' => 'required', 'generateid' => 'auto'],
-                    ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where status_keanggotaan = 'aktif' and isactive = '1'"],
+                    ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where isactive = '1'"],
                     ['field' => 'jenis_iuran', 'alias' => 'Jenis Iuran', 'type' => 'enum', 'length' => '20', 'validate' => 'required', 'query' => "select 'simpanan_pokok' as value, 'Simpanan Pokok' as name union select 'simpanan_wajib' as value, 'Simpanan Wajib' as name union select 'simpanan_sukarela' as value, 'Simpanan Sukarela' as name"],
                     ['field' => 'nominal', 'alias' => 'Nominal', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
                     ['field' => 'tanggal_iuran', 'alias' => 'Tanggal Iuran', 'type' => 'date', 'validate' => 'required'],
@@ -201,7 +201,7 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'judul', 'alias' => 'Judul Notifikasi', 'type' => 'text', 'length' => '100', 'validate' => 'required'],
                     ['field' => 'pesan', 'alias' => 'Pesan', 'type' => 'text', 'length' => '500', 'validate' => 'required', 'filter' => '0'],
                     ['field' => 'jenis', 'alias' => 'Jenis Notifikasi', 'type' => 'enum', 'length' => '20', 'validate' => 'required', 'query' => "select 'info' as value, 'Informasi' as name union select 'warning' as value, 'Peringatan' as name union select 'urgent' as value, 'Urgent' as name"],
-                    ['field' => 'anggota_id', 'alias' => 'Target Anggota', 'type' => 'enum', 'length' => '11', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where status_keanggotaan = 'aktif' and isactive = '1' union select '0' as value, 'Semua Anggota' as name"],
+                    ['field' => 'anggota_id', 'alias' => 'Target Anggota', 'type' => 'enum', 'length' => '11', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where isactive = '1' union select '0' as value, 'Semua Anggota' as name"],
                     ['field' => 'status_baca', 'alias' => 'Status Baca', 'type' => 'enum', 'default' => 'belum_dibaca', 'validate' => 'required', 'query' => "select 'belum_dibaca' as value, 'Belum Dibaca' as name union select 'sudah_dibaca' as value, 'Sudah Dibaca' as name"],
                     ['field' => 'tanggal_kirim', 'alias' => 'Tanggal Kirim', 'type' => 'datetime', 'validate' => 'required'],
                     $this->getActiveField()
@@ -233,8 +233,8 @@ class KoperasiTableSeeder extends Seeder
             'KOP503' => [
                 'gmenu' => 'KOP005',
                 'fields' => [
-                    ['field' => 'query', 'alias' => 'Query Laporan Anggota', 'type' => 'report', 'length' => '0', 'filter' => '0', 'list' => '0', 'query' => "SELECT a.nomor_anggota, a.nama_lengkap, a.email, a.jabatan, a.departemen, a.status_keanggotaan, COUNT(p.id) as total_pinjaman, COALESCE(SUM(p.pokok_pinjaman), 0) as total_pinjaman_amount FROM anggota a LEFT JOIN pinjaman p ON a.id = p.anggota_id WHERE (:status = '' OR a.status_keanggotaan = :status) GROUP BY a.id ORDER BY a.nama_lengkap"],
-                    ['field' => 'status', 'alias' => 'Status Anggota', 'type' => 'enum', 'query' => "select '' as value, 'Semua Status' as name union select 'aktif' as value, 'Aktif' as name union select 'non_aktif' as value, 'Non Aktif' as name union select 'keluar' as value, 'Keluar' as name", 'list' => '0']
+                    ['field' => 'query', 'alias' => 'Query Laporan Anggota', 'type' => 'report', 'length' => '0', 'filter' => '0', 'list' => '0', 'query' => "SELECT a.nomor_anggota, a.nama_lengkap, a.email, a.jabatan, a.departemen, CASE WHEN a.isactive = '1' THEN 'Aktif' ELSE 'Non Aktif' END as status_anggota, COUNT(p.id) as total_pinjaman, COALESCE(SUM(p.pokok_pinjaman), 0) as total_pinjaman_amount FROM anggota a LEFT JOIN pinjaman p ON a.id = p.anggota_id WHERE (:status = '' OR a.isactive = :status) GROUP BY a.id ORDER BY a.nama_lengkap"],
+                    ['field' => 'status', 'alias' => 'Status Anggota', 'type' => 'enum', 'query' => "select '' as value, 'Semua Status' as name union select '1' as value, 'Aktif' as name union select '0' as value, 'Non Aktif' as name", 'list' => '0']
                 ]
             ],
 
@@ -242,7 +242,7 @@ class KoperasiTableSeeder extends Seeder
             'KOP504' => [
                 'gmenu' => 'KOP005',
                 'fields' => [
-                    ['field' => 'query', 'alias' => 'Query Neraca', 'type' => 'report', 'length' => '0', 'filter' => '0', 'list' => '0', 'query' => "SELECT 'AKTIVA' as kategori, 'Kas' as akun, COALESCE(SUM(cp.total_bayar), 0) as nominal FROM cicilan_pinjaman cp WHERE cp.status = 'lunas' UNION SELECT 'AKTIVA' as kategori, 'Piutang Anggota' as akun, COALESCE(SUM(p.sisa_pokok), 0) as nominal FROM pinjaman p WHERE p.status = 'aktif' UNION SELECT 'PASIVA' as kategori, 'Modal Simpanan Pokok' as akun, COALESCE(SUM(a.simpanan_pokok), 0) as nominal FROM anggota a UNION SELECT 'PASIVA' as kategori, 'Modal Simpanan Wajib' as akun, COALESCE(SUM(a.simpanan_wajib), 0) as nominal FROM anggota a UNION SELECT 'PASIVA' as kategori, 'SHU Ditahan' as akun, COALESCE(SUM(cp.nominal_bunga * 0.25), 0) as nominal FROM cicilan_pinjaman cp WHERE cp.status = 'lunas' ORDER BY kategori, akun"],
+                    ['field' => 'query', 'alias' => 'Query Neraca', 'type' => 'report', 'length' => '0', 'filter' => '0', 'list' => '0', 'query' => "SELECT 'AKTIVA' as kategori, 'Kas' as akun, COALESCE(SUM(cp.total_bayar), 0) as nominal FROM cicilan_pinjaman cp WHERE cp.status = 'lunas' UNION SELECT 'AKTIVA' as kategori, 'Piutang Anggota' as akun, COALESCE(SUM(p.sisa_pokok), 0) as nominal FROM pinjaman p WHERE p.status = 'aktif' UNION SELECT 'PASIVA' as kategori, 'Modal Simpanan Pokok' as akun, COALESCE(SUM(a.simpanan_pokok), 0) as nominal FROM anggota a UNION SELECT 'PASIVA' as kategori, 'Modal Simpanan Wajib' as akun, COALESCE(SUM(a.total_simpanan_wajib), 0) as nominal FROM anggota a UNION SELECT 'PASIVA' as kategori, 'SHU Ditahan' as akun, COALESCE(SUM(cp.nominal_bunga * 0.25), 0) as nominal FROM cicilan_pinjaman cp WHERE cp.status = 'lunas' ORDER BY kategori, akun"],
                     ['field' => 'tanggal_laporan', 'alias' => 'Tanggal Laporan', 'type' => 'date', 'validate' => 'required', 'list' => '0']
                 ]
             ],
@@ -261,7 +261,7 @@ class KoperasiTableSeeder extends Seeder
             'KOP506' => [
                 'gmenu' => 'KOP005',
                 'fields' => [
-                    ['field' => 'query', 'alias' => 'Query Cash Flow', 'type' => 'report', 'length' => '0', 'filter' => '0', 'list' => '0', 'query' => "SELECT 'ARUS KAS OPERASI' as kategori, 'Penerimaan Cicilan Pinjaman' as aktivitas, COALESCE(SUM(cp.total_bayar), 0) as nominal FROM cicilan_pinjaman cp WHERE cp.status = 'lunas' AND cp.tanggal_bayar BETWEEN :tanggal_dari AND :tanggal_sampai UNION SELECT 'ARUS KAS INVESTASI' as kategori, 'Pencairan Pinjaman Baru' as aktivitas, COALESCE(-SUM(p.pokok_pinjaman), 0) as nominal FROM pinjaman p WHERE p.status = 'aktif' AND p.tanggal_cair BETWEEN :tanggal_dari AND :tanggal_sampai UNION SELECT 'ARUS KAS FINANCING' as kategori, 'Penerimaan Simpanan Anggota' as aktivitas, COALESCE(SUM(a.simpanan_pokok + a.simpanan_wajib), 0) as nominal FROM anggota a WHERE a.created_at BETWEEN :tanggal_dari AND :tanggal_sampai UNION SELECT 'ARUS KAS FINANCING' as kategori, 'Pembayaran SHU' as aktivitas, COALESCE(-SUM(cp.nominal_bunga * 0.75), 0) as nominal FROM cicilan_pinjaman cp WHERE cp.status = 'lunas' AND cp.tanggal_bayar BETWEEN :tanggal_dari AND :tanggal_sampai ORDER BY kategori, aktivitas"],
+                    ['field' => 'query', 'alias' => 'Query Cash Flow', 'type' => 'report', 'length' => '0', 'filter' => '0', 'list' => '0', 'query' => "SELECT 'ARUS KAS OPERASI' as kategori, 'Penerimaan Cicilan Pinjaman' as aktivitas, COALESCE(SUM(cp.total_bayar), 0) as nominal FROM cicilan_pinjaman cp WHERE cp.status = 'lunas' AND cp.tanggal_bayar BETWEEN :tanggal_dari AND :tanggal_sampai UNION SELECT 'ARUS KAS INVESTASI' as kategori, 'Pencairan Pinjaman Baru' as aktivitas, COALESCE(-SUM(p.pokok_pinjaman), 0) as nominal FROM pinjaman p WHERE p.status = 'aktif' AND p.tanggal_cair BETWEEN :tanggal_dari AND :tanggal_sampai UNION SELECT 'ARUS KAS FINANCING' as kategori, 'Penerimaan Simpanan Anggota' as aktivitas, COALESCE(SUM(a.simpanan_pokok + a.total_simpanan_wajib), 0) as nominal FROM anggota a WHERE a.created_at BETWEEN :tanggal_dari AND :tanggal_sampai UNION SELECT 'ARUS KAS FINANCING' as kategori, 'Pembayaran SHU' as aktivitas, COALESCE(-SUM(cp.nominal_bunga * 0.75), 0) as nominal FROM cicilan_pinjaman cp WHERE cp.status = 'lunas' AND cp.tanggal_bayar BETWEEN :tanggal_dari AND :tanggal_sampai ORDER BY kategori, aktivitas"],
                     ['field' => 'tanggal_dari', 'alias' => 'Tanggal Dari', 'type' => 'date', 'validate' => 'required', 'list' => '0'],
                     ['field' => 'tanggal_sampai', 'alias' => 'Tanggal Sampai', 'type' => 'date', 'validate' => 'required', 'list' => '0']
                 ]

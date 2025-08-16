@@ -128,15 +128,13 @@ class PengajuanPinjamanController extends Controller
             $data['hide_stock_info'] = true; // Hide stock information for regular members
             $data['current_anggota'] = Anggotum::where('email', $data['user_login']->email)
                                               ->orWhere('user_create', $data['user_login']->username)
-                                              ->where('status_keanggotaan', 'aktif')
                                               ->where('isactive', '1')
                                               ->select('id', 'nomor_anggota', 'nama_lengkap')
                                               ->first();
         }
 
         // Get form data using Eloquent
-        $data['anggota_list'] = Anggotum::where('status_keanggotaan', 'aktif')
-            ->where('isactive', '1')
+        $data['anggota_list'] = Anggotum::where('isactive', '1')
             ->select('id', 'nomor_anggota', 'nama_lengkap')
             ->get();
 
@@ -170,12 +168,13 @@ class PengajuanPinjamanController extends Controller
         // Handle role-based anggota_id assignment
         $anggotaId = request('anggota_id');
 
-        // Check if user is anggota (regular member) and auto-assign anggota_id
+        // Determine if user is anggota biasa (regular member)
+        $isAnggotaBiasa = false;
         if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggot') !== false) {
+            $isAnggotaBiasa = true;
             // Find anggota by email or username matching
             $anggota = Anggotum::where('email', $data['user_login']->email)
                               ->orWhere('user_create', $data['user_login']->username)
-                              ->where('status_keanggotaan', 'aktif')
                               ->where('isactive', '1')
                               ->first();
 
@@ -184,42 +183,33 @@ class PengajuanPinjamanController extends Controller
                 // Override request with the found anggota_id
                 request()->merge(['anggota_id' => $anggotaId]);
             } else {
-                $data['url_menu'] = 'error';
-                $data['title_group'] = 'Error';
-                $data['title_menu'] = 'Error';
-                $data['errorpages'] = 'Data anggota Anda tidak ditemukan. Silakan hubungi admin.';
-                return view("pages.errorpages", $data);
+                // Use MSJ framework Session flash message with badge info component styling
+                Session::flash('message', 'Data anggota Anda tidak ditemukan. Silakan hubungi admin untuk verifikasi data keanggotaan.');
+                Session::flash('class', 'danger');
+                return redirect()->back();
             }
         }
 
         if (!$anggotaId) {
-            $data['url_menu'] = 'error';
-            $data['title_group'] = 'Error';
-            $data['title_menu'] = 'Error';
-            $data['errorpages'] = 'Anggota harus dipilih.';
-            return view("pages.errorpages", $data);
+            // Use MSJ framework Session flash message with badge info component styling
+            Session::flash('message', 'Anggota harus dipilih untuk melanjutkan pengajuan pinjaman.');
+            Session::flash('class', 'warning');
+            return redirect()->back()->withInput();
         }
 
-        // Check if anggota already has pending application (any status that's still in process)
-        $pendingStatuses = ['diajukan', 'review_admin', 'review_panitia', 'review_ketua'];
-        $existingPending = PengajuanPinjaman::where('anggota_id', $anggotaId)
-            ->whereIn('status_pengajuan', $pendingStatuses)
+        // Check if anggota already has existing loan application with status "Diajukan" (Submitted/Pending)
+        $existingDiajukan = PengajuanPinjaman::where('anggota_id', $anggotaId)
+            ->where('status_pengajuan', 'diajukan')
             ->where('isactive', '1')
             ->first();
 
-        if ($existingPending) {
-            $statusText = [
-                'diajukan' => 'Diajukan',
-                'review_admin' => 'Review Admin',
-                'review_panitia' => 'Review Panitia',
-                'review_ketua' => 'Review Ketua'
-            ];
-            $currentStatus = $statusText[$existingPending->status_pengajuan] ?? $existingPending->status_pengajuan;
-            $data['url_menu'] = 'error';
-            $data['title_group'] = 'Error';
-            $data['title_menu'] = 'Error';
-            $data['errorpages'] = 'Anggota masih memiliki pengajuan pinjaman dengan status "' . $currentStatus . '". Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.';
-            return view("pages.errorpages", $data);
+        if ($existingDiajukan) {
+            // Use MSJ framework Session flash message with badge info component styling
+            Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status \'Diajukan\'. Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
+            Session::flash('class', 'warning');
+
+            // Redirect back to loan application form or list page
+            return redirect()->back()->withInput();
         }
 
         // Automatic eligibility check and set jenis_pengajuan
@@ -539,7 +529,6 @@ class PengajuanPinjamanController extends Controller
             $data['hide_stock_info'] = true; // Hide stock information for regular members
             $data['current_anggota'] = Anggotum::where('email', $data['user_login']->email)
                                               ->orWhere('user_create', $data['user_login']->username)
-                                              ->where('status_keanggotaan', 'aktif')
                                               ->where('isactive', '1')
                                               ->select('id', 'nomor_anggota', 'nama_lengkap')
                                               ->first();
@@ -586,7 +575,6 @@ class PengajuanPinjamanController extends Controller
             // Find anggota by email or username matching
             $anggota = Anggotum::where('email', $data['user_login']->email)
                               ->orWhere('user_create', $data['user_login']->username)
-                              ->where('status_keanggotaan', 'aktif')
                               ->where('isactive', '1')
                               ->first();
 
@@ -595,20 +583,18 @@ class PengajuanPinjamanController extends Controller
                 // Override request with the found anggota_id
                 request()->merge(['anggota_id' => $anggotaId]);
             } else {
-                $data['url_menu'] = 'error';
-                $data['title_group'] = 'Error';
-                $data['title_menu'] = 'Error';
-                $data['errorpages'] = 'Data anggota Anda tidak ditemukan. Silakan hubungi admin.';
-                return view("pages.errorpages", $data);
+                // Use MSJ framework Session flash message with badge info component styling
+                Session::flash('message', 'Data anggota Anda tidak ditemukan. Silakan hubungi admin untuk verifikasi data keanggotaan.');
+                Session::flash('class', 'danger');
+                return redirect()->back();
             }
         }
 
         if (!$anggotaId) {
-            $data['url_menu'] = 'error';
-            $data['title_group'] = 'Error';
-            $data['title_menu'] = 'Error';
-            $data['errorpages'] = 'Anggota harus dipilih.';
-            return view("pages.errorpages", $data);
+            // Use MSJ framework Session flash message with badge info component styling
+            Session::flash('message', 'Anggota harus dipilih untuk melanjutkan pengajuan pinjaman.');
+            Session::flash('class', 'warning');
+            return redirect()->back()->withInput();
         }
 
         // Decrypt ID first to get current pengajuan
@@ -622,51 +608,46 @@ class PengajuanPinjamanController extends Controller
             return view("pages.errorpages", $data);
         }
 
-        // Check if anggota has other pending applications (excluding current one)
-        $pendingStatuses = ['diajukan', 'review_admin', 'review_panitia', 'review_ketua'];
-        $existingPending = PengajuanPinjaman::where('anggota_id', $anggotaId)
-            ->whereIn('status_pengajuan', $pendingStatuses)
+        // Check if anggota has other loan applications with status "Diajukan" (excluding current one being updated)
+        $existingDiajukan = PengajuanPinjaman::where('anggota_id', $anggotaId)
+            ->where('status_pengajuan', 'diajukan')
             ->where('id', '!=', $id)
             ->where('isactive', '1')
             ->first();
 
-        if ($existingPending) {
-            $statusText = [
-                'diajukan' => 'Diajukan',
-                'review_admin' => 'Review Admin',
-                'review_panitia' => 'Review Panitia',
-                'review_ketua' => 'Review Ketua'
-            ];
-            $currentStatus = $statusText[$existingPending->status_pengajuan] ?? $existingPending->status_pengajuan;
-            $data['url_menu'] = 'error';
-            $data['title_group'] = 'Error';
-            $data['title_menu'] = 'Error';
-            $data['errorpages'] = 'Anggota masih memiliki pengajuan pinjaman lain dengan status "' . $currentStatus . '". Tidak dapat mengupdate pengajuan ini selama masih ada pengajuan dalam proses persetujuan.';
-            return view("pages.errorpages", $data);
+        if ($existingDiajukan) {
+            // Use MSJ framework Session flash message with badge info component styling
+            Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status \'Diajukan\'. Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
+            Session::flash('class', 'warning');
+
+            // Redirect back to edit form
+            return redirect()->back()->withInput();
         }
 
         // Automatic eligibility check and set jenis_pengajuan
         if ($anggotaId) {
             // Check if anggota has active loan and remaining payments ≤ 2
-            $eligibility = DB::select("
-                SELECT
-                    pp.id as pengajuan_id,
-                    p.id as pinjaman_id,
-                    p.tenor_bulan,
-                    COUNT(cp.id) as total_cicilan_lunas,
-                    (p.tenor_bulan - COUNT(cp.id)) as sisa_cicilan
-                FROM pengajuan_pinjaman pp
-                INNER JOIN pinjaman p ON pp.id = p.pengajuan_pinjaman_id
-                LEFT JOIN cicilan_pinjaman cp ON p.id = cp.pinjaman_id AND cp.status = 'lunas'
-                WHERE pp.anggota_id = ?
-                AND pp.status_pengajuan = 'disetujui'
-                AND p.status = 'aktif'
-                AND pp.isactive = '1'
-                AND p.isactive = '1'
-                GROUP BY pp.id, p.id, p.tenor_bulan
-                HAVING sisa_cicilan <= 2
-                LIMIT 1
-            ", [$anggotaId]);
+
+            $eligibility = PengajuanPinjaman::select(
+                    'pengajuan_pinjaman.id as pengajuan_id',
+                    'pinjaman.id as pinjaman_id',
+                    'pinjaman.tenor_bulan',
+                    DB::raw('COUNT(cicilan_pinjaman.id) as total_cicilan_lunas'),
+                    DB::raw('(pinjaman.tenor_bulan - COUNT(cicilan_pinjaman.id)) as sisa_cicilan')
+                )
+                ->join('pinjaman', 'pengajuan_pinjaman.id', '=', 'pinjaman.pengajuan_pinjaman_id')
+                ->leftJoin('cicilan_pinjaman', function($join) {
+                    $join->on('pinjaman.id', '=', 'cicilan_pinjaman.pinjaman_id')
+                        ->where('cicilan_pinjaman.status', '=', 'lunas');
+                })
+                ->where('pengajuan_pinjaman.anggota_id', $anggotaId)
+                ->where('pengajuan_pinjaman.status_pengajuan', 'disetujui')
+                ->where('pinjaman.status', 'aktif')
+                ->where('pengajuan_pinjaman.isactive', '1')
+                ->where('pinjaman.isactive', '1')
+                ->groupBy('pengajuan_pinjaman.id', 'pinjaman.id', 'pinjaman.tenor_bulan')
+                ->having('sisa_cicilan', '<=', 2)
+                ->first();
 
             // Automatically set jenis_pengajuan based on eligibility
             $jenis_pengajuan = !empty($eligibility) ? 'top_up' : 'baru';
