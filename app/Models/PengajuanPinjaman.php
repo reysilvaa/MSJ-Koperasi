@@ -207,6 +207,16 @@ class PengajuanPinjaman extends Model
 	}
 
 	/**
+	 * Check if user has admin role that can bypass approval workflow
+	 */
+	public static function isAdminUser($data)
+	{
+		$userRole = self::getUserRole($data);
+		$adminRoles = ['kadmin', 'akredt', 'atrans', 'ketuum'];
+		return in_array($userRole, $adminRoles);
+	}
+
+	/**
 	 * Business logic constants
 	 */
 	public const NILAI_PER_PAKET = 500000; // Rp 500.000 per paket

@@ -33,17 +33,26 @@ $(document).ready(function() {
         // Real-time calculation
         $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', calculateLoan);
 
+        // Handle package selection for stock information display
+        $('#paket_pinjaman_id').on('change', function() {
+            if (!$(this).val()) {
+                // Reset stock display when no package selected
+                if ($('#stock-information-panel').length) {
+                    $('#stock-information-panel').hide();
+                    $('#stock-no-selection').show();
+                }
+            }
+        });
+
         // Initial calculation
         setTimeout(calculateLoan, 500);
 
         // Character counter for tujuan pinjaman
         $('textarea[name="tujuan_pinjaman"]').on('input', updateCharacterCounter);
 
-        // Form validation - Stock validation removed as per koperasi system preferences
-        // Stock information is for display only, no blocking validation
+        // Form validation - no blocking validation as per system preferences
         $('#pengajuan-form').on('submit', function(e) {
-            // No stock validation - allow all submissions regardless of stock availability
-            // This follows koperasi system preference: "auto-approve loan applications without stock validation"
+            // Allow all submissions - auto-approve system
         });
     }
 
@@ -60,10 +69,10 @@ $(document).ready(function() {
         }
 
         // Real-time calculation for edit page
-        $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', calculateLoanEdit);
+        $('#paket_pinjaman_id, #jumlah_paket_dipilih, #tenor_pinjaman').on('change input', calculateLoan);
 
         // Initial calculation
-        setTimeout(calculateLoanEdit, 500);
+        setTimeout(calculateLoan, 500);
 
         // Character counter for tujuan pinjaman
         $('textarea[name="tujuan_pinjaman"]').on('input', updateCharacterCounter);
@@ -71,18 +80,15 @@ $(document).ready(function() {
         // Initialize character counter
         updateCharacterCounter();
 
-        // Form validation for edit - All validations removed as per koperasi system preferences
+        // Form validation for edit - no blocking validation
         $('#pengajuan-form').on('submit', function(e) {
-            // No validation - auto-approve all loan applications
-            // This follows koperasi system preference: "auto-approve loan applications without stock validation"
-            // Range validation also removed for maximum flexibility
+            // Allow all submissions - auto-approve system
         });
     }
 
     // === SHOW PAGE FUNCTIONALITY ===
     function initializeShowPage() {
         // No specific functionality needed for show page
-        console.log('Show page initialized');
     }
 
     // === CALCULATION FUNCTIONS ===
@@ -115,38 +121,7 @@ $(document).ready(function() {
         }
     }
 
-    function calculateLoanEdit() {
-        const paketSelect = document.getElementById('paket_pinjaman_id');
-        const jumlahPaket = parseInt(document.getElementById('jumlah_paket_dipilih').value) || 1;
-        const tenorSelect = document.getElementById('tenor_pinjaman');
 
-        if (paketSelect && paketSelect.value && tenorSelect && tenorSelect.value) {
-            const selectedPaket = paketSelect.options[paketSelect.selectedIndex];
-            const selectedTenor = tenorSelect.options[tenorSelect.selectedIndex];
-            const bunga = parseFloat(selectedPaket.dataset.bunga) || 0;
-            const stock = parseInt(selectedPaket.dataset.stock) || 0;
-            const tenor = parseInt(selectedTenor.dataset.bulan) || 1;
-
-            // Business logic calculation - Bunga Flat
-            const nilaiPerPaket = 500000;
-            const jumlahPinjaman = jumlahPaket * nilaiPerPaket;
-            const cicilanPokok = jumlahPinjaman / tenor;
-            const bungaFlat = jumlahPinjaman * (bunga / 100);
-            const cicilanPerBulan = cicilanPokok + bungaFlat;
-            const totalPembayaran = cicilanPerBulan * tenor;
-
-            // Update display elements
-            updateElement('display-jumlah-pinjaman', formatCurrency(jumlahPinjaman));
-            updateElement('display-bunga', bunga + '%');
-            updateElement('display-cicilan', formatCurrency(cicilanPerBulan));
-            updateElement('display-total', formatCurrency(totalPembayaran));
-
-            // Stock display removed - no stock information shown
-            if (document.getElementById('display-stock')) {
-                document.getElementById('display-stock').innerHTML = '';
-            }
-        }
-    }
 
     function updateCalculationDisplay(jumlahPinjaman, bunga, cicilanPerBulan, totalPembayaran) {
         $('#display-jumlah-pinjaman').text(formatCurrency(jumlahPinjaman));
@@ -156,24 +131,119 @@ $(document).ready(function() {
     }
 
     function updateStockDisplay(stockAvailable, stockLimit, stockTerpakai, jumlahPaket) {
-        // Stock display removed - no stock information shown
-        if ($('#stock-display').length) {
-            $('#stock-display').html('');
+        // Check if stock information panel exists (only for non-member roles)
+        if ($('#stock-information-panel').length) {
+            // Show the stock information panel
+            $('#stock-information-panel').show();
+            $('#stock-no-selection').hide();
+
+            // Update stock values
+            $('#display-stock-available').text(stockAvailable + ' paket');
+            $('#display-stock-limit').text(stockLimit + ' paket');
+            $('#display-stock-used').text(stockTerpakai + ' paket');
+            $('#display-requested-amount').text(jumlahPaket + ' paket');
+
+            // Calculate stock usage percentage
+            const usagePercentage = stockLimit > 0 ? (stockTerpakai / stockLimit) * 100 : 0;
+
+            // Update progress bar
+            $('#stock-progress-bar').css('width', usagePercentage + '%');
+
+            // Simplified binary stock status determination - sufficient vs insufficient
+            let statusBadge = '';
+            let progressBarClass = 'bg-success';
+            let statusText = '';
+            let panelClass = 'stock-status-good';
+
+            // Simplified binary stock status - only two states: sufficient or insufficient
+            if (stockAvailable <= 0 || jumlahPaket > stockAvailable) {
+                // Insufficient stock - red badge
+                statusBadge = '<span class="badge bg-danger">Stok Tidak Cukup</span>';
+                progressBarClass = 'bg-danger';
+                panelClass = 'stock-status-danger';
+
+                if (stockAvailable <= 0) {
+                    statusText = `Stok tidak tersedia untuk memenuhi permintaan ${jumlahPaket} paket`;
+                } else {
+                    statusText = `Permintaan ${jumlahPaket} paket melebihi stok tersedia (${stockAvailable} paket)`;
+                }
+            } else {
+                // Sufficient stock - green badge
+                statusBadge = '<span class="badge bg-success">Stok Cukup</span>';
+                progressBarClass = 'bg-success';
+                statusText = `Stok mencukupi - ${stockAvailable} paket tersedia untuk permintaan ${jumlahPaket} paket`;
+                panelClass = 'stock-status-good';
+            }
+
+            // Update status badge and progress bar class
+            $('#stock-status-badge').html(statusBadge);
+            $('#stock-progress-bar').removeClass('bg-success bg-danger').addClass(progressBarClass);
+            $('#stock-progress-text').text(statusText);
+            $('#stock-usage-percentage').text(`${usagePercentage.toFixed(1)}% terpakai`);
+
+            // Update integrated validation feedback within the stock card
+            updateIntegratedValidationFeedback(jumlahPaket, stockAvailable, panelClass);
+
+            // Apply panel styling based on stock status
+            $('#stock-information-panel .info-item').removeClass('stock-status-good stock-status-danger').addClass(panelClass);
+
+            // Clear any external stock info text since everything is now integrated in the card
+            clearExternalStockInfo();
         }
     }
 
     function validateStock(jumlahPaket, stockAvailable) {
-        // Stock validation disabled - auto-approve without stock validation
-        // This follows koperasi system preference: "auto-approve loan applications without stock validation"
+        // Always enable submit button - no blocking validation
         const submitButton = $('button[type="submit"]');
-        const stockInfo = $('#stock-info');
-
-        // Hide stock info completely - no stock information displayed
-        stockInfo.text('')
-                 .removeClass('text-danger text-success text-info');
-
-        // Always enable submit button regardless of stock
         submitButton.prop('disabled', false);
+
+        // Clear any external stock info
+        clearExternalStockInfo();
+    }
+
+    function updateIntegratedValidationFeedback(jumlahPaket, stockAvailable, panelClass) {
+        const feedbackElement = $('#stock-validation-feedback');
+        const messageElement = $('#stock-validation-message');
+
+        if (!feedbackElement.length) return; // Exit if feedback element doesn't exist
+
+        let message = '';
+        let alertClass = 'alert-info';
+        let iconClass = 'fas fa-info-circle';
+
+        // Simplified binary validation message
+        if (stockAvailable <= 0 || jumlahPaket > stockAvailable) {
+            // Insufficient stock
+            if (stockAvailable <= 0) {
+                message = `Stok tidak tersedia untuk memenuhi permintaan ${jumlahPaket} paket. Aplikasi tetap dapat diproses sesuai kebijakan sistem.`;
+            } else {
+                message = `Permintaan ${jumlahPaket} paket melebihi stok tersedia (${stockAvailable} paket). Aplikasi tetap dapat diproses sesuai kebijakan sistem.`;
+            }
+            alertClass = 'alert-danger';
+            iconClass = 'fas fa-exclamation-circle';
+        } else {
+            // Sufficient stock
+            message = `Stok mencukupi untuk memenuhi permintaan ${jumlahPaket} paket dari ${stockAvailable} paket tersedia.`;
+            alertClass = 'alert-success';
+            iconClass = 'fas fa-check-circle';
+        }
+
+        // Update feedback display
+        feedbackElement.removeClass('alert-success alert-danger d-none')
+                      .addClass(alertClass + ' show');
+
+        messageElement.html(`<i class="${iconClass} me-2"></i>${message}`);
+    }
+
+    function clearExternalStockInfo() {
+        // Clear any external stock info text elements
+        const stockInfo = $('#stock-info');
+        if (stockInfo.length) {
+            stockInfo.text('').removeClass('text-danger text-success');
+        }
+
+        // Clear any other external stock warning elements that might exist
+        $('.stock-warning-external').remove();
     }
 
     function resetCalculationDisplay() {
@@ -182,19 +252,31 @@ $(document).ready(function() {
         $('#display-cicilan').text('Rp 0');
         $('#display-total').text('Rp 0');
 
-        if ($('#stock-display').length) {
-            $('#stock-display').html('');
+        // Reset stock information panel for non-member roles
+        if ($('#stock-information-panel').length) {
+            $('#stock-information-panel').hide();
+            $('#stock-no-selection').show();
+
+            // Reset all stock display values
+            $('#display-stock-available').text('-');
+            $('#display-stock-limit').text('-');
+            $('#display-stock-used').text('-');
+            $('#display-requested-amount').text('-');
+            $('#stock-status-badge').html('<span class="badge bg-secondary">Pilih paket terlebih dahulu</span>');
+            $('#stock-progress-bar').css('width', '0%').removeClass('bg-success bg-danger');
+            $('#stock-progress-text').text('Pilih paket untuk melihat informasi stok');
+            $('#stock-usage-percentage').text('');
+
+            // Reset integrated validation feedback
+            $('#stock-validation-feedback').removeClass('alert-success alert-danger show').addClass('d-none');
+            $('#stock-validation-message').text('Informasi validasi stok akan ditampilkan di sini');
         }
 
+        // Clear any external stock info
+        clearExternalStockInfo();
     }
 
     // === UTILITY FUNCTIONS ===
-    function updateElement(id, content) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = content;
-        }
-    }
 
     function formatCurrency(amount) {
         return new Intl.NumberFormat('id-ID', {
@@ -250,26 +332,8 @@ $(document).ready(function() {
         });
     };
 
-    // === ANGGOTA ELIGIBILITY CHECK ===
-    // This function is no longer used - eligibility check now happens during form submission
-    function checkAnggotaEligibility() {
-        const anggotaId = $('#anggota_id').val();
 
-        if (!anggotaId) {
-            // Reset to default
-            $('#jenis_pengajuan').val('baru');
-            $('#jenis_pengajuan_display').val('Pinjaman Baru');
-            $('#jenis_pengajuan_info').html('*) Jenis pengajuan akan ditentukan sistem saat menyimpan data');
-            return;
-        }
 
-        // Set default without AJAX call
-        $('#jenis_pengajuan').val('baru');
-        $('#jenis_pengajuan_display').val('Pinjaman Baru');
-        $('#jenis_pengajuan_info').html('*) Jenis pengajuan akan ditentukan sistem saat menyimpan data');
-    }
 
-    console.log('PengajuanPinjaman JavaScript initialized for:',
-                isListPage ? 'List' : isAddPage ? 'Add' : isEditPage ? 'Edit' : isShowPage ? 'Show' : 'Unknown');
 });
 </script>

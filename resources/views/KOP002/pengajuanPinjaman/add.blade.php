@@ -187,7 +187,7 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-header pb-0">
-                        <h6>Simulasi Perhitungan</h6>
+                        <h6>Estimasi Perhitungan</h6>
                         <p class="text-sm mb-0">Perhitungan otomatis berdasarkan pilihan Anda</p>
                     </div>
                     <div class="card-body">
@@ -222,11 +222,116 @@
                     </div>
                 </div>
 
-                {{-- Stock Information - Completely hidden as per koperasi system preferences --}}
-                {{-- Stock validation disabled - no stock information displayed --}}
+                {{-- Stock Information Panel - Only visible for non-member roles --}}
+                @if(!$hide_stock_info)
+                <div class="card mt-3">
+                    <div class="card-header pb-0">
+                        <h6>Informasi Stok Paket</h6>
+                        <p class="text-sm mb-0">Informasi ketersediaan stok paket pinjaman</p>
+                    </div>
+                    <div class="card-body">
+                        <div id="stock-information-panel" style="display: none;">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="info-item mb-3">
+                                        <label class="text-sm font-weight-bold">Status Stok:</label>
+                                        <h6 class="mb-1" id="stock-status-badge">
+                                            <span class="badge bg-secondary">Pilih paket terlebih dahulu</span>
+                                        </h6>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-item mb-3">
+                                        <label class="text-sm font-weight-bold">Stok Tersedia:</label>
+                                        <h5 class="text-success mb-0" id="display-stock-available">-</h5>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-item mb-3">
+                                        <label class="text-sm font-weight-bold">Total Limit:</label>
+                                        <h6 class="text-info mb-0" id="display-stock-limit">-</h6>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-item mb-3">
+                                        <label class="text-sm font-weight-bold">Stok Terpakai:</label>
+                                        <h6 class="text-warning mb-0" id="display-stock-used">-</h6>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-item mb-3">
+                                        <label class="text-sm font-weight-bold">Permintaan Anda:</label>
+                                        <h6 class="text-primary mb-0" id="display-requested-amount">-</h6>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="progress mb-2" style="height: 8px;">
+                                        <div class="progress-bar" role="progressbar" id="stock-progress-bar"
+                                             style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <small class="text-muted" id="stock-progress-text">Pilih paket untuk melihat informasi stok</small>
+                                        <small class="text-muted" id="stock-usage-percentage"></small>
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- Integrated validation feedback area --}}
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <div id="stock-validation-feedback" class="alert alert-info alert-dismissible fade show d-none" role="alert" style="padding: 8px 12px; margin-bottom: 0;">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <span id="stock-validation-message">Informasi validasi stok akan ditampilkan di sini</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="stock-no-selection" class="text-center py-3">
+                            <i class="fas fa-box-open text-muted" style="font-size: 2rem;"></i>
+                            <p class="text-muted mt-2 mb-0">Pilih paket pinjaman untuk melihat informasi stok</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </div>
+
+    {{-- Custom CSS for Stock Information Panel --}}
+    @if(!$hide_stock_info)
+    @push('css')
+    <style>
+        #stock-information-panel .info-item {
+            border-left: 3px solid #e9ecef;
+            padding-left: 12px;
+            transition: border-color 0.3s ease;
+        }
+
+        #stock-information-panel .info-item:hover {
+            border-left-color: #007bff;
+        }
+
+        .stock-status-good { border-left-color: #28a745 !important; }
+        .stock-status-danger { border-left-color: #dc3545 !important; }
+
+        #stock-no-selection {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+        }
+
+        .progress {
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .progress-bar {
+            transition: width 0.6s ease;
+        }
+    </style>
+    @endpush
+    @endif
 
     {{-- Check flag js on dmenu --}}
     @if ($jsmenu == '1')

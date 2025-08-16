@@ -8,6 +8,7 @@ use App\Models\PengajuanPinjaman;
 use App\Models\Anggotum;
 use App\Models\MasterPaketPinjaman;
 use App\Models\PeriodePencairan;
+use App\Models\Pinjaman;
 use App\Models\ApprovalHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -234,6 +235,16 @@ class PengajuanPinjamanController extends Controller
             // Stock information is for display only, no blocking validation
             // This follows the preference: "auto-approve loan applications without stock validation"
 
+            // Determine initial status based on user role
+            // Admin users (kadmin, akredt, atrans, ketuum) get automatic approval bypass
+            // Regular members (anggot) go through standard approval workflow
+            $userRole = PengajuanPinjaman::getUserRole($data);
+            $currentUsername = PengajuanPinjaman::getCurrentUsername($data);
+            $isAdminUser = PengajuanPinjaman::isAdminUser($data);
+
+            $initialStatus = $isAdminUser ? 'disetujui' : 'diajukan';
+            $approvalDate = $isAdminUser ? now() : null;
+
             // Create pengajuan using calculated values
             $pengajuan = PengajuanPinjaman::create([
                 'anggota_id' => request('anggota_id'),
@@ -247,20 +258,62 @@ class PengajuanPinjamanController extends Controller
                 'tujuan_pinjaman' => request('tujuan_pinjaman'),
                 'jenis_pengajuan' => request('jenis_pengajuan'),
                 'periode_pencairan_id' => request('periode_pencairan_id'),
-                'status_pengajuan' => 'diajukan',
+                'status_pengajuan' => $initialStatus,
                 'status_pencairan' => 'belum_cair',
                 'tanggal_pengajuan' => now(),
+                'tanggal_approval' => $approvalDate,
+                'approved_by' => $isAdminUser ? $currentUsername : null,
                 'isactive' => '1',
-                'user_create' => PengajuanPinjaman::getCurrentUsername($data),
+                'user_create' => $currentUsername,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
             // Update stock terpakai using model method (only for non-regular members)
-            $userRole = PengajuanPinjaman::getUserRole($data);
             $isAnggotaBiasa = Anggotum::isRegularMember($userRole);
             if (!$isAnggotaBiasa) {
                 $paket->updateStockUsage($jumlah_paket, 'increment');
+            }
+
+            // Admin users bypass approval workflow - automatically create active loan record
+            // This streamlines the process for admin-created applications while maintaining
+            // audit trail through user_create field
+            if ($isAdminUser) {
+                // Calculate tenor in months from string like "6 bulan"
+                $tenor_bulan = (int) filter_var($tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
+
+                // Calculate angsuran details
+                $nominal_pinjaman = $calculations['jumlah_pinjaman'];
+                $bunga_per_bulan = $calculations['bunga_per_bulan'];
+                $angsuran_pokok = $nominal_pinjaman / $tenor_bulan;
+                $angsuran_bunga = $nominal_pinjaman * ($bunga_per_bulan / 100);
+                $total_angsuran = $angsuran_pokok + $angsuran_bunga;
+
+                // Calculate dates
+                $tanggal_pencairan = now();
+                $tanggal_jatuh_tempo = now()->addMonths($tenor_bulan);
+                $tanggal_angsuran_pertama = now()->addMonth();
+
+                Pinjaman::create([
+                    'nomor_pinjaman' => $data['format']->IDFormat('KOP301'),
+                    'pengajuan_pinjaman_id' => $pengajuan->id,
+                    'anggota_id' => $pengajuan->anggota_id,
+                    'nominal_pinjaman' => $nominal_pinjaman,
+                    'bunga_per_bulan' => $bunga_per_bulan,
+                    'tenor_bulan' => $tenor_bulan,
+                    'angsuran_pokok' => $angsuran_pokok,
+                    'angsuran_bunga' => $angsuran_bunga,
+                    'total_angsuran' => $total_angsuran,
+                    'tanggal_pencairan' => $tanggal_pencairan,
+                    'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
+                    'tanggal_angsuran_pertama' => $tanggal_angsuran_pertama,
+                    'status' => 'aktif',
+                    'sisa_pokok' => $nominal_pinjaman,
+                    'total_dibayar' => 0,
+                    'angsuran_ke' => 0,
+                    'isactive' => '1',
+                    'user_create' => $currentUsername,
+                ]);
             }
 
             DB::commit();
@@ -268,9 +321,16 @@ class PengajuanPinjamanController extends Controller
             // Log success
             $syslog->log_insert('C', $data['dmenu'], 'Pengajuan Pinjaman Created: ID ' . $pengajuan->id, '1');
 
+            // Create appropriate success message based on user role and approval status
             $jenis_text = $jenis_pengajuan === 'top_up' ? 'Top Up (otomatis terdeteksi)' : 'Pinjaman Baru';
-            Session::flash('message', 'Pengajuan pinjaman berhasil dibuat sebagai: ' . $jenis_text);
-            Session::flash('class', 'success');
+
+            if ($isAdminUser) {
+                Session::flash('message', 'Pengajuan pinjaman berhasil dibuat dan otomatis disetujui sebagai: ' . $jenis_text . '. Pinjaman telah aktif dan siap dicairkan.');
+                Session::flash('class', 'success');
+            } else {
+                Session::flash('message', 'Pengajuan pinjaman berhasil dibuat sebagai: ' . $jenis_text . '. Menunggu proses approval.');
+                Session::flash('class', 'success');
+            }
 
         } catch (\Exception $e) {
             DB::rollback();
