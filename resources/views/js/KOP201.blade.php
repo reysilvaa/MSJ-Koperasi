@@ -18,29 +18,6 @@ $(document).ready(function() {
         initializeShowPage();
     }
 
-    // === LIST PAGE FUNCTIONALITY ===
-    function initializeListPage() {
-        // Initialize DataTable if exists
-        if ($('#pengajuan-table').length > 0) {
-            $('#pengajuan-table').DataTable({
-                "language": {
-                    "search": "Cari :",
-                    "lengthMenu": "Tampilkan _MENU_ baris",
-                    "zeroRecords": "Tidak ada pengajuan",
-                    "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ pengajuan",
-                    "infoEmpty": "Tidak ada data",
-                    "infoFiltered": "(difilter dari _MAX_ total pengajuan)"
-                },
-                "pageLength": 10,
-                "responsive": true,
-                "order": [[5, "desc"]], // Sort by tanggal
-                "columnDefs": [
-                    { "orderable": false, "targets": -1 } // Disable sorting on Action column
-                ]
-            });
-        }
-    }
-
     // === ADD PAGE FUNCTIONALITY ===
     function initializeAddPage() {
         // Auto-check eligibility when anggota selected (only if dropdown exists)
@@ -252,39 +229,26 @@ $(document).ready(function() {
         textarea.after(counterHtml);
     }
 
-    // === DELETE CONFIRMATION ===
-    window.confirmDelete = function(id) {
+    // === DELETE CONFIRMATION - MSJ Framework Pattern ===
+    // Note: Delete function is now handled in the view file for list pages
+    // This is kept for compatibility with other pages (add, edit, show)
+    window.deleteData = function(event, name, msg) {
+        event.preventDefault(); // Prevent default form submission
         Swal.fire({
-            title: 'Hapus Pengajuan?',
-            text: 'Data yang dihapus tidak dapat dikembalikan!',
+            title: 'Konfirmasi',
+            text: `Apakah Anda Yakin ${msg} Data ${name} ini?`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Ya, Hapus!',
+            confirmButtonText: `Ya, ${msg}`,
             cancelButtonText: 'Batal',
-            confirmButtonColor: '#d33'
+            confirmButtonColor: '#028284'
         }).then((result) => {
             if (result.isConfirmed) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `{{ url($url_menu ?? '') }}/${id}`;
-
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = '{{ csrf_token() }}';
-
-                const methodField = document.createElement('input');
-                methodField.type = 'hidden';
-                methodField.name = '_method';
-                methodField.value = 'DELETE';
-
-                form.appendChild(csrfToken);
-                form.appendChild(methodField);
-                document.body.appendChild(form);
-                form.submit();
+                // Find the closest form element and submit it manually
+                event.target.closest('form').submit();
             }
         });
-    }
+    };
 
     // === ANGGOTA ELIGIBILITY CHECK ===
     // This function is no longer used - eligibility check now happens during form submission

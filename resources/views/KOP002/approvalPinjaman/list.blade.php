@@ -228,19 +228,20 @@
     <script>
         let columnAbjad = '';
         $(document).ready(function() {
-            let numColumns = $('#list_{{ $dmenu }}').DataTable().columns().count();
+            // Column detection for status styling (MSJ Framework pattern)
+            let numColumns = $('#list_{{ $dmenu }} thead th').length;
             let columnNames = '';
-            for (let index = 0; index < numColumns; index++) {
-                columnNames = $('#list_{{ $dmenu }}').DataTable().columns(index).header()[0].textContent;
+            $('#list_{{ $dmenu }} thead th').each(function(index) {
+                columnNames = $(this).text();
                 if (columnNames == 'Status' || columnNames == 'status') {
                     columnAbjad = String.fromCharCode(65 + index);
                 }
-            }
+            });
         });
 
-        //set table into datatables
+        // Initialize DataTable following EXACT MSJ Framework standards
         $('#list_{{ $dmenu }}').DataTable({
-            paging: false,
+            paging: false, // MSJ Framework standard for custom modules
             info: false,
             searching: true,
             responsive: true,
@@ -259,7 +260,7 @@
                 {
                     text: '<i class="fas fa-file-excel me-1 text-lg text-success"></i><span class="font-weight-bold"> Excel</span>',
                     action: function() {
-                        // Arahkan ke server untuk ekspor Excel
+                        // Server-side export following MSJ Framework pattern
                         window.location.href = "{{ url($url_menu) }}?export=excel";
                     }
                 },
@@ -269,14 +270,14 @@
                     extend: 'pdfHtml5',
                     text: '<i class="fas fa-file-pdf me-1 text-lg text-danger"></i><span class="font-weight-bold"> PDF</span>',
                     action: function() {
-                        // Arahkan ke server untuk ekspor PDF
+                        // Server-side export following MSJ Framework pattern
                         window.location.href = "{{ url($url_menu) }}?export=pdf";
                     }
                 },
                 @endif
             ],
             initComplete: function() {
-                // Tambahkan custom search bar
+                // Custom search bar following MSJ Framework pattern
                 var searchBarHtml = `
                     <div class="dataTables_filter d-flex justify-content-end">
                         <form method="GET" action="{{ url($url_menu) }}" class="d-flex">
@@ -284,13 +285,38 @@
                         </form>
                     </div>
                 `;
-                $('.dataTables_filter').remove(); // Hapus input pencarian default DataTables
-                $(searchBarHtml).insertAfter('.dt-buttons'); // Tambahkan search bar setelah tombol
+                $('.dataTables_filter').remove(); // Remove default DataTables search
+                $(searchBarHtml).insertAfter('.dt-buttons'); // Add search bar after buttons
             }
         });
 
-        //set color button datatables
+        // MSJ Framework standard button styling
         $('.dt-button').addClass('btn btn-secondary');
         $('.dt-button').removeClass('dt-button');
+
+        // MSJ Framework standard authorization cleanup
+        <?= $authorize->add == '0' ? 'btnadd.remove();' : '' ?>
+        <?= $authorize->excel == '0' ? "$('.buttons-excel').remove();" : '' ?>
+        <?= $authorize->pdf == '0' ? "$('.buttons-pdf').remove();" : '' ?>
+        <?= $authorize->print == '0' ? "$('.buttons-print').remove();" : '' ?>
+
+        // MSJ Framework standard delete confirmation function
+        function deleteData(event, name, msg) {
+            event.preventDefault(); // Prevent default form submission
+            Swal.fire({
+                title: 'Konfirmasi',
+                text: `Apakah Anda Yakin ${msg} Data ${name} ini?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: `Ya, ${msg}`,
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#028284'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Find the closest form element and submit it manually
+                    event.target.closest('form').submit();
+                }
+            });
+        }
     </script>
 @endpush

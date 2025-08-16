@@ -23,10 +23,10 @@ class ApprovalPinjamanController extends Controller
      */
     public function index($data)
     {
-        // Export handling
+        // Export handling - EXACT MSJ Framework pattern
         if (request()->has('export') || request()->has('pdf')) {
             $exportType = request()->input('export');
-            return $this->exportData($data['dmenu'], $exportType, request());
+            return $this->exportData($data['dmenu'], $exportType);
         }
 
         // Function helper
@@ -418,12 +418,97 @@ class ApprovalPinjamanController extends Controller
     }
 
     /**
-     * Export data functionality following MSJ Framework standard
+     * Export data functionality - Custom implementation for ApprovalPinjaman module
      */
-    private function exportData($dmenu, $exportType, $request)
+    private function exportData($dmenu, $exportType)
     {
-        // Implementation for export functionality
-        // This would follow MSJ Framework export standards
-        return response()->json(['message' => 'Export functionality not implemented yet']);
+        try {
+            // Get user role and username using model helper methods
+            $user_role = PengajuanPinjaman::getUserRole(['user_login' => session('user_login')]);
+            $current_username = PengajuanPinjaman::getCurrentUsername(['user_login' => session('user_login')]);
+
+            // Get data using same logic as index method
+            $query = PengajuanPinjaman::filterByRole($user_role, $current_username);
+
+            // Apply search filter if exists
+            $search = request('search');
+            if (!empty($search)) {
+                $query->where(function($q) use ($search) {
+                    $q->where('id', 'like', "%$search%")
+                      ->orWhereHas('anggotum', function($qa) use ($search) {
+                          $qa->where('nama_lengkap', 'like', "%$search%")
+                            ->orWhere('nomor_anggota', 'like', "%$search%");
+                      });
+                });
+            }
+
+            $exportData = $query->orderBy('created_at', 'desc')->get();
+
+            // Prepare export data following MSJ Framework pattern
+            $data = [];
+            $headers = ['No', 'No. Pengajuan', 'Anggota', 'Paket', 'Jumlah Pinjaman', 'Status', 'Tanggal'];
+            $data[] = $headers;
+
+            foreach ($exportData as $index => $pengajuan) {
+                $data[] = [
+                    $index + 1,
+                    $pengajuan->id ?? '-',
+                    $pengajuan->anggotum->nama_lengkap ?? '-',
+                    $pengajuan->master_paket_pinjaman->periode ?? '-',
+                    'Rp ' . number_format($pengajuan->jumlah_pinjaman, 0, ',', '.'),
+                    ucfirst(str_replace('_', ' ', $pengajuan->status_pengajuan)),
+                    $pengajuan->tanggal_pengajuan ? date('d/m/Y', strtotime($pengajuan->tanggal_pengajuan)) : '-'
+                ];
+            }
+
+            // Generate filename
+            $fileName = 'approval_pinjaman_' . date('Y-m-d_H-i-s');
+
+            // Use PhpSpreadsheet for export (following MSJ Framework pattern)
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Approval Pinjaman');
+
+            // Set data
+            $sheet->fromArray($data, null, 'A1');
+
+            // Auto-size columns
+            foreach (range('A', $sheet->getHighestColumn()) as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            // Apply header styling
+            $headerRange = 'A1:' . $sheet->getHighestColumn() . '1';
+            $sheet->getStyle($headerRange)->getFont()->setBold(true);
+            $sheet->getStyle($headerRange)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFE0E0E0');
+
+            if ($exportType === 'excel') {
+                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+                $filePath = public_path("{$fileName}.xlsx");
+                $writer->save($filePath);
+                return response()->download($filePath)->deleteFileAfterSend(true);
+
+            } elseif ($exportType === 'pdf') {
+                // Configure for PDF
+                $sheet->getPageSetup()
+                    ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
+                    ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
+                $sheet->getPageMargins()->setTop(0.5)->setRight(0.5)->setLeft(0.5)->setBottom(0.5);
+
+                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Pdf\Mpdf($spreadsheet);
+                $filePath = public_path("{$fileName}.pdf");
+                $writer->save($filePath);
+                return response()->download($filePath)->deleteFileAfterSend(true);
+            }
+
+            return response()->json(['error' => 'Invalid export type'], 400);
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
+        }
     }
+
+
 }

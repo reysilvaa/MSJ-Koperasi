@@ -14,30 +14,10 @@ $(document).ready(function() {
 
     // === LIST PAGE FUNCTIONALITY ===
     function initializeApprovalListPage() {
-        // Initialize DataTable for approval list
-        if ($('#approval-table').length > 0) {
-            // // Check if DataTable is already initialized and destroy it first
-            // if ($.fn.DataTable.isDataTable('#approval-table')) {
-            //     $('#approval-table').DataTable().destroy();
-            // }
+        // List page functionality (non-DataTables related)
+        // DataTables initialization moved to view file following MSJ Framework standards
 
-            $('#approval-table').DataTable({
-                "language": {
-                    "search": "Cari :",
-                    "lengthMenu": "Tampilkan _MENU_ baris",
-                    "zeroRecords": "Tidak ada pengajuan untuk direview",
-                    "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ pengajuan",
-                    "infoEmpty": "Tidak ada data",
-                    "infoFiltered": "(difilter dari _MAX_ total pengajuan)"
-                },
-                "pageLength": 10,
-                "responsive": true,
-                "order": [[5, "desc"]], // Sort by tanggal
-                "columnDefs": [
-                    { "orderable": false, "targets": 6 } // Disable sorting on Action column
-                ]
-            });
-        }
+        console.log('Approval list page initialized - DataTables handled in view file');
     }
 
     // === SHOW PAGE FUNCTIONALITY ===

@@ -44,35 +44,20 @@ class PengajuanPinjamanController extends Controller
             ->orderBy('urut')
             ->get();
 
-        // Get pengajuan pinjaman data using Eloquent with relationships
-        $query = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
+        // Get pengajuan pinjaman data using model methods (MSJ Framework standard)
+        $query = PengajuanPinjaman::with(['anggotum', 'master_paket_pinjaman', 'periode_pencairan'])
             ->where('isactive', '1');
 
-        // Search functionality
+        // Apply search filter using model method
         $search = request('search');
-        if (!empty($search)) {
-            $query->where(function($q) use ($search) {
-                $q->where('id', 'like', "%$search%")
-                  ->orWhereHas('anggotum', function($qa) use ($search) {
-                      $qa->where('nama_lengkap', 'like', "%$search%")
-                        ->orWhere('nomor_anggota', 'like', "%$search%");
-                  });
-            });
-        }
+        $query = PengajuanPinjaman::applySearchFilter($query, $search);
 
-        // Check authorization rules
-        if ($data['authorize']->rules == '1') {
-            $roles = $data['users_rules'];
-            $query->where(function ($q) use ($roles) {
-                foreach ($roles as $role) {
-                    $q->orWhereRaw("FIND_IN_SET(?, REPLACE(rules, ' ', ''))", [$role]);
-                }
-            });
-        }
+        // Apply authorization rules using model method
+        $query = PengajuanPinjaman::applyAuthorizationRules($query, $data['authorize'], $data['users_rules']);
 
         $collectionData = $query->orderBy('created_at', 'desc')->get();
 
-        // Pagination
+        // MSJ Framework standard: Use Laravel Pagination for view compatibility
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 10;
         $currentItems = $collectionData->slice(($currentPage - 1) * $perPage, $perPage)->all();
@@ -84,13 +69,8 @@ class PengajuanPinjamanController extends Controller
             ['path' => request()->url(), 'query' => request()->query()]
         );
 
-        // Get summary statistics
-        $data['stats'] = [
-            'total_pengajuan' => $collectionData->count(),
-            'pending_approval' => $collectionData->where('status_pengajuan', 'diajukan')->count(),
-            'approved' => $collectionData->where('status_pengajuan', 'disetujui')->count(),
-            'rejected' => $collectionData->where('status_pengajuan', 'ditolak')->count(),
-        ];
+        // Get summary statistics using model method
+        $data['stats'] = PengajuanPinjaman::getStatistics($collectionData);
 
         // Log access
         $syslog->log_insert('R', $data['dmenu'], 'Pengajuan Pinjaman List Accessed', '1');
@@ -118,31 +98,24 @@ class PengajuanPinjamanController extends Controller
             ->orderBy('urut')
             ->get();
 
-        // Check if user is anggota (regular member) and get their anggota data
-        $data['current_anggota'] = null;
-        $data['is_anggota_biasa'] = false;
-        $data['hide_stock_info'] = false;
+        // Check if user is anggota (regular member) using model method
+        $userRole = PengajuanPinjaman::getUserRole($data);
+        $data['is_anggota_biasa'] = Anggotum::isRegularMember($userRole);
+        $data['hide_stock_info'] = $data['is_anggota_biasa']; // Hide stock information for regular members
 
-        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggot') !== false) {
-            $data['is_anggota_biasa'] = true;
-            $data['hide_stock_info'] = true; // Hide stock information for regular members
-            $data['current_anggota'] = Anggotum::where('email', $data['user_login']->email)
-                                              ->orWhere('user_create', $data['user_login']->username)
-                                              ->where('isactive', '1')
-                                              ->select('id', 'nomor_anggota', 'nama_lengkap')
-                                              ->first();
+        $data['current_anggota'] = null;
+        if ($data['is_anggota_biasa']) {
+            $data['current_anggota'] = Anggotum::findByUserCredentials(
+                $data['user_login']->email,
+                $data['user_login']->username
+            );
         }
 
-        // Get form data using Eloquent
-        $data['anggota_list'] = Anggotum::where('isactive', '1')
-            ->select('id', 'nomor_anggota', 'nama_lengkap')
-            ->get();
+        // Get form data using model methods
+        $data['anggota_list'] = Anggotum::getActiveList();
+        $data['paket_list'] = MasterPaketPinjaman::getActiveList();
 
-        $data['paket_list'] = MasterPaketPinjaman::where('isactive', '1')
-            ->select('id', 'periode', 'stock_limit', 'stock_terpakai')
-            ->get();
-
-        // Static tenor options since we removed master_tenor table
+        // Static tenor options using model constant
         $data['tenor_list'] = collect([
             (object) ['id' => '6 bulan', 'nama_tenor' => '6 bulan', 'tenor_bulan' => 6],
             (object) ['id' => '10 bulan', 'nama_tenor' => '10 bulan', 'tenor_bulan' => 10],
@@ -197,61 +170,21 @@ class PengajuanPinjamanController extends Controller
             return redirect()->back()->withInput();
         }
 
-        // Check if anggota already has existing loan application with status "Diajukan" (Submitted/Pending)
-        $existingDiajukan = PengajuanPinjaman::where('anggota_id', $anggotaId)
-            ->where('status_pengajuan', 'diajukan')
-            ->where('isactive', '1')
-            ->first();
-
-        if ($existingDiajukan) {
-            // Use MSJ framework Session flash message with badge info component styling
+        // Check for existing pending application using model method
+        if (PengajuanPinjaman::hasExistingPendingApplication($anggotaId)) {
             Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status \'Diajukan\'. Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
             Session::flash('class', 'warning');
-
-            // Redirect back to loan application form or list page
             return redirect()->back()->withInput();
         }
 
-        // Automatic eligibility check and set jenis_pengajuan
+        // Automatic eligibility check and set jenis_pengajuan using model method
         if ($anggotaId) {
-            // Check if anggota has active loan and remaining payments ≤ 2
-            $eligibility = DB::select("
-                SELECT
-                    pp.id as pengajuan_id,
-                    p.id as pinjaman_id,
-                    p.tenor_bulan,
-                    COUNT(cp.id) as total_cicilan_lunas,
-                    (p.tenor_bulan - COUNT(cp.id)) as sisa_cicilan
-                FROM pengajuan_pinjaman pp
-                INNER JOIN pinjaman p ON pp.id = p.pengajuan_pinjaman_id
-                LEFT JOIN cicilan_pinjaman cp ON p.id = cp.pinjaman_id AND cp.status = 'lunas'
-                WHERE pp.anggota_id = ?
-                AND pp.status_pengajuan = 'disetujui'
-                AND p.status = 'aktif'
-                AND pp.isactive = '1'
-                AND p.isactive = '1'
-                GROUP BY pp.id, p.id, p.tenor_bulan
-                HAVING sisa_cicilan <= 2
-                LIMIT 1
-            ", [$anggotaId]);
-
-            // Automatically set jenis_pengajuan based on eligibility
-            $jenis_pengajuan = !empty($eligibility) ? 'top_up' : 'baru';
-
-            // Override the request with the determined jenis_pengajuan
+            $jenis_pengajuan = PengajuanPinjaman::determineLoanType($anggotaId);
             request()->merge(['jenis_pengajuan' => $jenis_pengajuan]);
         }
 
-        // Validation rules - Range validation removed as per koperasi system preferences
-        $validator = Validator::make(request()->all(), [
-            'anggota_id' => 'required|exists:anggota,id',
-            'paket_pinjaman_id' => 'required|exists:master_paket_pinjaman,id',
-            'jumlah_paket_dipilih' => 'required|integer|min:1', // max removed for flexibility
-            'tenor_pinjaman' => 'required|string|in:6 bulan,10 bulan,12 bulan',
-            'tujuan_pinjaman' => 'required|string|max:500',
-            'jenis_pengajuan' => 'required|in:baru,top_up',
-            'periode_pencairan_id' => 'required|exists:periode_pencairan,id',
-        ]);
+        // Validation using model method
+        $validator = Validator::make(request()->all(), PengajuanPinjaman::getValidationRules());
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -274,53 +207,47 @@ class PengajuanPinjamanController extends Controller
         DB::beginTransaction();
 
         try {
-            // Get paket and tenor data for calculation using Eloquent
+            // Get basic data
             $paket = MasterPaketPinjaman::find(request('paket_pinjaman_id'));
             $anggota = Anggotum::find(request('anggota_id'));
-            $tenor_pinjaman = request('tenor_pinjaman'); // e.g., "6 bulan", "12 bulan"
-            $tenor_bulan = (int) filter_var($tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
+            $tenor_pinjaman = request('tenor_pinjaman');
+            $tenor_bulan = PengajuanPinjaman::getTenorBulan($tenor_pinjaman);
             $jumlah_paket = request('jumlah_paket_dipilih');
 
-            // Business logic calculation sesuai docs/PENGAJUAN_PINJAMAN_FIX.md
-            $nilai_per_paket = 500000; // Rp 500.000 per paket
-            $jumlah_pinjaman = $jumlah_paket * $nilai_per_paket;
-            $bunga_per_bulan = 1.0; // Fixed 1% per bulan
-
-            // Perhitungan Bunga Flat (CORRECTED)
-            $cicilan_pokok = $jumlah_pinjaman / $tenor_bulan;
-            $bunga_flat = $jumlah_pinjaman * ($bunga_per_bulan / 100);
-            $cicilan_per_bulan = $cicilan_pokok + $bunga_flat;
-            $total_pembayaran = $cicilan_per_bulan * $tenor_bulan;
+            // Calculate loan amounts using model method
+            $calculations = PengajuanPinjaman::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
 
             // Stock validation removed as per koperasi system preferences
             // Stock information is for display only, no blocking validation
             // This follows the preference: "auto-approve loan applications without stock validation"
 
-            // Create pengajuan using Eloquent
+            // Create pengajuan using calculated values
             $pengajuan = PengajuanPinjaman::create([
                 'anggota_id' => request('anggota_id'),
                 'paket_pinjaman_id' => request('paket_pinjaman_id'),
                 'jumlah_paket_dipilih' => $jumlah_paket,
-                'tenor_pinjaman' => $tenor_pinjaman, // Store as string like "6 bulan"
-                'jumlah_pinjaman' => $jumlah_pinjaman,
-                'bunga_per_bulan' => $bunga_per_bulan,
-                'cicilan_per_bulan' => $cicilan_per_bulan,
-                'total_pembayaran' => $total_pembayaran,
+                'tenor_pinjaman' => $tenor_pinjaman,
+                'jumlah_pinjaman' => $calculations['jumlah_pinjaman'],
+                'bunga_per_bulan' => $calculations['bunga_per_bulan'],
+                'cicilan_per_bulan' => $calculations['cicilan_per_bulan'],
+                'total_pembayaran' => $calculations['total_pembayaran'],
                 'tujuan_pinjaman' => request('tujuan_pinjaman'),
                 'jenis_pengajuan' => request('jenis_pengajuan'),
                 'periode_pencairan_id' => request('periode_pencairan_id'),
-                'status_pengajuan' => 'diajukan', // Auto submit sesuai requirement
-                'status_pencairan' => 'belum_cair', // Fixed enum value
+                'status_pengajuan' => 'diajukan',
+                'status_pencairan' => 'belum_cair',
                 'tanggal_pengajuan' => now(),
                 'isactive' => '1',
-                'user_create' => $data['user_login']->username ?? 'system',
+                'user_create' => PengajuanPinjaman::getCurrentUsername($data),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            // Update stock terpakai using Eloquent (only for non-regular members)
+            // Update stock terpakai using model method (only for non-regular members)
+            $userRole = PengajuanPinjaman::getUserRole($data);
+            $isAnggotaBiasa = Anggotum::isRegularMember($userRole);
             if (!$isAnggotaBiasa) {
-                $paket->increment('stock_terpakai', $jumlah_paket);
+                $paket->updateStockUsage($jumlah_paket, 'increment');
             }
 
             DB::commit();
@@ -414,22 +341,16 @@ class PengajuanPinjamanController extends Controller
         $data['pengajuan'] = $pengajuan;
         $data['list'] = $pengajuan; // For view compatibility with $list variable
 
-        // Recalculate with correct bunga flat formula for display
-        $tenor_bulan = (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
-        $jumlah_pinjaman = $pengajuan->jumlah_pinjaman;
-        $bunga_per_bulan = 1.0; // Fixed 1% per bulan
+        // Recalculate using model method for display
+        $tenor_bulan = PengajuanPinjaman::getTenorBulan($pengajuan->tenor_pinjaman);
+        $jumlah_paket = $pengajuan->jumlah_pinjaman / PengajuanPinjaman::NILAI_PER_PAKET;
+        $calculations = PengajuanPinjaman::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
 
-        // Perhitungan Bunga Flat yang Benar
-        $cicilan_pokok = $jumlah_pinjaman / $tenor_bulan;
-        $bunga_flat = $jumlah_pinjaman * ($bunga_per_bulan / 100);
-        $cicilan_per_bulan_correct = $cicilan_pokok + $bunga_flat;
-        $total_pembayaran_correct = $cicilan_per_bulan_correct * $tenor_bulan;
-
-        // Add corrected calculations to data
-        $data['cicilan_per_bulan_correct'] = $cicilan_per_bulan_correct;
-        $data['total_pembayaran_correct'] = $total_pembayaran_correct;
-        $data['cicilan_pokok'] = $cicilan_pokok;
-        $data['bunga_flat'] = $bunga_flat;
+        // Add calculations to data
+        $data['cicilan_per_bulan_correct'] = $calculations['cicilan_per_bulan'];
+        $data['total_pembayaran_correct'] = $calculations['total_pembayaran'];
+        $data['cicilan_pokok'] = $calculations['jumlah_pinjaman'] / $tenor_bulan;
+        $data['bunga_flat'] = $calculations['jumlah_pinjaman'] * (PengajuanPinjaman::BUNGA_PER_BULAN / 100);
 
         // Get additional data for view using Eloquent
         $data['periode_list'] = PeriodePencairan::where('isactive', '1')
@@ -508,8 +429,8 @@ class PengajuanPinjamanController extends Controller
             return view("pages.errorpages", $data);
         }
 
-        // Check if editable (only draft and diajukan status)
-        if (!in_array($pengajuan->status_pengajuan, ['draft', 'diajukan'])) {
+        // Check if editable using model method
+        if (!$pengajuan->isEditable()) {
             $data['url_menu'] = 'error';
             $data['title_group'] = 'Error';
             $data['title_menu'] = 'Error';
@@ -519,30 +440,22 @@ class PengajuanPinjamanController extends Controller
 
         $data['pengajuan'] = $pengajuan;
 
-        // Check if user is anggota (regular member) and get their anggota data
-        $data['current_anggota'] = null;
-        $data['is_anggota_biasa'] = false;
-        $data['hide_stock_info'] = false;
+        // Check if user is anggota (anggota_koperasi)
+        $userRole = PengajuanPinjaman::getUserRole($data);
+        $data['is_anggota_biasa'] = Anggotum::isRegularMember($userRole);
+        $data['hide_stock_info'] = $data['is_anggota_biasa'];
 
-        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggot') !== false) {
-            $data['is_anggota_biasa'] = true;
-            $data['hide_stock_info'] = true; // Hide stock information for regular members
-            $data['current_anggota'] = Anggotum::where('email', $data['user_login']->email)
-                                              ->orWhere('user_create', $data['user_login']->username)
-                                              ->where('isactive', '1')
-                                              ->select('id', 'nomor_anggota', 'nama_lengkap')
-                                              ->first();
+        $data['current_anggota'] = null;
+        if ($data['is_anggota_biasa']) {
+            $data['current_anggota'] = Anggotum::findByUserCredentials(
+                $data['user_login']->email,
+                $data['user_login']->username
+            );
         }
 
-        // Get form data using Eloquent
-        $data['anggota_list'] = Anggotum::where('status_keanggotaan', 'aktif')
-            ->where('isactive', '1')
-            ->select('id', 'nomor_anggota', 'nama_lengkap')
-            ->get();
-
-        $data['paket_list'] = MasterPaketPinjaman::where('isactive', '1')
-            ->select('id', 'periode', 'stock_limit', 'stock_terpakai')
-            ->get();
+        // Get form data using model methods
+        $data['anggota_list'] = Anggotum::getActiveList();
+        $data['paket_list'] = MasterPaketPinjaman::getActiveList();
 
         $data['tenor_list'] = collect([
             (object) ['id' => '6 bulan', 'nama_tenor' => '6 bulan', 'tenor_bulan' => 6],
@@ -567,23 +480,21 @@ class PengajuanPinjamanController extends Controller
         $syslog = new Function_Helper;
         $data['format'] = new Format_Helper;
 
-        // Handle role-based anggota_id assignment
+        // Handle role-based anggota_id assignment using model methods
         $anggotaId = request('anggota_id');
+        $userRole = PengajuanPinjaman::getUserRole($data);
 
-        // Check if user is anggota (regular member) and auto-assign anggota_id
-        if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggot') !== false) {
-            // Find anggota by email or username matching
-            $anggota = Anggotum::where('email', $data['user_login']->email)
-                              ->orWhere('user_create', $data['user_login']->username)
-                              ->where('isactive', '1')
-                              ->first();
+        // Check if user is anggota and auto-assign anggota_id
+        if (Anggotum::isRegularMember($userRole)) {
+            $anggota = Anggotum::findByUserCredentials(
+                $data['user_login']->email,
+                $data['user_login']->username
+            );
 
             if ($anggota) {
                 $anggotaId = $anggota->id;
-                // Override request with the found anggota_id
                 request()->merge(['anggota_id' => $anggotaId]);
             } else {
-                // Use MSJ framework Session flash message with badge info component styling
                 Session::flash('message', 'Data anggota Anda tidak ditemukan. Silakan hubungi admin untuk verifikasi data keanggotaan.');
                 Session::flash('class', 'danger');
                 return redirect()->back();
@@ -591,7 +502,6 @@ class PengajuanPinjamanController extends Controller
         }
 
         if (!$anggotaId) {
-            // Use MSJ framework Session flash message with badge info component styling
             Session::flash('message', 'Anggota harus dipilih untuk melanjutkan pengajuan pinjaman.');
             Session::flash('class', 'warning');
             return redirect()->back()->withInput();
@@ -608,64 +518,21 @@ class PengajuanPinjamanController extends Controller
             return view("pages.errorpages", $data);
         }
 
-        // Check if anggota has other loan applications with status "Diajukan" (excluding current one being updated)
-        $existingDiajukan = PengajuanPinjaman::where('anggota_id', $anggotaId)
-            ->where('status_pengajuan', 'diajukan')
-            ->where('id', '!=', $id)
-            ->where('isactive', '1')
-            ->first();
-
-        if ($existingDiajukan) {
-            // Use MSJ framework Session flash message with badge info component styling
+        // Check for existing pending application using model method (excluding current one)
+        if (PengajuanPinjaman::hasExistingPendingApplication($anggotaId, $id)) {
             Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status \'Diajukan\'. Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
             Session::flash('class', 'warning');
-
-            // Redirect back to edit form
             return redirect()->back()->withInput();
         }
 
-        // Automatic eligibility check and set jenis_pengajuan
+        // Automatic eligibility check using model method
         if ($anggotaId) {
-            // Check if anggota has active loan and remaining payments ≤ 2
-
-            $eligibility = PengajuanPinjaman::select(
-                    'pengajuan_pinjaman.id as pengajuan_id',
-                    'pinjaman.id as pinjaman_id',
-                    'pinjaman.tenor_bulan',
-                    DB::raw('COUNT(cicilan_pinjaman.id) as total_cicilan_lunas'),
-                    DB::raw('(pinjaman.tenor_bulan - COUNT(cicilan_pinjaman.id)) as sisa_cicilan')
-                )
-                ->join('pinjaman', 'pengajuan_pinjaman.id', '=', 'pinjaman.pengajuan_pinjaman_id')
-                ->leftJoin('cicilan_pinjaman', function($join) {
-                    $join->on('pinjaman.id', '=', 'cicilan_pinjaman.pinjaman_id')
-                        ->where('cicilan_pinjaman.status', '=', 'lunas');
-                })
-                ->where('pengajuan_pinjaman.anggota_id', $anggotaId)
-                ->where('pengajuan_pinjaman.status_pengajuan', 'disetujui')
-                ->where('pinjaman.status', 'aktif')
-                ->where('pengajuan_pinjaman.isactive', '1')
-                ->where('pinjaman.isactive', '1')
-                ->groupBy('pengajuan_pinjaman.id', 'pinjaman.id', 'pinjaman.tenor_bulan')
-                ->having('sisa_cicilan', '<=', 2)
-                ->first();
-
-            // Automatically set jenis_pengajuan based on eligibility
-            $jenis_pengajuan = !empty($eligibility) ? 'top_up' : 'baru';
-
-            // Override the request with the determined jenis_pengajuan
+            $jenis_pengajuan = PengajuanPinjaman::determineLoanType($anggotaId);
             request()->merge(['jenis_pengajuan' => $jenis_pengajuan]);
         }
 
-        // Validation rules - Range validation removed as per koperasi system preferences
-        $validator = Validator::make(request()->all(), [
-            'anggota_id' => 'required|exists:anggota,id',
-            'paket_pinjaman_id' => 'required|exists:master_paket_pinjaman,id',
-            'jumlah_paket_dipilih' => 'required|integer|min:1', // max removed for flexibility
-            'tenor_pinjaman' => 'required|string|in:6 bulan,10 bulan,12 bulan',
-            'tujuan_pinjaman' => 'required|string|max:500',
-            'jenis_pengajuan' => 'required|in:baru,top_up',
-            'periode_pencairan_id' => 'required|exists:periode_pencairan,id',
-        ]);
+        // Validation using model method
+        $validator = Validator::make(request()->all(), PengajuanPinjaman::getValidationRules());
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -699,8 +566,8 @@ class PengajuanPinjamanController extends Controller
                 return view("pages.errorpages", $data);
             }
 
-            // Check if editable
-            if (!in_array($pengajuan->status_pengajuan, ['draft', 'diajukan'])) {
+            // Check if editable using model method
+            if (!$pengajuan->isEditable()) {
                 $data['url_menu'] = 'error';
                 $data['title_group'] = 'Error';
                 $data['title_menu'] = 'Error';
@@ -708,46 +575,39 @@ class PengajuanPinjamanController extends Controller
                 return view("pages.errorpages", $data);
             }
 
-            // Get paket data for calculation
+            // Get basic data and calculate using model methods
             $paket = MasterPaketPinjaman::find(request('paket_pinjaman_id'));
             $tenor_pinjaman = request('tenor_pinjaman');
-            $tenor_bulan = (int) filter_var($tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
+            $tenor_bulan = PengajuanPinjaman::getTenorBulan($tenor_pinjaman);
             $jumlah_paket = request('jumlah_paket_dipilih');
 
-            // Calculate new amounts
-            $nilai_per_paket = 500000;
-            $jumlah_pinjaman = $jumlah_paket * $nilai_per_paket;
-            $bunga_per_bulan = 1.0; // Fixed 1% per bulan
+            // Calculate amounts using model method
+            $calculations = PengajuanPinjaman::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
 
-            $cicilan_pokok = $jumlah_pinjaman / $tenor_bulan;
-            $bunga_flat = $jumlah_pinjaman * ($bunga_per_bulan / 100);
-            $cicilan_per_bulan = $cicilan_pokok + $bunga_flat;
-            $total_pembayaran = $cicilan_per_bulan * $tenor_bulan;
-
-            // Update stock tracking (for information only, no validation)
+            // Update stock tracking using model methods (for information only, no validation)
             if ($pengajuan->paket_pinjaman_id != request('paket_pinjaman_id') || $pengajuan->jumlah_paket_dipilih != $jumlah_paket) {
                 // Restore old stock count
                 $old_paket = MasterPaketPinjaman::find($pengajuan->paket_pinjaman_id);
-                $old_paket->decrement('stock_terpakai', $pengajuan->jumlah_paket_dipilih);
+                $old_paket->updateStockUsage($pengajuan->jumlah_paket_dipilih, 'decrement');
 
                 // Update new stock count (no validation, just tracking)
-                $paket->increment('stock_terpakai', $jumlah_paket);
+                $paket->updateStockUsage($jumlah_paket, 'increment');
             }
 
-            // Update pengajuan using Eloquent
+            // Update pengajuan using calculated values
             $pengajuan->update([
                 'anggota_id' => request('anggota_id'),
                 'paket_pinjaman_id' => request('paket_pinjaman_id'),
                 'jumlah_paket_dipilih' => $jumlah_paket,
                 'tenor_pinjaman' => $tenor_pinjaman,
-                'jumlah_pinjaman' => $jumlah_pinjaman,
-                'bunga_per_bulan' => $bunga_per_bulan,
-                'cicilan_per_bulan' => $cicilan_per_bulan,
-                'total_pembayaran' => $total_pembayaran,
+                'jumlah_pinjaman' => $calculations['jumlah_pinjaman'],
+                'bunga_per_bulan' => $calculations['bunga_per_bulan'],
+                'cicilan_per_bulan' => $calculations['cicilan_per_bulan'],
+                'total_pembayaran' => $calculations['total_pembayaran'],
                 'tujuan_pinjaman' => request('tujuan_pinjaman'),
                 'jenis_pengajuan' => request('jenis_pengajuan'),
                 'periode_pencairan_id' => request('periode_pencairan_id'),
-                'user_update' => $data['user_login']->username ?? 'system',
+                'user_update' => PengajuanPinjaman::getCurrentUsername($data),
                 'updated_at' => now(),
             ]);
 
@@ -950,8 +810,89 @@ class PengajuanPinjamanController extends Controller
      */
     private function exportData($dmenu, $exportType, $request)
     {
-        // Implementation for export functionality
-        // This would follow MSJ Framework export standards
-        return response()->json(['message' => 'Export functionality not implemented yet']);
+        // Function helper
+        $syslog = new Function_Helper;
+
+        try {
+            // Get data for export using same logic as index
+            $query = PengajuanPinjaman::with(['anggotum', 'master_paket_pinjaman', 'periode_pencairan'])
+                ->where('isactive', '1');
+
+            // Apply search filter if exists
+            $search = $request->input('search');
+            $query = PengajuanPinjaman::applySearchFilter($query, $search);
+
+            $exportData = $query->orderBy('created_at', 'desc')->get();
+
+            // Prepare export data following MSJ Framework pattern
+            $data = [];
+            $data[] = ['No', 'No. Pengajuan', 'Anggota', 'Paket', 'Jumlah Pinjaman', 'Tenor', 'Status', 'Tanggal'];
+
+            foreach ($exportData as $index => $pengajuan) {
+                $data[] = [
+                    $index + 1,
+                    $pengajuan->nomor_pengajuan ?? '-',
+                    $pengajuan->anggotum->nama_lengkap ?? '-',
+                    $pengajuan->master_paket_pinjaman->periode ?? '-',
+                    'Rp ' . number_format($pengajuan->jumlah_pinjaman, 0, ',', '.'),
+                    $pengajuan->tenor_pinjaman,
+                    ucfirst(str_replace('_', ' ', $pengajuan->status_pengajuan)),
+                    $pengajuan->tanggal_pengajuan ? date('d/m/Y', strtotime($pengajuan->tanggal_pengajuan)) : '-'
+                ];
+            }
+
+            // Generate filename
+            $fileName = 'pengajuan_pinjaman_' . date('Y-m-d_H-i-s');
+
+            // Log export activity
+            $syslog->log_insert('E', $dmenu, ucfirst($exportType) . ' Export: ' . $fileName, '1');
+
+            // Use PhpSpreadsheet for export (following MSJ Framework pattern from MasterController)
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Pengajuan Pinjaman');
+
+            // Set data
+            $sheet->fromArray($data, null, 'A1');
+
+            // Auto-size columns
+            foreach (range('A', $sheet->getHighestColumn()) as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            // Apply header styling
+            $headerRange = 'A1:' . $sheet->getHighestColumn() . '1';
+            $sheet->getStyle($headerRange)->getFont()->setBold(true);
+            $sheet->getStyle($headerRange)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFE0E0E0');
+
+            if ($exportType === 'excel') {
+                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+                $filePath = public_path("{$fileName}.xlsx");
+                $writer->save($filePath);
+                return response()->download($filePath)->deleteFileAfterSend(true);
+
+            } elseif ($exportType === 'pdf') {
+                // Configure for PDF
+                $sheet->getPageSetup()
+                    ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
+                    ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
+                $sheet->getPageMargins()->setTop(0.5)->setRight(0.5)->setLeft(0.5)->setBottom(0.5);
+
+                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Pdf\Mpdf($spreadsheet);
+                $filePath = public_path("{$fileName}.pdf");
+                $writer->save($filePath);
+                return response()->download($filePath)->deleteFileAfterSend(true);
+            }
+
+            return response()->json(['error' => 'Invalid export type'], 400);
+
+        } catch (\Exception $e) {
+            // Log error
+            $syslog->log_insert('E', $dmenu, 'Export Error: ' . $e->getMessage(), '0');
+
+            return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
+        }
     }
 }

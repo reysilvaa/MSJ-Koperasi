@@ -109,4 +109,34 @@ class Anggotum extends Model
 	{
 		return $this->hasMany(Pinjaman::class, 'anggota_id');
 	}
+
+	/**
+	 * Get active anggota list for forms
+	 */
+	public static function getActiveList()
+	{
+		return self::where('isactive', '1')
+			->select('id', 'nomor_anggota', 'nama_lengkap')
+			->get();
+	}
+
+	/**
+	 * Find anggota by user credentials
+	 */
+	public static function findByUserCredentials($email, $username)
+	{
+		return self::where('email', $email)
+			->orWhere('user_create', $username)
+			->where('isactive', '1')
+			->select('id', 'nomor_anggota', 'nama_lengkap')
+			->first();
+	}
+
+	/**
+	 * Check if user is regular member (anggota biasa)
+	 */
+	public static function isRegularMember($userRole)
+	{
+		return strpos($userRole, 'anggot') !== false;
+	}
 }

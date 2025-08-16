@@ -205,4 +205,164 @@ class PengajuanPinjaman extends Model
 	{
 		return $data['user_login']->idroles;
 	}
+
+	/**
+	 * Business logic constants
+	 */
+	public const NILAI_PER_PAKET = 500000; // Rp 500.000 per paket
+	public const BUNGA_PER_BULAN = 1.0; // Fixed 1% per bulan
+	public const EDITABLE_STATUSES = ['draft', 'diajukan'];
+	public const TENOR_OPTIONS = [
+		'6 bulan' => 6,
+		'10 bulan' => 10,
+		'12 bulan' => 12,
+	];
+
+	/**
+	 * Check if anggota has existing pending application
+	 */
+	public static function hasExistingPendingApplication($anggotaId, $excludeId = null)
+	{
+		$query = self::where('anggota_id', $anggotaId)
+			->where('status_pengajuan', 'diajukan')
+			->where('isactive', '1');
+
+		if ($excludeId) {
+			$query->where('id', '!=', $excludeId);
+		}
+
+		return $query->exists();
+	}
+
+	/**
+	 * Check eligibility for top-up loan
+	 */
+	public static function checkTopUpEligibility($anggotaId)
+	{
+		return self::select(
+				'pengajuan_pinjaman.id as pengajuan_id',
+				'pinjaman.id as pinjaman_id',
+				'pinjaman.tenor_bulan',
+				DB::raw('COUNT(cicilan_pinjaman.id) as total_cicilan_lunas'),
+				DB::raw('(pinjaman.tenor_bulan - COUNT(cicilan_pinjaman.id)) as sisa_cicilan')
+			)
+			->join('pinjaman', 'pengajuan_pinjaman.id', '=', 'pinjaman.pengajuan_pinjaman_id')
+			->leftJoin('cicilan_pinjaman', function($join) {
+				$join->on('pinjaman.id', '=', 'cicilan_pinjaman.pinjaman_id')
+					->where('cicilan_pinjaman.status', '=', 'lunas');
+			})
+			->where('pengajuan_pinjaman.anggota_id', $anggotaId)
+			->where('pengajuan_pinjaman.status_pengajuan', 'disetujui')
+			->where('pinjaman.status', 'aktif')
+			->where('pengajuan_pinjaman.isactive', '1')
+			->where('pinjaman.isactive', '1')
+			->groupBy('pengajuan_pinjaman.id', 'pinjaman.id', 'pinjaman.tenor_bulan')
+			->having('sisa_cicilan', '<=', 2)
+			->first();
+	}
+
+	/**
+	 * Determine loan type based on eligibility
+	 */
+	public static function determineLoanType($anggotaId)
+	{
+		$eligibility = self::checkTopUpEligibility($anggotaId);
+		return !empty($eligibility) ? 'top_up' : 'baru';
+	}
+
+	/**
+	 * Calculate loan amounts
+	 */
+	public static function calculateLoanAmounts($jumlahPaket, $tenorBulan)
+	{
+		$jumlahPinjaman = $jumlahPaket * self::NILAI_PER_PAKET;
+		$cicilanPokok = $jumlahPinjaman / $tenorBulan;
+		$bungaFlat = $jumlahPinjaman * (self::BUNGA_PER_BULAN / 100);
+		$cicilanPerBulan = $cicilanPokok + $bungaFlat;
+		$totalPembayaran = $cicilanPerBulan * $tenorBulan;
+
+		return [
+			'jumlah_pinjaman' => $jumlahPinjaman,
+			'bunga_per_bulan' => self::BUNGA_PER_BULAN,
+			'cicilan_per_bulan' => $cicilanPerBulan,
+			'total_pembayaran' => $totalPembayaran,
+		];
+	}
+
+	/**
+	 * Get tenor in months from string
+	 */
+	public static function getTenorBulan($tenorString)
+	{
+		return self::TENOR_OPTIONS[$tenorString] ?? 0;
+	}
+
+	/**
+	 * Check if pengajuan is editable
+	 */
+	public function isEditable()
+	{
+		return in_array($this->status_pengajuan, self::EDITABLE_STATUSES);
+	}
+
+	/**
+	 * Get validation rules for pengajuan
+	 */
+	public static function getValidationRules()
+	{
+		return [
+			'anggota_id' => 'required|exists:anggota,id',
+			'paket_pinjaman_id' => 'required|exists:master_paket_pinjaman,id',
+			'jumlah_paket_dipilih' => 'required|integer|min:1',
+			'tenor_pinjaman' => 'required|string|in:6 bulan,10 bulan,12 bulan',
+			'tujuan_pinjaman' => 'required|string|max:500',
+			'jenis_pengajuan' => 'required|in:baru,top_up',
+			'periode_pencairan_id' => 'required|exists:periode_pencairan,id',
+		];
+	}
+
+	/**
+	 * Get statistics for pengajuan list
+	 */
+	public static function getStatistics($collection)
+	{
+		return [
+			'total_pengajuan' => $collection->count(),
+			'pending_approval' => $collection->where('status_pengajuan', 'diajukan')->count(),
+			'approved' => $collection->where('status_pengajuan', 'disetujui')->count(),
+			'rejected' => $collection->where('status_pengajuan', 'ditolak')->count(),
+		];
+	}
+
+	/**
+	 * Apply search filters to query
+	 */
+	public static function applySearchFilter($query, $search)
+	{
+		if (!empty($search)) {
+			$query->where(function($q) use ($search) {
+				$q->where('id', 'like', "%$search%")
+				  ->orWhereHas('anggotum', function($qa) use ($search) {
+					  $qa->where('nama_lengkap', 'like', "%$search%")
+						->orWhere('nomor_anggota', 'like', "%$search%");
+				  });
+			});
+		}
+		return $query;
+	}
+
+	/**
+	 * Apply authorization rules to query
+	 */
+	public static function applyAuthorizationRules($query, $authorize, $userRoles)
+	{
+		if ($authorize->rules == '1') {
+			$query->where(function ($q) use ($userRoles) {
+				foreach ($userRoles as $role) {
+					$q->orWhereRaw("FIND_IN_SET(?, REPLACE(rules, ' ', ''))", [$role]);
+				}
+			});
+		}
+		return $query;
+	}
 }

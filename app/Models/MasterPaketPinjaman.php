@@ -52,4 +52,42 @@ class MasterPaketPinjaman extends Model
 	{
 		return $this->hasMany(PengajuanPinjaman::class, 'paket_pinjaman_id');
 	}
+
+	/**
+	 * Get active paket list for forms
+	 */
+	public static function getActiveList()
+	{
+		return self::where('isactive', '1')
+			->select('id', 'periode', 'stock_limit', 'stock_terpakai')
+			->get();
+	}
+
+	/**
+	 * Update stock usage (for tracking only, no validation)
+	 */
+	public function updateStockUsage($amount, $operation = 'increment')
+	{
+		if ($operation === 'increment') {
+			$this->increment('stock_terpakai', $amount);
+		} else {
+			$this->decrement('stock_terpakai', $amount);
+		}
+	}
+
+	/**
+	 * Get available stock (for display only)
+	 */
+	public function getAvailableStockAttribute()
+	{
+		return max(0, $this->stock_limit - $this->stock_terpakai);
+	}
+
+	/**
+	 * Check if stock is available (for display only, no blocking)
+	 */
+	public function hasAvailableStock($requestedAmount)
+	{
+		return $this->available_stock >= $requestedAmount;
+	}
 }
