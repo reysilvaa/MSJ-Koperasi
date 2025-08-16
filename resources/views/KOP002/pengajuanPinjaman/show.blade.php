@@ -217,7 +217,7 @@
                                         </div>
                                     </div>
                                     <div class="flex-grow-1 ms-3">
-                                        <h6 class="mb-1">{{ $history->approver_name }} - {{ ucfirst($history->status_approval) }}</h6>
+                                        <h6 class="mb-1">{{ $history->user ? ($history->user->firstname . ' ' . $history->user->lastname) : $history->user_create }} - {{ ucfirst($history->status_approval) }}</h6>
                                         <p class="text-sm text-muted mb-1">{{ $history->catatan ?: 'Tidak ada catatan' }}</p>
                                         <small class="text-xs text-secondary">{{ date('d/m/Y H:i', strtotime($history->created_at)) }}</small>
                                     </div>

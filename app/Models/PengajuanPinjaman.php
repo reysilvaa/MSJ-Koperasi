@@ -161,7 +161,7 @@ class PengajuanPinjaman extends Model
 						$subquery->select(DB::raw(1))
 								 ->from('approval_history')
 								 ->whereColumn('approval_history.pengajuan_pinjaman_id', 'pengajuan_pinjaman.id')
-								 ->where('approval_history.approver_name', $username)
+								 ->where('approval_history.user_create', $username)
 								 ->where('approval_history.isactive', '1');
 					});
 
@@ -171,7 +171,7 @@ class PengajuanPinjaman extends Model
 						$subquery->select(DB::raw(1))
 								 ->from('approval_history')
 								 ->whereColumn('approval_history.pengajuan_pinjaman_id', 'pengajuan_pinjaman.id')
-								 ->where('approval_history.approver_name', $username)
+								 ->where('approval_history.user_create', $username)
 								 ->where('approval_history.isactive', '1');
 					});
 
@@ -181,7 +181,7 @@ class PengajuanPinjaman extends Model
 						$subquery->select(DB::raw(1))
 								 ->from('approval_history')
 								 ->whereColumn('approval_history.pengajuan_pinjaman_id', 'pengajuan_pinjaman.id')
-								 ->where('approval_history.approver_name', $username)
+								 ->where('approval_history.user_create', $username)
 								 ->where('approval_history.isactive', '1');
 					});
 

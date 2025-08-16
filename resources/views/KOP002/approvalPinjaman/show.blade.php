@@ -219,7 +219,7 @@
                                         </span>
                                         <div class="timeline-content">
                                             <h6 class="text-dark text-sm font-weight-bold mb-0">
-                                                {{ $history->approver_name }} ({{ $history->approver_jabatan }})
+                                                {{ $history->user ? ($history->user->firstname . ' ' . $history->user->lastname) : $history->user_create }}
                                             </h6>
                                             <p class="text-secondary font-weight-bold text-xs mt-1 mb-0">
                                                 {{ ucfirst(str_replace('_', ' ', $history->status_approval)) }}

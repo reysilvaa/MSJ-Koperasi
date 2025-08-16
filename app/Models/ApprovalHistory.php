@@ -15,8 +15,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property int $pengajuan_pinjaman_id
  * @property string $level_approval
- * @property string $approver_name
- * @property string $approver_jabatan
  * @property string $status_approval
  * @property string|null $catatan
  * @property Carbon|null $tanggal_approval
@@ -44,8 +42,6 @@ class ApprovalHistory extends Model
 	protected $fillable = [
 		'pengajuan_pinjaman_id',
 		'level_approval',
-		'approver_name',
-		'approver_jabatan',
 		'status_approval',
 		'catatan',
 		'tanggal_approval',
@@ -98,7 +94,7 @@ class ApprovalHistory extends Model
 
 	public function user()
 	{
-		return $this->belongsTo(User::class, 'approver_name', 'username');
+		return $this->belongsTo(User::class, 'user_create', 'username');
 	}
 
 	/**
@@ -117,7 +113,7 @@ class ApprovalHistory extends Model
 		$level = self::getApprovalLevel($role);
 
 		return self::where('pengajuan_pinjaman_id', $pengajuan_id)
-			->where('approver_name', $username)
+			->where('user_create', $username)
 			->where('level_approval', $level)
 			->where('isactive', '1')
 			->exists();

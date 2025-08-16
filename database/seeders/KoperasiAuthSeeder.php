@@ -172,46 +172,59 @@ class KoperasiAuthSeeder extends Seeder
             foreach ($menuItems as $menu) {
                 // Special permissions for specific menus based on activity diagram
                 $menuPermissions = $permissions;
+                $skipMenu = false; // Flag to skip creating record for this menu
 
-                // Anggota special rules
+                // Anggota special rules - HANYA bisa akses menu tertentu
                 if ($roleId === 'anggot') {
-                    if (in_array($menu['dmenu'], ['KOP201'])) { // Pengajuan Pinjaman
-                        $menuPermissions['add'] = '1'; // Anggota bisa mengajukan pinjaman
-                        $menuPermissions['edit'] = '1'; // Edit pengajuan sendiri
-                    }
-                    if (in_array($menu['dmenu'], ['KOP101', 'KOP102', 'KOP202', 'KOP301', 'KOP302'])) {
-                        $menuPermissions['value'] = '0'; // No access to master data and admin functions
-                        $menuPermissions['isactive'] = '0';
+                    // Anggota HANYA bisa akses: KOP201 (Pengajuan Pinjaman), KOP203 (Data Pinjaman Aktif), KOP401 (Cicilan), KOP402 (Iuran), KOP403 (Notifikasi)
+                    $allowedMenus = ['KOP201', 'KOP203', 'KOP401', 'KOP402', 'KOP403'];
+
+                    if (!in_array($menu['dmenu'], $allowedMenus)) {
+                        $skipMenu = true; // Skip menu yang tidak diizinkan
+                    } else {
+                        if ($menu['dmenu'] === 'KOP201') { // Pengajuan Pinjaman
+                            $menuPermissions['add'] = '1'; // Anggota bisa mengajukan pinjaman
+                            $menuPermissions['edit'] = '1'; // Edit pengajuan sendiri
+                        }
                     }
                 }
 
                 // Admin Kredit special rules (Fokus pada credit analysis)
                 if ($roleId === 'akredt') {
-                    if (in_array($menu['dmenu'], ['KOP202'])) { // Approval Pinjaman
-                        $menuPermissions['approval'] = '1'; // Strong approval rights
-                    }
-                    if (in_array($menu['dmenu'], ['KOP301', 'KOP302', 'KOP401', 'KOP402'])) { // Limited access to transfer/finance
-                        $menuPermissions['add'] = '0';
-                        $menuPermissions['edit'] = '0';
+                    // Admin Kredit tidak bisa akses: KOP301, KOP302 (Pencairan), KOP401, KOP402 (Keuangan)
+                    $restrictedMenus = ['KOP301', 'KOP302', 'KOP401', 'KOP402'];
+
+                    if (in_array($menu['dmenu'], $restrictedMenus)) {
+                        $skipMenu = true; // Skip menu yang tidak diizinkan
+                    } else {
+                        if ($menu['dmenu'] === 'KOP202') { // Approval Pinjaman
+                            $menuPermissions['approval'] = '1'; // Strong approval rights
+                        }
                     }
                 }
 
                 // Admin Transfer special rules (Fokus pada pencairan dan transfer)
                 if ($roleId === 'atrans') {
-                    if (in_array($menu['dmenu'], ['KOP301', 'KOP302', 'KOP401', 'KOP402'])) { // Transfer & Finance
-                        $menuPermissions['approval'] = '1'; // Strong approval for transfers
-                    }
-                    if (in_array($menu['dmenu'], ['KOP101', 'KOP102','KOP202'])) { // Limited access to master & approval
-                        $menuPermissions['add'] = '0';
-                        $menuPermissions['delete'] = '0';
+                    // Admin Transfer tidak bisa akses: KOP101, KOP102 (Master Data), KOP202 (Approval)
+                    $restrictedMenus = ['KOP101', 'KOP102', 'KOP202'];
+
+                    if (in_array($menu['dmenu'], $restrictedMenus)) {
+                        $skipMenu = true; // Skip menu yang tidak diizinkan
+                    } else {
+                        if (in_array($menu['dmenu'], ['KOP301', 'KOP302', 'KOP401', 'KOP402'])) { // Transfer & Finance
+                            $menuPermissions['approval'] = '1'; // Strong approval for transfers
+                        }
                     }
                 }
 
-                $authRecords[] = array_merge([
-                    'idroles' => $roleId,
-                    'gmenu' => $menu['gmenu'],
-                    'dmenu' => $menu['dmenu']
-                ], $menuPermissions);
+                // Hanya tambahkan record jika menu tidak di-skip
+                if (!$skipMenu) {
+                    $authRecords[] = array_merge([
+                        'idroles' => $roleId,
+                        'gmenu' => $menu['gmenu'],
+                        'dmenu' => $menu['dmenu']
+                    ], $menuPermissions);
+                }
             }
         }
 

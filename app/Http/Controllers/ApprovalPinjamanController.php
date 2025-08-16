@@ -9,7 +9,6 @@ use App\Models\ApprovalHistory;
 use App\Models\Pinjaman;
 use App\Models\Anggotum;
 use App\Models\MasterPaketPinjaman;
-use App\Models\PeriodePencairan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -315,8 +314,6 @@ class ApprovalPinjamanController extends Controller
             ApprovalHistory::create([
                 'pengajuan_pinjaman_id' => $id,
                 'level_approval' => $level_approval,
-                'approver_name' => $approved_by,
-                'approver_jabatan' => $level_approval,
                 'status_approval' => $status_approval,
                 'catatan' => $catatan,
                 'tanggal_approval' => now(),

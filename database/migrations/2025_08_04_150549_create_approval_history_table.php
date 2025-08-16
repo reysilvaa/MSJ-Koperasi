@@ -15,8 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('pengajuan_pinjaman_id')->constrained('pengajuan_pinjaman');
             $table->string('level_approval', 20);
-            $table->string('approver_name', 100);
-            $table->string('approver_jabatan', 50);
             $table->enum('status_approval', ['pending', 'approved', 'rejected']);
             $table->text('catatan')->nullable();
             $table->datetime('tanggal_approval')->nullable();
