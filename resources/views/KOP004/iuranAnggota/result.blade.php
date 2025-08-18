@@ -17,9 +17,10 @@
                                 <div class="nav-wrapper row">
                                     <div class="col">
                                         {{-- button back --}}
-                                        <button class="btn btn-secondary mb-0" onclick="history.back()"><i
-                                                class="fas fa-circle-left me-1"> </i><span
-                                                class="font-weight-bold">Kembali</button>
+                                        <button class="btn btn-secondary mb-0" onclick="history.back()">
+                                            <i class="fas fa-circle-left me-1"></i>
+                                            <span class="font-weight-bold">Kembali</span>
+                                        </button>
                                     </div>
                                     <div class="col-md-3 md-auto justify-content-end row">
                                         <div class="col">
@@ -28,22 +29,17 @@
                                         </div>
                                         <div class="col">
                                             {{-- display label alias on class filter --}}
-                                            Filter Tahun :
-                                            <select class="form-select" id="filter_tahun" style="width: 150px;">
-                                                <option value="{{ $filter['tahun'] ?? date('Y') }}" selected>
-                                                    {{ $filter['tahun'] ?? date('Y') }}
-                                                    @if ($filter['tahun'] == date('Y'))
-                                                        (s/d {{ date('M') }})
-                                                    @endif
-                                                </option>
-                                            </select>
+                                            Filter Tahun : {{ $filter['tahun'] ?? date('Y') }}
+                                            @if ($filter['tahun'] == date('Y'))
+                                                <small class="text-muted">(s/d {{ date('M') }})</small>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Table with MSJ Framework Style --}}
+                        {{-- Main Data Table with DataTable --}}
                         <div class="row px-4 py-2">
                             <div class="table-responsive">
                                 @if ($table_result && count($table_result) > 0)
@@ -51,32 +47,22 @@
                                         $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agus', 'Sept', 'Oct', 'Nov', 'Des'];
                                         $bulanFields = ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'agu', 'sep', 'okt', 'nov', 'des'];
                                         $maxMonth = $max_month ?? 12;
+                                        $totalPerBulan = array_fill(1, $maxMonth, 0);
+                                        $grandTotal = 0;
                                     @endphp
 
-                                    <table class="table" id="iuran_table_{{ $dmenu ?? 'KOP401' }}">
+                                    <table class="table display" id="list_{{ $dmenu ?? 'KOP401' }}">
                                         <thead class="thead-light" style="background-color: #00b7bd4f;">
                                             <tr>
-                                                <th rowspan="2" style="width: 40px;">No.</th>
-                                                <th rowspan="2" style="width: 120px;">Name</th>
-                                                <th colspan="{{ $maxMonth }}">TAHUN {{ $filter['tahun'] ?? date('Y') }}
-                                                    @if ($filter['tahun'] == date('Y'))
-                                                        (s/d {{ $monthNames[$maxMonth - 1] }})
-                                                    @endif
-                                                </th>
-                                                <th rowspan="2">TOTAL<br>SALDO</th>
-                                            </tr>
-                                            <tr>
+                                                <th>No</th>
+                                                <th>Name</th>
                                                 @for ($i = 0; $i < $maxMonth; $i++)
                                                     <th>{{ $monthNames[$i] }}</th>
                                                 @endfor
+                                                <th>TOTAL SALDO</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @php
-                                                $totalPerBulan = array_fill(1, $maxMonth, 0);
-                                                $grandTotal = 0;
-                                            @endphp
-
                                             @foreach ($table_result as $index => $anggota)
                                                 @php
                                                     $isResign = isset($anggota->status_anggota) && $anggota->status_anggota == 'resign';
@@ -118,69 +104,6 @@
                                                     @php $grandTotal += $totalSaldo; @endphp
                                                 </tr>
                                             @endforeach
-
-                                            {{-- Sum Row --}}
-                                            <tr>
-                                                <td colspan="2" class="text-sm font-weight-normal"></td>
-                                                @for ($bulan = 1; $bulan <= $maxMonth; $bulan++)
-                                                    <td class="text-sm font-weight-normal">
-                                                        @if ($totalPerBulan[$bulan] > 0)
-                                                            {{ number_format($totalPerBulan[$bulan], 0, '.', '.') }}
-                                                        @else
-                                                            -
-                                                        @endif
-                                                    </td>
-                                                @endfor
-                                                <td class="text-sm font-weight-normal">{{ number_format($grandTotal, 0, '.', '.') }}</td>
-                                            </tr>
-
-                                            {{-- SP Row (Simpanan Pokok) --}}
-                                            <tr>
-                                                <td class="text-sm font-weight-normal"></td>
-                                                <td class="text-sm font-weight-normal">sp</td>
-                                                @php
-                                                    $totalSP = 0;
-                                                    $spData = $sp_data ?? [];
-                                                @endphp
-                                                @for ($bulan = 1; $bulan <= $maxMonth; $bulan++)
-                                                    @php
-                                                        $spValue = $spData[$bulan] ?? 0;
-                                                        $totalSP += $spValue;
-                                                    @endphp
-                                                    <td class="text-sm font-weight-normal">
-                                                        @if ($spValue > 0)
-                                                            {{ number_format($spValue, 0, '.', '.') }}
-                                                        @else
-                                                            0
-                                                        @endif
-                                                    </td>
-                                                @endfor
-                                                <td class="text-sm font-weight-normal">{{ number_format($totalSP, 0, '.', '.') }}</td>
-                                            </tr>
-
-                                            {{-- SW Row (Simpanan Wajib/Sukarela) --}}
-                                            <tr>
-                                                <td class="text-sm font-weight-normal"></td>
-                                                <td class="text-sm font-weight-normal">sw</td>
-                                                @php
-                                                    $totalSW = 0;
-                                                    $swData = $sw_data ?? [];
-                                                @endphp
-                                                @for ($bulan = 1; $bulan <= $maxMonth; $bulan++)
-                                                    @php
-                                                        $swValue = $swData[$bulan] ?? 0;
-                                                        $totalSW += $swValue;
-                                                    @endphp
-                                                    <td class="text-sm font-weight-normal">
-                                                        @if ($swValue > 0)
-                                                            {{ number_format($swValue, 0, '.', '.') }}
-                                                        @else
-                                                            0
-                                                        @endif
-                                                    </td>
-                                                @endfor
-                                                <td class="text-sm font-weight-normal">{{ number_format($totalSW, 0, '.', '.') }}</td>
-                                            </tr>
                                         </tbody>
                                     </table>
                                 @else
@@ -192,11 +115,93 @@
                             </div>
                         </div>
 
+                        {{-- Summary Table (TOTAL, SP, SW) - Separate from DataTable --}}
+                        @if ($table_result && count($table_result) > 0)
+                            <div class="row px-4 py-2">
+                                <div class="table-responsive">
+                                    <table class="table" id="summary_table">
+                                        <tbody>
+                                            {{-- TOTAL Row --}}
+                                            <tr style="background-color: #e9ecef; font-weight: bold;">
+                                                <td class="text-sm font-weight-normal" style="width: 40px;"></td>
+                                                <td class="text-sm font-weight-normal" style="width: 120px; font-weight: bold;">TOTAL</td>
+                                                @for ($bulan = 1; $bulan <= $maxMonth; $bulan++)
+                                                    <td class="text-sm font-weight-normal">
+                                                        @if ($totalPerBulan[$bulan] > 0)
+                                                            {{ number_format($totalPerBulan[$bulan], 0, '.', '.') }}
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
+                                                @endfor
+                                                <td class="text-sm font-weight-normal" style="background-color: #d4edda; font-weight: bold;">{{ number_format($grandTotal, 0, '.', '.') }}</td>
+                                            </tr>
+
+                                            {{-- SP Row (Simpanan Pokok) --}}
+                                            <tr style="background-color: #fff3cd;">
+                                                <td class="text-sm font-weight-normal"></td>
+                                                <td class="text-sm font-weight-normal" style="font-weight: bold;">SP</td>
+                                                @php
+                                                    $totalSP = 0;
+                                                    $spData = $sp_data ?? [];
+                                                @endphp
+                                                @for ($bulan = 1; $bulan <= $maxMonth; $bulan++)
+                                                    @php
+                                                        $spValue = $spData[$bulan] ?? 0;
+                                                        $totalSP += $spValue;
+                                                    @endphp
+                                                    <td class="text-sm font-weight-normal" style="background-color: #fff3cd;">
+                                                        @if ($spValue > 0)
+                                                            {{ number_format($spValue, 0, '.', '.') }}
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
+                                                @endfor
+                                                <td class="text-sm font-weight-normal" style="background-color: #ffeaa7; font-weight: bold;">{{ number_format($totalSP, 0, '.', '.') }}</td>
+                                            </tr>
+
+                                            {{-- SW Row (Simpanan Wajib/Sukarela) --}}
+                                            <tr style="background-color: #d1ecf1;">
+                                                <td class="text-sm font-weight-normal"></td>
+                                                <td class="text-sm font-weight-normal" style="font-weight: bold;">SW</td>
+                                                @php
+                                                    $totalSW = 0;
+                                                    $swData = $sw_data ?? [];
+                                                @endphp
+                                                @for ($bulan = 1; $bulan <= $maxMonth; $bulan++)
+                                                    @php
+                                                        $swValue = $swData[$bulan] ?? 0;
+                                                        $totalSW += $swValue;
+                                                    @endphp
+                                                    <td class="text-sm font-weight-normal" style="background-color: #d1ecf1;">
+                                                        @if ($swValue > 0)
+                                                            {{ number_format($swValue, 0, '.', '.') }}
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
+                                                @endfor
+                                                <td class="text-sm font-weight-normal" style="background-color: #74b9ff; font-weight: bold;">{{ number_format($totalSW, 0, '.', '.') }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="row px-4 py-2">
                             <div class="col-lg">
                                 @if ($table_result && count($table_result) > 0)
-                                    <div class="nav-wrapper" id="noted"><code>Note : <i aria-hidden="true"
-                                                style="color: #ffc2cd;" class="fas fa-circle"></i> Data not active</code>
+                                    <div class="nav-wrapper" id="noted">
+                                        <code>
+                                            Note: Data iuran anggota tahun {{ $filter['tahun'] ?? date('Y') }}
+                                            @if ($filter['tahun'] == date('Y'))
+                                                (sampai {{ $monthNames[($max_month ?? 12) - 1] }})
+                                            @endif
+                                            <i aria-hidden="true" style="color: #ffc2cd;" class="fas fa-circle"></i>
+                                            Data not active
+                                        </code>
                                     </div>
                                 @else
                                     <div class="nav-wrapper">
@@ -210,6 +215,7 @@
             </div>
         </div>
     </div>
+
     {{-- check flag js on dmenu --}}
     @if ($jsmenu == '1')
         @if (view()->exists("js.{$dmenu}"))
