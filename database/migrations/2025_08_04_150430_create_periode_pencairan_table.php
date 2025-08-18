@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('periode_pencairan', function (Blueprint $table) {
             $table->id();
-            $table->string('nama_periode', 100); // "Pencairan Januari 2025"
-            $table->date('tanggal_pencairan');
+            $table->integer('tahun'); // 2025
+            $table->integer('bulan'); // 1-12
             $table->enum('isactive', [0, 1])->default(1);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();

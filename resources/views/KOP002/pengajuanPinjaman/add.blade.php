@@ -156,7 +156,7 @@
                                         <label class="form-control-label">Periode Pencairan <span class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <input type="text" class="form-control" name="periode_pencairan_id_display" id="periode_pencairan_id_display"
-                                                   value="{{ old('periode_pencairan_id') ? ($periode_list->where('id', old('periode_pencairan_id'))->first()->nama_periode ?? '') . ' (' . (\Carbon\Carbon::parse($periode_list->where('id', old('periode_pencairan_id'))->first()->tanggal_mulai ?? now())->format('d M Y')) . ' - ' . (\Carbon\Carbon::parse($periode_list->where('id', old('periode_pencairan_id'))->first()->tanggal_selesai ?? now())->format('d M Y')) . ')' : '' }}"
+                                                   value="{{ old('periode_pencairan_id') ? ($periode_list->where('id', old('periode_pencairan_id'))->first()->nama_periode ?? '') : '' }}"
                                                    placeholder="Pilih Periode" readonly required>
                                             <span class="input-group-text bg-primary text-light icon-modal-search"
                                                   data-bs-toggle="modal" data-bs-target="#searchModalPeriode"
@@ -456,8 +456,8 @@
                             <tr>
                                 <th width="20px">Action</th>
                                 <th>Nama Periode</th>
-                                <th>Tanggal Mulai</th>
-                                <th>Tanggal Selesai</th>
+                                <th>Tahun</th>
+                                <th>Bulan</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -466,14 +466,14 @@
                                 <td>
                                     <button type="button" class="btn btn-sm btn-primary select-periode"
                                             data-id="{{ $periode->id }}"
-                                            data-display="{{ $periode->nama_periode }} ({{ \Carbon\Carbon::parse($periode->tanggal_mulai)->format('d M Y') }} - {{ \Carbon\Carbon::parse($periode->tanggal_selesai)->format('d M Y') }})"
+                                            data-display="{{ $periode->nama_periode }}"
                                             data-bs-dismiss="modal">
                                         Pilih
                                     </button>
                                 </td>
                                 <td>{{ $periode->nama_periode }}</td>
-                                <td>{{ \Carbon\Carbon::parse($periode->tanggal_mulai)->format('d M Y') }}</td>
-                                <td>{{ \Carbon\Carbon::parse($periode->tanggal_selesai)->format('d M Y') }}</td>
+                                <td>{{ $periode->tahun }}</td>
+                                <td>{{ $periode->bulan }}</td>
                             </tr>
                             @endforeach
                         </tbody>

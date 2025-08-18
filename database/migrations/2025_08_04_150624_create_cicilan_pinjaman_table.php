@@ -19,12 +19,7 @@ return new class extends Migration
             $table->date('tanggal_bayar')->nullable();
             $table->decimal('nominal_pokok', 15, 2);
             $table->decimal('nominal_bunga', 15, 2);
-            $table->decimal('nominal_denda', 15, 2)->default(0);
             $table->decimal('total_bayar', 15, 2);
-            $table->decimal('nominal_dibayar', 15, 2)->default(0);
-            $table->decimal('sisa_bayar', 15, 2);
-            $table->enum('status', ['belum_bayar', 'sebagian', 'lunas', 'terlambat'])->default('belum_bayar');
-            $table->integer('hari_terlambat')->default(0);
             $table->string('metode_pembayaran', 20)->nullable();
             $table->string('nomor_transaksi', 50)->nullable();
             $table->text('keterangan')->nullable();

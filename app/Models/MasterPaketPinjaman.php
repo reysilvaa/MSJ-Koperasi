@@ -9,6 +9,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
  * Class MasterPaketPinjaman
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class MasterPaketPinjaman extends Model
 {
+	use HasFactory;
 	protected $table = 'master_paket_pinjaman';
 
 	protected $casts = [

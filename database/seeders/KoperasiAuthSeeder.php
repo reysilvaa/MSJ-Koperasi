@@ -112,7 +112,6 @@ class KoperasiAuthSeeder extends Seeder
 
             // KOP004 - Keuangan
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP401'],
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP402'],
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP403'],
 
             // KOP005 - Laporan
@@ -176,8 +175,8 @@ class KoperasiAuthSeeder extends Seeder
 
                 // Anggota special rules - HANYA bisa akses menu tertentu
                 if ($roleId === 'anggot') {
-                    // Anggota HANYA bisa akses: KOP201 (Pengajuan Pinjaman), KOP203 (Data Pinjaman Aktif), KOP401 (Cicilan), KOP402 (Iuran), KOP403 (Notifikasi)
-                    $allowedMenus = ['KOP201', 'KOP203', 'KOP401', 'KOP402', 'KOP403'];
+                    // Anggota HANYA bisa akses: KOP201 (Pengajuan Pinjaman), KOP203 (Cicilan Anggota), KOP401 (Laporan Iuran), KOP403 (Notifikasi)
+                    $allowedMenus = ['KOP201', 'KOP203', 'KOP401', 'KOP403'];
 
                     if (!in_array($menu['dmenu'], $allowedMenus)) {
                         $skipMenu = true; // Skip menu yang tidak diizinkan
@@ -191,8 +190,8 @@ class KoperasiAuthSeeder extends Seeder
 
                 // Admin Kredit special rules (Fokus pada credit analysis)
                 if ($roleId === 'akredt') {
-                    // Admin Kredit tidak bisa akses: KOP301, KOP302 (Pencairan), KOP401, KOP402 (Keuangan)
-                    $restrictedMenus = ['KOP301', 'KOP302', 'KOP401', 'KOP402'];
+                    // Admin Kredit tidak bisa akses: KOP301, KOP302 (Pencairan), KOP401, KOP401 (Keuangan)
+                    $restrictedMenus = ['KOP301', 'KOP302', 'KOP401'];
 
                     if (in_array($menu['dmenu'], $restrictedMenus)) {
                         $skipMenu = true; // Skip menu yang tidak diizinkan
@@ -211,7 +210,7 @@ class KoperasiAuthSeeder extends Seeder
                     if (in_array($menu['dmenu'], $restrictedMenus)) {
                         $skipMenu = true; // Skip menu yang tidak diizinkan
                     } else {
-                        if (in_array($menu['dmenu'], ['KOP301', 'KOP302', 'KOP401', 'KOP402'])) { // Transfer & Finance
+                        if (in_array($menu['dmenu'], ['KOP301', 'KOP302', 'KOP401'])) { // Transfer & Finance
                             $menuPermissions['approval'] = '1'; // Strong approval for transfers
                         }
                     }

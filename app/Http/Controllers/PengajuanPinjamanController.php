@@ -124,7 +124,7 @@ class PengajuanPinjamanController extends Controller
         ]);
 
         $data['periode_list'] = PeriodePencairan::where('isactive', '1')
-            ->select('id', 'nama_periode')
+            ->select('id', 'tahun', 'bulan')
             ->get();
 
         return view($data['url'], $data);
@@ -427,7 +427,7 @@ class PengajuanPinjamanController extends Controller
 
         // Get additional data for view using Eloquent
         $data['periode_list'] = PeriodePencairan::where('isactive', '1')
-            ->select('id', 'nama_periode')
+            ->select('id', 'tahun', 'bulan')
             ->get();
 
         // Static tenor options
@@ -538,7 +538,7 @@ class PengajuanPinjamanController extends Controller
 
         // Get periode pencairan list
         $data['periode_list'] = PeriodePencairan::where('isactive', '1')
-            ->select('id', 'nama_periode')
+            ->select('id', 'tahun', 'bulan')
             ->get();
 
         return view($data['url'], $data);
@@ -877,8 +877,14 @@ class PengajuanPinjamanController extends Controller
 
             case 'get_periode':
                 $periodeList = PeriodePencairan::where('isactive', '1')
-                    ->select('id', 'nama_periode')
-                    ->get();
+                    ->select('id', 'tahun', 'bulan')
+                    ->get()
+                    ->map(function($periode) {
+                        return (object) [
+                            'id' => $periode->id,
+                            'nama_periode' => $periode->nama_periode
+                        ];
+                    });
 
                 return response()->json([
                     'success' => true,

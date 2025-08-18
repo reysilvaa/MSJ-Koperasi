@@ -63,7 +63,7 @@ class PinjamanController extends Controller
                 DB::raw('DATE_FORMAT(cp.tanggal_jatuh_tempo, "%Y-%m") as bulan_tempo'),
                 DB::raw('DATE_FORMAT(cp.tanggal_jatuh_tempo, "%M %Y") as nama_bulan')
             )
-            ->where('cp.status', 'belum_bayar')
+            ->whereNull('cp.tanggal_bayar')
             ->where('cp.tanggal_jatuh_tempo', '<=', $akhir_bulan_ini)
             ->where('p.status', 'aktif')
             ->where('p.isactive', '1')
@@ -262,13 +262,10 @@ class PinjamanController extends Controller
                     'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
                     'nominal_pokok' => round($angsuran_pokok, 2),
                     'nominal_bunga' => round($angsuran_bunga, 2),
-                    'nominal_denda' => 0,
                     'total_bayar' => round($total_angsuran, 2),
-                    'nominal_dibayar' => 0,
-                    'sisa_bayar' => round($total_angsuran, 2),
-                    'status' => 'belum_bayar',
-                    'hari_terlambat' => 0,
+                    'tanggal_bayar' => null, // Akan diisi saat pembayaran
                     'metode_pembayaran' => null, // Akan diisi saat pembayaran
+                    'nomor_transaksi' => null, // Akan diisi saat pembayaran
                     'keterangan' => 'Cicilan bulan ' . date('M Y', strtotime($tanggal_jatuh_tempo)),
                     'user_create' => $data['user_login']->username,
                     'created_at' => now(),
@@ -342,14 +339,14 @@ class PinjamanController extends Controller
         // Get cicilan yang belum dibayar
         $data['cicilan_pending'] = DB::table('cicilan_pinjaman')
             ->where('pinjaman_id', $id)
-            ->where('status', 'belum_bayar')
+            ->whereNull('tanggal_bayar')
             ->orderBy('angsuran_ke')
             ->get();
 
         // Get cicilan yang sudah dibayar (untuk history)
         $data['cicilan_lunas'] = DB::table('cicilan_pinjaman')
             ->where('pinjaman_id', $id)
-            ->where('status', 'lunas')
+            ->whereNotNull('tanggal_bayar')
             ->orderBy('angsuran_ke', 'desc')
             ->limit(5)
             ->get();

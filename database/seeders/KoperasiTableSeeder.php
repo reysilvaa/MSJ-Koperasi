@@ -20,7 +20,6 @@ class KoperasiTableSeeder extends Seeder
             ['gmenu' => 'KOP003', 'dmenu' => 'KOP301'],
             ['gmenu' => 'KOP003', 'dmenu' => 'KOP302'],
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP401'],
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP402'],
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP403'],
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP501'],
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP502'],
@@ -54,6 +53,17 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'alamat', 'alias' => 'Alamat', 'type' => 'text', 'length' => '255', 'validate' => 'required'],
                     ['field' => 'jabatan', 'alias' => 'Jabatan', 'type' => 'text', 'length' => '50', 'validate' => 'required'],
                     ['field' => 'departemen', 'alias' => 'Departemen', 'type' => 'text', 'length' => '50', 'validate' => 'required'],
+                    ['field' => 'gaji_pokok', 'alias' => 'Gaji Pokok', 'type' => 'number', 'length' => '15', 'validate' => 'required'],
+                    ['field' => 'tanggal_bergabung', 'alias' => 'Tanggal Bergabung', 'type' => 'date', 'validate' => 'required'],
+                    ['field' => 'tanggal_aktif', 'alias' => 'Tanggal Aktif', 'type' => 'date', 'validate' => 'nullable'],
+                    ['field' => 'simpanan_pokok', 'alias' => 'Simpanan Pokok', 'type' => 'number', 'length' => '15', 'default' => '50000', 'validate' => 'required'],
+                    ['field' => 'simpanan_wajib_bulanan', 'alias' => 'Simpanan Wajib Bulanan', 'type' => 'number', 'length' => '15', 'default' => '25000', 'validate' => 'required'],
+                    ['field' => 'total_simpanan_wajib', 'alias' => 'Total Simpanan Wajib', 'type' => 'number', 'length' => '15', 'default' => '0', 'list' => '1', 'show' => '1'],
+                    ['field' => 'total_simpanan_sukarela', 'alias' => 'Total Simpanan Sukarela', 'type' => 'number', 'length' => '15', 'default' => '0', 'list' => '1', 'show' => '1'],
+                    ['field' => 'no_rekening', 'alias' => 'No Rekening', 'type' => 'text', 'length' => '20', 'validate' => 'nullable'],
+                    ['field' => 'nama_bank', 'alias' => 'Nama Bank', 'type' => 'text', 'length' => '50', 'validate' => 'nullable'],
+                    ['field' => 'foto_ktp', 'alias' => 'Foto KTP', 'type' => 'image', 'length' => '2048', 'validate' => 'nullable|mimes:png,PNG,jpg,JPG,jpeg,JPEG|file|max:2048', 'default' => 'noimage.png'],
+                    ['field' => 'keterangan', 'alias' => 'Keterangan', 'type' => 'text', 'length' => '255', 'validate' => 'nullable'],
 
                     $this->getActiveField()
                 ]
@@ -93,7 +103,7 @@ class KoperasiTableSeeder extends Seeder
                     // Pengajuan Details
                     ['field' => 'tujuan_pinjaman', 'alias' => 'Tujuan Pinjaman', 'type' => 'text', 'length' => '500', 'validate' => 'required'],
                     ['field' => 'jenis_pengajuan', 'alias' => 'Jenis Pengajuan', 'type' => 'enum', 'default' => 'baru', 'query' => "select 'baru' as value, 'Pinjaman Baru' as name union select 'top_up' as value, 'Top Up' as name"],
-                    ['field' => 'status_pengajuan', 'alias' => 'Status', 'type' => 'enum', 'default' => 'draft', 'validate' => 'required', 'show' => '0', 'query' => "select 'draft' as value, 'Draft' as name union select 'diajukan' as value, 'Diajukan' as name union select 'review_admin' as value, 'Review Admin' as name union select 'review_panitia' as value, 'Review Panitia' as name union select 'review_ketua' as value, 'Review Ketua' as name union select 'disetujui' as value, 'Disetujui' as name union select 'ditolak' as value, 'Ditolak' as name"],
+                    // Status akan diambil dari approval_history table
                     ['field' => 'catatan_pengajuan', 'alias' => 'Catatan Pengajuan', 'type' => 'text', 'length' => '500', 'filter' => '0'],
                     $this->getActiveField()
                 ]
@@ -104,7 +114,7 @@ class KoperasiTableSeeder extends Seeder
                 'gmenu' => 'KOP002',
                 'fields' => [
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
-                    ['field' => 'pengajuan_pinjaman_id', 'alias' => 'Pengajuan Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat('ID ', id, ' - Rp ', format(jumlah_pinjaman, 0)) as name from pengajuan_pinjaman where status_pengajuan = 'review_panitia' and isactive = '1'"],
+                    ['field' => 'pengajuan_pinjaman_id', 'alias' => 'Pengajuan Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select pp.id as value, concat('ID ', pp.id, ' - Rp ', format(pp.jumlah_pinjaman, 0)) as name from pengajuan_pinjaman pp inner join approval_history ah on pp.id = ah.pengajuan_pinjaman_id where ah.status = 'review_panitia' and pp.isactive = '1' and ah.created_at = (select max(created_at) from approval_history where pengajuan_pinjaman_id = pp.id)"],
                     ['field' => 'approver', 'alias' => 'Approver', 'type' => 'text', 'length' => '100', 'validate' => 'required'],
                     ['field' => 'status_approval', 'alias' => 'Status Approval', 'type' => 'enum', 'validate' => 'required', 'query' => "select 'approved' as value, 'Approved' as name union select 'rejected' as value, 'Rejected' as name"],
                     ['field' => 'catatan', 'alias' => 'Catatan', 'type' => 'text', 'length' => '500', 'filter' => '0', 'list' => '0'],
@@ -149,7 +159,7 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
                     ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'list' => '1', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from anggota where isactive = '1'"],
                     ['field' => 'jumlah_pinjaman', 'alias' => 'Jumlah Pinjaman', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'list' => '1'],
-                    ['field' => 'status_pengajuan', 'alias' => 'Status', 'type' => 'enum', 'list' => '1', 'query' => "select 'draft' as value, 'Draft' as name union select 'diajukan' as value, 'Diajukan' as name union select 'review_admin' as value, 'Review Admin' as name union select 'review_panitia' as value, 'Review Panitia' as name union select 'review_ketua' as value, 'Review Ketua' as name union select 'disetujui' as value, 'Disetujui' as name union select 'ditolak' as value, 'Ditolak' as name union select 'dibatalkan' as value, 'Dibatalkan' as name"],
+                    // Status akan diambil dari approval_history via join query
                     ['field' => 'periode_pencairan_id', 'alias' => 'Periode Pencairan', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'list' => '1', 'query' => "select id as value, nama_periode as name from periode_pencairan where isactive = '1'"],
                     ['field' => 'status_pencairan', 'alias' => 'Status Pencairan', 'type' => 'enum', 'default' => 'belum_cair', 'validate' => 'required', 'list' => '1', 'query' => "select 'belum_cair' as value, 'Belum Cair' as name union select 'dalam_proses' as value, 'Dalam Proses' as name union select 'sudah_cair' as value, 'Sudah Cair' as name"],
                     ['field' => 'tanggal_pengajuan', 'alias' => 'Tanggal Pengajuan', 'type' => 'datetime', 'list' => '1'],
@@ -158,27 +168,10 @@ class KoperasiTableSeeder extends Seeder
                 ]
             ],
 
-            // KOP401 - Cicilan Anggota
-            'KOP401' => [
-                'gmenu' => 'KOP004',
-                'fields' => [
-                    ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
-                    ['field' => 'nomor_transaksi', 'alias' => 'Nomor Transaksi', 'type' => 'text', 'length' => '20', 'validate' => 'required', 'generateid' => 'auto'],
-                    ['field' => 'pinjaman_id', 'alias' => 'Pinjaman', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_pinjaman, ' - Rp ', format(cicilan_per_bulan, 0)) as name from pinjaman where status = 'aktif' and isactive = '1'"],
-                    ['field' => 'cicilan_ke', 'alias' => 'Cicilan Ke-', 'type' => 'number', 'length' => '3', 'validate' => 'required'],
-                    ['field' => 'nominal_pokok', 'alias' => 'Nominal Pokok', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
-                    ['field' => 'nominal_bunga', 'alias' => 'Nominal Bunga', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
-                    ['field' => 'denda', 'alias' => 'Denda', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'default' => '0'],
-                    ['field' => 'total_bayar', 'alias' => 'Total Bayar', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
-                    ['field' => 'tanggal_jatuh_tempo', 'alias' => 'Tanggal Jatuh Tempo', 'type' => 'date', 'validate' => 'required'],
-                    ['field' => 'tanggal_bayar', 'alias' => 'Tanggal Bayar', 'type' => 'date', 'show' => '0'],
-                    ['field' => 'status', 'alias' => 'Status Cicilan', 'type' => 'enum', 'default' => 'belum_bayar', 'validate' => 'required', 'show' => '0', 'query' => "select 'belum_bayar' as value, 'Belum Bayar' as name union select 'lunas' as value, 'Lunas' as name union select 'telat' as value, 'Telat' as name"],
-                    $this->getActiveField()
-                ]
-            ],
 
-            // KOP402 - Iuran Anggota
-            'KOP402' => [
+
+            // KOP401 - Iuran Anggota
+            'KOP401' => [
                 'gmenu' => 'KOP004',
                 'fields' => [
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
@@ -223,7 +216,7 @@ class KoperasiTableSeeder extends Seeder
             'KOP502' => [
                 'gmenu' => 'KOP005',
                 'fields' => [
-                    ['field' => 'query', 'alias' => 'Query Laporan Keuangan', 'type' => 'report', 'length' => '0', 'filter' => '0', 'list' => '0', 'query' => "SELECT cp.nomor_transaksi, a.nama_lengkap, cp.nominal_pokok, cp.nominal_bunga, cp.total_bayar, cp.tanggal_bayar FROM cicilan_pinjaman cp LEFT JOIN pinjaman p ON cp.pinjaman_id = p.id LEFT JOIN anggota a ON p.anggota_id = a.id WHERE cp.status = 'lunas' AND cp.tanggal_bayar BETWEEN :tanggal_dari AND :tanggal_sampai ORDER BY cp.tanggal_bayar DESC"],
+                    ['field' => 'query', 'alias' => 'Query Laporan Keuangan', 'type' => 'report', 'length' => '0', 'filter' => '0', 'list' => '0', 'query' => "SELECT cp.nomor_transaksi, a.nama_lengkap, cp.nominal_pokok, cp.nominal_bunga, cp.total_bayar, cp.tanggal_bayar, cp.metode_pembayaran FROM cicilan_pinjaman cp LEFT JOIN pinjaman p ON cp.pinjaman_id = p.id LEFT JOIN anggota a ON p.anggota_id = a.id WHERE cp.tanggal_bayar IS NOT NULL AND cp.tanggal_bayar BETWEEN :tanggal_dari AND :tanggal_sampai ORDER BY cp.tanggal_bayar DESC"],
                     ['field' => 'tanggal_dari', 'alias' => 'Tanggal Dari', 'type' => 'date', 'validate' => 'required', 'list' => '0'],
                     ['field' => 'tanggal_sampai', 'alias' => 'Tanggal Sampai', 'type' => 'date', 'validate' => 'required', 'list' => '0']
                 ]

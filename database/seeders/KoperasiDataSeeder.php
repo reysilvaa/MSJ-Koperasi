@@ -36,7 +36,7 @@ class KoperasiDataSeeder extends Seeder
             'total_simpanan_sukarela' => 0.00,
             'no_rekening' => '1234567890',
             'nama_bank' => 'BRI',
-            'foto' => null,
+            'foto_ktp' => null,
             'keterangan' => 'Anggota aktif dengan status baik',
             'isactive' => 1, // Sample data - already activated
             'created_at' => now(),
@@ -93,26 +93,26 @@ class KoperasiDataSeeder extends Seeder
         ]);
 
         // ===== PERIODE PENCAIRAN =====
-        DB::table('periode_pencairan')->insert([
-            [
-                'nama_periode' => 'Pencairan Agustus 2025 - Periode 1',
-                'tanggal_pencairan' => '2025-08-10',
-                'isactive' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-                'user_create' => 'seeder',
-                'user_update' => 'seeder'
-            ],
-            [
-                'nama_periode' => 'Pencairan Agustus 2025 - Periode 2',
-                'tanggal_pencairan' => '2025-08-25',
-                'isactive' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-                'user_create' => 'seeder',
-                'user_update' => 'seeder'
-            ]
-        ]);
+        // DB::table('periode_pencairan')->insert([
+        //     [
+        //         'tahun' => 2025,
+        //         'bulan' => 8,
+        //         'isactive' => 1,
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //         'user_create' => 'seeder',
+        //         'user_update' => 'seeder'
+        //     ],
+        //     [
+        //         'tahun' => 2025,
+        //         'bulan' => 9,
+        //         'isactive' => 1,
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //         'user_create' => 'seeder',
+        //         'user_update' => 'seeder'
+        //     ]
+        // ]);
         }
     }
 }
