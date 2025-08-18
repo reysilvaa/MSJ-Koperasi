@@ -1,4 +1,5 @@
 @extends('layouts.app', ['class' => 'g-sidenav-show bg-gray-100'])
+
 {{-- section content --}}
 @section('content')
     @include('layouts.navbars.auth.topnav', ['title' => ''])
@@ -18,7 +19,7 @@
                                         {{-- button back --}}
                                         <button class="btn btn-secondary mb-0" onclick="history.back()"><i
                                                 class="fas fa-circle-left me-1"> </i><span
-                                                class="font-weight-bold">Kembali</span></button>
+                                                class="font-weight-bold">Kembali</button>
                                     </div>
                                     <div class="col-md-3 md-auto justify-content-end row">
                                         <div class="col">
@@ -27,81 +28,180 @@
                                         </div>
                                         <div class="col">
                                             {{-- display label alias on class filter --}}
-                                            Filter Tahun : {{ $filter['tahun'] ?? date('Y') }}
+                                            Filter Tahun :
+                                            <select class="form-select" id="filter_tahun" style="width: 150px;">
+                                                <option value="{{ $filter['tahun'] ?? date('Y') }}" selected>
+                                                    {{ $filter['tahun'] ?? date('Y') }}
+                                                    @if ($filter['tahun'] == date('Y'))
+                                                        (s/d {{ date('M') }})
+                                                    @endif
+                                                </option>
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        {{-- Table with MSJ Framework Style --}}
                         <div class="row px-4 py-2">
                             <div class="table-responsive">
-                                <table class="table display" id="list_{{ $dmenu }}">
-                                    {{-- check result data --}}
-                                    @if ($table_result)
+                                @if ($table_result && count($table_result) > 0)
+                                    @php
+                                        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agus', 'Sept', 'Oct', 'Nov', 'Des'];
+                                        $bulanFields = ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'agu', 'sep', 'okt', 'nov', 'des'];
+                                        $maxMonth = $max_month ?? 12;
+                                    @endphp
+
+                                    <table class="table" id="iuran_table_{{ $dmenu ?? 'KOP401' }}">
                                         <thead class="thead-light" style="background-color: #00b7bd4f;">
                                             <tr>
-                                                <th>No</th>
-                                                {{-- set table header --}}
-                                                @foreach ($table_result as $result)
-                                                    @php
-                                                        $sAsArray = array_keys((array) $result);
-                                                        $i = 0;
-                                                    @endphp
-                                                @endforeach
-                                                @foreach ($sAsArray as $header)
-                                                    @if (substr($header, 0, 3) == 'IMG')
-                                                        <th>{{ substr($header, 4) }}</th>
-                                                    @elseif (substr($header, 0, 3) == 'CDT')
-                                                        <th>{{ substr($header, 6) . '-' . substr($header, 3, 2) }}</th>
-                                                    @elseif (substr($header, 0, 3) == 'CST')
-                                                        <th>{{ substr($header, 4) }}</th>
-                                                    @else
-                                                        <th>{{ $header }}</th>
+                                                <th rowspan="2" style="width: 40px;">No.</th>
+                                                <th rowspan="2" style="width: 120px;">Name</th>
+                                                <th colspan="{{ $maxMonth }}">TAHUN {{ $filter['tahun'] ?? date('Y') }}
+                                                    @if ($filter['tahun'] == date('Y'))
+                                                        (s/d {{ $monthNames[$maxMonth - 1] }})
                                                     @endif
-                                                    @php
-                                                        $i++;
-                                                    @endphp
-                                                @endforeach
+                                                </th>
+                                                <th rowspan="2">TOTAL<br>SALDO</th>
+                                            </tr>
+                                            <tr>
+                                                @for ($i = 0; $i < $maxMonth; $i++)
+                                                    <th>{{ $monthNames[$i] }}</th>
+                                                @endfor
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {{-- retrieve table result --}}
-                                            @foreach ($table_result as $detail)
-                                                <tr
-                                                    {{ @$detail->isactive == '0' || @$detail->ISACTIVE == '0' ? 'class=not style=background-color:#ffe9ed;' : '' }}>
-                                                    <td>{{ $loop->iteration }}</td>
-                                                    @foreach ($table_result as $result)
+                                            @php
+                                                $totalPerBulan = array_fill(1, $maxMonth, 0);
+                                                $grandTotal = 0;
+                                            @endphp
+
+                                            @foreach ($table_result as $index => $anggota)
+                                                @php
+                                                    $isResign = isset($anggota->status_anggota) && $anggota->status_anggota == 'resign';
+                                                    $totalSaldo = 0;
+                                                @endphp
+                                                <tr {{ $isResign ? 'class=not style=background-color:#ffe9ed;' : '' }}>
+                                                    <td class="text-sm font-weight-normal">{{ $index + 1 }}</td>
+                                                    <td class="text-sm font-weight-normal">{{ $anggota->nama ?? 'N/A' }}</td>
+
+                                                    @for ($fieldIndex = 0; $fieldIndex < $maxMonth; $fieldIndex++)
                                                         @php
-                                                            $field = array_keys((array) $result);
-                                                            $i = 0;
+                                                            $fieldBulan = $bulanFields[$fieldIndex];
+                                                            $bulanNumber = $fieldIndex + 1;
+                                                            $nilaiIuran = $anggota->$fieldBulan ?? 0;
+
+                                                            // Jika anggota resign dan bulan > bulan resign, tampilkan dash
+                                                            $showDash = $isResign && isset($anggota->bulan_resign) && $bulanNumber > $anggota->bulan_resign;
+
+                                                            if (!$showDash && $nilaiIuran > 0) {
+                                                                $totalPerBulan[$bulanNumber] += $nilaiIuran;
+                                                                $totalSaldo += $nilaiIuran;
+                                                            }
                                                         @endphp
-                                                    @endforeach
-                                                    @foreach ($field as $header)
-                                                        @php
-                                                            $string = $header;
-                                                        @endphp
+
                                                         <td class="text-sm font-weight-normal">
-                                                            {{ $detail->$string }}
+                                                            @if ($showDash)
+                                                                -
+                                                            @elseif ($nilaiIuran > 0)
+                                                                {{ number_format($nilaiIuran, 0, '.', '.') }}
+                                                            @elseif (is_null($nilaiIuran))
+                                                                -
+                                                            @else
+                                                                -
+                                                            @endif
                                                         </td>
-                                                        @php
-                                                            $i++;
-                                                        @endphp
-                                                    @endforeach
+                                                    @endfor
+
+                                                    <td class="text-sm font-weight-normal">{{ number_format($totalSaldo, 0, '.', '.') }}</td>
+                                                    @php $grandTotal += $totalSaldo; @endphp
                                                 </tr>
                                             @endforeach
+
+                                            {{-- Sum Row --}}
+                                            <tr>
+                                                <td colspan="2" class="text-sm font-weight-normal"></td>
+                                                @for ($bulan = 1; $bulan <= $maxMonth; $bulan++)
+                                                    <td class="text-sm font-weight-normal">
+                                                        @if ($totalPerBulan[$bulan] > 0)
+                                                            {{ number_format($totalPerBulan[$bulan], 0, '.', '.') }}
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
+                                                @endfor
+                                                <td class="text-sm font-weight-normal">{{ number_format($grandTotal, 0, '.', '.') }}</td>
+                                            </tr>
+
+                                            {{-- SP Row (Simpanan Pokok) --}}
+                                            <tr>
+                                                <td class="text-sm font-weight-normal"></td>
+                                                <td class="text-sm font-weight-normal">sp</td>
+                                                @php
+                                                    $totalSP = 0;
+                                                    $spData = $sp_data ?? [];
+                                                @endphp
+                                                @for ($bulan = 1; $bulan <= $maxMonth; $bulan++)
+                                                    @php
+                                                        $spValue = $spData[$bulan] ?? 0;
+                                                        $totalSP += $spValue;
+                                                    @endphp
+                                                    <td class="text-sm font-weight-normal">
+                                                        @if ($spValue > 0)
+                                                            {{ number_format($spValue, 0, '.', '.') }}
+                                                        @else
+                                                            0
+                                                        @endif
+                                                    </td>
+                                                @endfor
+                                                <td class="text-sm font-weight-normal">{{ number_format($totalSP, 0, '.', '.') }}</td>
+                                            </tr>
+
+                                            {{-- SW Row (Simpanan Wajib/Sukarela) --}}
+                                            <tr>
+                                                <td class="text-sm font-weight-normal"></td>
+                                                <td class="text-sm font-weight-normal">sw</td>
+                                                @php
+                                                    $totalSW = 0;
+                                                    $swData = $sw_data ?? [];
+                                                @endphp
+                                                @for ($bulan = 1; $bulan <= $maxMonth; $bulan++)
+                                                    @php
+                                                        $swValue = $swData[$bulan] ?? 0;
+                                                        $totalSW += $swValue;
+                                                    @endphp
+                                                    <td class="text-sm font-weight-normal">
+                                                        @if ($swValue > 0)
+                                                            {{ number_format($swValue, 0, '.', '.') }}
+                                                        @else
+                                                            0
+                                                        @endif
+                                                    </td>
+                                                @endfor
+                                                <td class="text-sm font-weight-normal">{{ number_format($totalSW, 0, '.', '.') }}</td>
+                                            </tr>
                                         </tbody>
-                                    @endif
-                                </table>
+                                    </table>
+                                @else
+                                    <div class="alert alert-info text-center">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Data iuran anggota untuk tahun {{ $filter['tahun'] ?? date('Y') }} tidak ditemukan.
+                                    </div>
+                                @endif
                             </div>
                         </div>
+
                         <div class="row px-4 py-2">
                             <div class="col-lg">
-                                @if ($table_result)
+                                @if ($table_result && count($table_result) > 0)
                                     <div class="nav-wrapper" id="noted"><code>Note : <i aria-hidden="true"
                                                 style="color: #ffc2cd;" class="fas fa-circle"></i> Data not active</code>
                                     </div>
                                 @else
-                                    <div class="nav-wrapper"><code> Data not found!</code></div>
+                                    <div class="nav-wrapper">
+                                        <code>Data tidak ditemukan untuk tahun {{ $filter['tahun'] ?? date('Y') }}!</code>
+                                    </div>
                                 @endif
                             </div>
                         </div>
@@ -110,7 +210,6 @@
             </div>
         </div>
     </div>
-
     {{-- check flag js on dmenu --}}
     @if ($jsmenu == '1')
         @if (view()->exists("js.{$dmenu}"))
@@ -132,103 +231,3 @@
         @endif
     @endif
 @endsection
-
-@push('js')
-    <script>
-        let columnAbjad = '';
-        $(document).ready(function() {
-            let table = $('#list_{{ $dmenu }}').DataTable();
-            let indexStatus = 0;
-            let numColumns = $('#list_{{ $dmenu }}').DataTable().columns().count();
-            let columnNames = '';
-            for (let index = 0; index < numColumns; index++) {
-                columnNames = $('#list_{{ $dmenu }}').DataTable().columns(index).header()[0].textContent;
-                if (columnNames == 'Status' || columnNames == 'status' || columnNames == 'STATUS') {
-                    columnAbjad = String.fromCharCode(65 + index);
-                }
-            }
-            //check note
-            if ($('*').hasClass('exp')) {
-                $('#noted').html(`<code>Note :( <i aria-hidden="true" style="color: #ffc2cd;"
-                class="fas fa-circle"></i> Data not active ), ( <i aria-hidden="true"
-                style="color: #ffe768;" class="fas fa-circle"></i> Data Expired )</code>`)
-            }
-            if ($('*').hasClass('stock')) {
-                $('#noted').html(`<code>Note :( <i aria-hidden="true" style="color: #ffc2cd;"
-                class="fas fa-circle"></i> Data not active ), ( <i aria-hidden="true"
-                style="color: #f93c3c;" class="fas fa-circle"></i> Stock < Min Stock )</code>`)
-            }
-            if ($('*').hasClass('exp') && $('*').hasClass('stock')) {
-                $('#noted').html(`<code>Note :( <i aria-hidden="true" style="color: #ffc2cd;"
-                class="fas fa-circle"></i> Data not active ), ( <i aria-hidden="true"
-                style="color: #ffe768;" class="fas fa-circle"></i> Data Expired ), ( <i aria-hidden="true"
-                style="color: #f93c3c;" class="fas fa-circle"></i> Stock < Min Stock )</code>`)
-            }
-        });
-        //set table into datatables
-        $('#list_{{ $dmenu }}').DataTable({
-            "language": {
-                "search": "Cari :",
-                "lengthMenu": "Tampilkan _MENU_ baris",
-                "zeroRecords": "Maaf - Data tidak ada",
-                "info": "Data _START_ - _END_ dari _TOTAL_",
-                "infoEmpty": "Tidak ada data",
-                "infoFiltered": "(pencarian dari _MAX_ data)"
-            },
-            responsive: true,
-            dom: 'Bfrtip',
-            buttons: [{
-                    extend: 'excelHtml5',
-                    text: '<i class="fas fa-file-excel me-1 text-lg text-success"> </i><span class="font-weight-bold"> Excel',
-                    autoFilter: true,
-                    sheetName: 'Exported data',
-                    customize: function(xlsx) {
-                        var sheet = xlsx.xl.worksheets['sheet1.xml'];
-                        // Loop over the cells in column
-                        sheet.querySelectorAll('row c[r^="' + columnAbjad + '"]').forEach((row) => {
-                            // Get the value
-                            let cell = row.querySelector('is t');
-                            if (cell && cell.textContent === 'Not Active') {
-                                row.setAttribute('s', '10'); //red background
-                            }
-                        });
-                    },
-                    exportOptions: {
-                        columns: ':visible:not(:last-child)'
-                    },
-                },
-                {
-                    extend: 'pdfHtml5',
-                    text: '<i class="fas fa-file-pdf me-1 text-lg text-danger"> </i><span class="font-weight-bold"> PDF',
-                    orientation: 'landscape',
-                    pageSize: 'A4',
-                    exportOptions: {
-                        columns: ':visible:not(:last-child)'
-                    },
-                },
-                {
-                    extend: 'print',
-                    text: '<i class="fas fa-print me-1 text-lg text-info"> </i><span class="font-weight-bold"> Print',
-                    orientation: 'landscape',
-                    pageSize: 'A4',
-                    exportOptions: {
-                        columns: ':visible:not(:last-child)'
-                    },
-                },
-            ]
-        });
-        //set color button datatables
-        $('.dt-button').addClass('btn btn-secondary');
-        $('.dt-button').removeClass('dt-button');
-        //check authorize button datatables
-        <?= $authorize->excel == '0' ? "$('.buttons-excel').remove();" : '' ?>
-        <?= $authorize->pdf == '0' ? "$('.buttons-pdf').remove();" : '' ?>
-        <?= $authorize->print == '0' ? "$('.buttons-print').remove();" : '' ?>
-        //function delete
-        function deleteData(name, msg) {
-            pesan = confirm('Apakah Anda Yakin ' + msg + ' Data ' + name + ' ini ?');
-            if (pesan) return true
-            else return false
-        }
-    </script>
-@endpush

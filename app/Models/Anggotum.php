@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class Anggotum
@@ -92,8 +93,6 @@ class Anggotum extends Model
 		'user_update'
 	];
 
-
-
 	public function notifikasis()
 	{
 		return $this->hasMany(Notifikasi::class, 'anggota_id');
@@ -137,5 +136,39 @@ class Anggotum extends Model
 	public static function isRegularMember($userRole)
 	{
 		return strpos($userRole, 'anggot') !== false;
+	}
+
+	/**
+	 * Get Simpanan Pokok summary by month for specific year
+	 */
+	public static function getSimpananPokokByMonth($tahun)
+	{
+		$result = self::selectRaw('MONTH(tanggal_bergabung) as bulan_bergabung, SUM(simpanan_pokok) as total_sp')
+			->where('isactive', '1')
+			->whereYear('tanggal_bergabung', $tahun)
+			->groupByRaw('MONTH(tanggal_bergabung)')
+			->get();
+
+		return $result->pluck('total_sp', 'bulan_bergabung')->toArray();
+	}
+
+	/**
+	 * Get Simpanan Wajib summary by month for specific year
+	 */
+	public static function getSimpananWajibByMonth($tahun)
+	{
+		$swData = [];
+		
+		for ($bulan = 1; $bulan <= 12; $bulan++) {
+			$bulanFormatted = str_pad($bulan, 2, '0', STR_PAD_LEFT);
+			
+			$swTotal = self::where('isactive', '1')
+				->where('tanggal_bergabung', '<', "{$tahun}-{$bulanFormatted}-01")
+				->sum('simpanan_wajib_bulanan');
+				
+			$swData[$bulan] = $swTotal;
+		}
+
+		return $swData;
 	}
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\Function_Helper;
+use App\Models\Anggotum;
 
 class IuranAnggotaController extends Controller
 {
@@ -29,7 +30,7 @@ class IuranAnggotaController extends Controller
     }
 
     /**
-     * Process the report and show results
+     * Process the report and show results using Eloquent ORM
      */
     public function store($data)
     {
@@ -38,9 +39,23 @@ class IuranAnggotaController extends Controller
         // Get filter parameters
         $tahun = $request->input('tahun', date('Y'));
 
-        // Validate tahun - hanya pastikan input adalah angka
+        // Get current date info for validation
+        $currentYear = date('Y');
+        $currentMonth = date('n');
+
+        // Comprehensive year validation
         if (!is_numeric($tahun)) {
             return redirect()->back()->withErrors(['tahun' => 'Tahun harus berupa angka']);
+        }
+        
+        $tahun = intval($tahun); // Convert to integer
+        
+        if ($tahun > $currentYear) {
+            return redirect()->back()->withErrors(['tahun' => "Tahun tidak boleh melebihi tahun saat ini ({$currentYear})"]);
+        }
+        
+        if ($tahun < 2000) {
+            return redirect()->back()->withErrors(['tahun' => 'Tahun tidak boleh kurang dari 2000']);
         }
 
         // Check for export requests
@@ -48,185 +63,26 @@ class IuranAnggotaController extends Controller
             return $this->exportData($tahun, $request->get('export'));
         }
 
-        // Build the query for iuran anggota
-        $query = "SELECT
-            a.nomor_anggota AS nomor_anggota,
-            a.nama_lengkap AS nama,
-
-            -- Januari
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 1 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-01-31')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS jan,
-
-            -- Februari
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 2 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-02-28')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS feb,
-
-            -- Maret
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 3 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-03-31')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS mar,
-
-            -- April
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 4 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-04-30')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS apr,
-
-            -- Mei
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 5 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-05-31')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS mei,
-
-            -- Juni
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 6 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-06-30')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS jun,
-
-            -- Juli
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 7 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-07-31')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS jul,
-
-            -- Agustus
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 8 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-08-31')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS agu,
-
-            -- September
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 9 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-09-30')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS sep,
-
-            -- Oktober
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 10 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-10-31')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS okt,
-
-            -- November
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 11 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-11-30')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS nov,
-
-            -- Desember
-            (CASE
-                WHEN MONTH(a.tanggal_bergabung) = 12 AND YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok
-                ELSE 0
-            END) +
-            (CASE
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-12-31')
-                    THEN a.simpanan_wajib_bulanan
-                ELSE 0
-            END) AS des,
-
-            -- Total saldo
-            (CASE
-                WHEN YEAR(a.tanggal_bergabung) = ?
-                    THEN a.simpanan_pokok + (a.simpanan_wajib_bulanan * (13 - MONTH(a.tanggal_bergabung)))
-                WHEN a.tanggal_bergabung <= CONCAT(?, '-12-31')
-                    THEN a.simpanan_wajib_bulanan * 12
-                ELSE 0
-            END) AS total_saldo
-
-        FROM anggota a
-        WHERE a.isactive = '1'
-            AND a.tanggal_bergabung <= CONCAT(?, '-12-31')
-        ORDER BY a.nomor_anggota";
-
-        // Prepare parameters - we need 27 instances of the same year value
-        // Each month needs 2 parameters (1 for SP, 1 for SW) + 2 for total_saldo + 1 for WHERE = 27 total
-        $params = array_fill(0, 27, $tahun);
-        // dd($params);
-
         try {
-            // Execute query
-            $data['table_result'] = DB::select($query, $params);
+            // Get iuran anggota data using Eloquent with calculated monthly contributions
+            $data['table_result'] = $this->getIuranAnggotaData($tahun);
             $data['filter'] = ['tahun' => $tahun];
             $data['title_menu'] = 'Laporan Iuran Bulanan';
+
+            // Get SP and SW data using model methods - limited to current period
+            $data['sp_data'] = $this->getSimpananPokokDataLimited($tahun);
+            $data['sw_data'] = $this->getSimpananWajibDataLimited($tahun);
+
+            // Pass current period info to view
+            $data['current_year'] = $currentYear;
+            $data['current_month'] = $currentMonth;
+            $data['max_month'] = ($tahun == $currentYear) ? $currentMonth : 12;
 
             // Log activity
             $syslog = new Function_Helper;
             $syslog->log_insert('V', 'KOP401', "Generate laporan iuran anggota tahun {$tahun}", '1');
 
-            // Return result view - MSJ Framework pattern for manual layout
+            // Return result view
             return view('KOP004.iuranAnggota.result', $data);
 
         } catch (\Exception $e) {
@@ -236,6 +92,112 @@ class IuranAnggotaController extends Controller
 
             return redirect()->back()->withErrors(['error' => 'Terjadi kesalahan saat memproses laporan: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Get iuran anggota data with monthly breakdown using Eloquent
+     * Limited to current month and year only
+     */
+    private function getIuranAnggotaData($tahun)
+    {
+        $months = [
+            'jan' => '01', 'feb' => '02', 'mar' => '03', 'apr' => '04',
+            'mei' => '05', 'jun' => '06', 'jul' => '07', 'agu' => '08',
+            'sep' => '09', 'okt' => '10', 'nov' => '11', 'des' => '12'
+        ];
+
+        // Get current date for limiting data display
+        $currentYear = date('Y');
+        $currentMonth = date('n'); // 1-12 without leading zeros
+
+        $selectFields = [
+            'nomor_anggota',
+            'nama_lengkap as nama'
+        ];
+
+        // Generate monthly columns dynamically - only up to current month
+        foreach ($months as $monthName => $monthNum) {
+            $monthNumInt = intval($monthNum);
+            
+            // Only include months up to current month if it's current year
+            if ($tahun == $currentYear && $monthNumInt > $currentMonth) {
+                // For future months in current year, show null/empty
+                $selectFields[] = DB::raw("NULL as {$monthName}");
+            } else {
+                $selectFields[] = DB::raw("(CASE 
+                    WHEN MONTH(tanggal_bergabung) = {$monthNum} AND YEAR(tanggal_bergabung) = {$tahun} 
+                    THEN simpanan_pokok ELSE 0 END) + 
+                    (CASE WHEN tanggal_bergabung < '{$tahun}-{$monthNum}-01' 
+                    THEN simpanan_wajib_bulanan ELSE 0 END) as {$monthName}");
+            }
+        }
+
+        // Add total saldo calculation - adjusted for current period
+        if ($tahun == $currentYear) {
+            $selectFields[] = DB::raw("(CASE 
+                WHEN YEAR(tanggal_bergabung) = {$tahun} AND MONTH(tanggal_bergabung) <= {$currentMonth}
+                THEN simpanan_pokok + (simpanan_wajib_bulanan * ({$currentMonth} - MONTH(tanggal_bergabung)))
+                WHEN tanggal_bergabung < '{$tahun}-01-01' 
+                THEN simpanan_wajib_bulanan * {$currentMonth}
+                ELSE 0 END) as total_saldo");
+        } else {
+            $selectFields[] = DB::raw("(CASE 
+                WHEN YEAR(tanggal_bergabung) = {$tahun} 
+                THEN simpanan_pokok + (simpanan_wajib_bulanan * (12 - MONTH(tanggal_bergabung)))
+                WHEN tanggal_bergabung < '{$tahun}-01-01' 
+                THEN simpanan_wajib_bulanan * 12
+                ELSE 0 END) as total_saldo");
+        }
+
+        return Anggotum::select($selectFields)
+            ->where('isactive', '1')
+            ->where('tanggal_bergabung', '<=', "{$tahun}-12-31")
+            ->orderBy('nomor_anggota')
+            ->get();
+    }
+
+    /**
+     * Get Simpanan Pokok data per month - limited to current period
+     */
+    private function getSimpananPokokDataLimited($tahun)
+    {
+        $currentYear = date('Y');
+        $currentMonth = date('n');
+        
+        $spData = Anggotum::getSimpananPokokByMonth($tahun);
+        
+        // If current year, limit to current month only
+        if ($tahun == $currentYear) {
+            $limitedSpData = [];
+            for ($bulan = 1; $bulan <= $currentMonth; $bulan++) {
+                $limitedSpData[$bulan] = $spData[$bulan] ?? 0;
+            }
+            return $limitedSpData;
+        }
+        
+        return $spData;
+    }
+
+    /**
+     * Get Simpanan Wajib data per month - limited to current period
+     */
+    private function getSimpananWajibDataLimited($tahun)
+    {
+        $currentYear = date('Y');
+        $currentMonth = date('n');
+        
+        $swData = Anggotum::getSimpananWajibByMonth($tahun);
+        
+        // If current year, limit to current month only
+        if ($tahun == $currentYear) {
+            $limitedSwData = [];
+            for ($bulan = 1; $bulan <= $currentMonth; $bulan++) {
+                $limitedSwData[$bulan] = $swData[$bulan] ?? 0;
+            }
+            return $limitedSwData;
+        }
+        
+        return $swData;
     }
 
     /**
