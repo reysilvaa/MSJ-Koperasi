@@ -32,9 +32,9 @@ return new class extends Migration
             $table->decimal('total_simpanan_sukarela', 15, 2)->default(0);
             $table->string('no_rekening', 20)->nullable();
             $table->string('nama_bank', 50)->nullable();
-            $table->string('foto')->nullable();
+            $table->string('foto_ktp')->nullable();
             $table->text('keterangan')->nullable();
-            $table->enum('isactive', [0, 1])->default(0); 
+            $table->enum('isactive', [0, 1])->default(0);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             $table->string('user_create')->nullable();
