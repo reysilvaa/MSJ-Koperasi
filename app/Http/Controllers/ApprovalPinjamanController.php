@@ -10,6 +10,8 @@ use App\Models\Pinjaman;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\Koperasi\Approval\ApprovalWorkflowHelper;
+
 
 class ApprovalPinjamanController extends Controller
 {
@@ -268,8 +270,8 @@ class ApprovalPinjamanController extends Controller
         }
 
         // Check if this user has already approved this application at their role level
-        if (ApprovalHistory::hasExistingApproval($id, $current_username, $user_role)) {
-            $current_level = ApprovalHistory::getApprovalLevel($user_role);
+        if (ApprovalWorkflowHelper::hasExistingApproval($id, $current_username, $user_role)) {
+            $current_level = ApprovalWorkflowHelper::getApprovalLevel($user_role);
             Session::flash('message', 'Anda sudah melakukan approval untuk pengajuan pinjaman ini sebelumnya pada level ' . $current_level . '. Setiap admin hanya dapat melakukan approval sekali untuk setiap pengajuan.');
             Session::flash('class', 'warning');
             return redirect()->back();
@@ -281,7 +283,7 @@ class ApprovalPinjamanController extends Controller
         // Debug logging
         $syslog->log_insert('I', $data['dmenu'], 'Approval attempt: User Role=' . $user_role . ', Current Status=' . $currentStatus . ', Pengajuan ID=' . $id, '1');
 
-        if (!ApprovalHistory::validateWorkflowPermissions($currentStatus, $user_role)) {
+        if (!ApprovalWorkflowHelper::validateWorkflowPermissions($currentStatus, $user_role)) {
             $syslog->log_insert('W', $data['dmenu'], 'Approval denied: User Role=' . $user_role . ' cannot approve status=' . $currentStatus, '0');
             Session::flash('message', 'Anda tidak memiliki wewenang untuk melakukan approval pada status pengajuan ini. Status saat ini: ' . $currentStatus . '. Role Anda: ' . $user_role);
             Session::flash('class', 'warning');
@@ -296,7 +298,7 @@ class ApprovalPinjamanController extends Controller
             $approved_by = PengajuanPinjaman::getCurrentUsername($data);
 
             // Determine next status based on role and action using model method
-            $new_status = ApprovalHistory::getNextStatus($user_role, $action);
+            $new_status = ApprovalWorkflowHelper::getNextStatus($user_role, $action);
 
             // Update pengajuan status
             $pengajuan->update([
@@ -306,7 +308,7 @@ class ApprovalPinjamanController extends Controller
 
             // Create approval history using model methods
             $status_approval = $action === 'approve' ? 'approved' : 'rejected';
-            $level_approval = ApprovalHistory::getApprovalLevel($user_role);
+            $level_approval = ApprovalWorkflowHelper::getApprovalLevel($user_role);
 
             ApprovalHistory::create([
                 'pengajuan_pinjaman_id' => $id,
@@ -314,7 +316,7 @@ class ApprovalPinjamanController extends Controller
                 'status_approval' => $status_approval,
                 'catatan' => $catatan,
                 'tanggal_approval' => now(),
-                'urutan' => ApprovalHistory::getApprovalOrder($user_role),
+                'urutan' => ApprovalWorkflowHelper::getApprovalOrder($user_role),
                 'isactive' => '1',
                 'user_create' => $approved_by,
             ]);
@@ -353,7 +355,7 @@ class ApprovalPinjamanController extends Controller
     {
         $maxRetries = 5;
         $retryCount = 0;
-        
+
         while ($retryCount < $maxRetries) {
             try {
                 // Calculate tenor in months from string like "6 bulan"
@@ -410,7 +412,7 @@ class ApprovalPinjamanController extends Controller
                 }
             }
         }
-        
+
         throw new \Exception('Gagal membuat pinjaman setelah ' . $maxRetries . ' percobaan.');
     }
 
@@ -421,21 +423,21 @@ class ApprovalPinjamanController extends Controller
     {
         // Use database lock to prevent race condition
         DB::statement('LOCK TABLES sys_counter WRITE, pinjaman READ');
-        
+
         try {
             $nomor_pinjaman = $format->IDFormat('KOP301');
-            
+
             // Double check if nomor already exists
             $exists = Pinjaman::where('nomor_pinjaman', $nomor_pinjaman)->exists();
-            
+
             if ($exists) {
                 // If exists, manually increment counter and try again
                 $this->incrementCounter();
                 $nomor_pinjaman = $format->IDFormat('KOP301');
             }
-            
+
             return $nomor_pinjaman;
-            
+
         } finally {
             DB::statement('UNLOCK TABLES');
         }
@@ -447,7 +449,7 @@ class ApprovalPinjamanController extends Controller
     private function incrementCounter()
     {
         $string = date('Y-m') . '-'; // Assuming format is YYYY-MM-
-        
+
         DB::table('sys_counter')
             ->where('character', $string)
             ->increment('counter', 1);

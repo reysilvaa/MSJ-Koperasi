@@ -4,6 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Helpers\Format_Helper;
 use App\Helpers\Function_Helper;
+use App\Helpers\Koperasi\Approval\ApprovalWorkflowHelper;
+use App\Helpers\Koperasi\Pengajuan\PengajuanPinjamanWorkflowHelper;
+use App\Helpers\Koperasi\Pengajuan\PengajuanPinjamanCalculationHelper;
+use App\Helpers\Koperasi\Pengajuan\PengajuanPinjamanValidationHelper;
+use App\Helpers\Koperasi\Pengajuan\PengajuanPinjamanAuthHelper;
 use App\Models\PengajuanPinjaman;
 use App\Models\Anggotum;
 use App\Models\MasterPaketPinjaman;
@@ -49,12 +54,12 @@ class PengajuanPinjamanController extends Controller
         $query = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
             ->where('isactive', '1');
 
-        // Apply search filter using model method
+        // Apply search filter using helper method
         $search = request('search');
-        $query = PengajuanPinjaman::applySearchFilter($query, $search);
+        $query = PengajuanPinjamanAuthHelper::applySearchFilter($query, $search);
 
-        // Apply authorization rules using model method
-        $query = PengajuanPinjaman::applyAuthorizationRules($query, $data['authorize'], $data['users_rules']);
+        // Apply authorization rules using helper method
+        $query = PengajuanPinjamanAuthHelper::applyAuthorizationRules($query, $data['authorize'], $data['users_rules']);
 
         $collectionData = $query->orderBy('created_at', 'desc')->get();
 
@@ -70,8 +75,8 @@ class PengajuanPinjamanController extends Controller
             ['path' => request()->url(), 'query' => request()->query()]
         );
 
-        // Get summary statistics using model method
-        $data['stats'] = PengajuanPinjaman::getStatistics($collectionData);
+        // Get summary statistics using helper method
+        $data['stats'] = PengajuanPinjamanCalculationHelper::getStatistics($collectionData);
 
         // Log access
         $syslog->log_insert('R', $data['dmenu'], 'Pengajuan Pinjaman List Accessed', '1');
@@ -99,8 +104,8 @@ class PengajuanPinjamanController extends Controller
             ->orderBy('urut')
             ->get();
 
-        // Check if user is anggota (regular member) using model method
-        $userRole = PengajuanPinjaman::getUserRole($data);
+        // Check if user is anggota (regular member) using helper method
+        $userRole = PengajuanPinjamanAuthHelper::getUserRole($data);
         $data['is_anggota_biasa'] = Anggotum::isRegularMember($userRole);
         $data['hide_stock_info'] = $data['is_anggota_biasa']; // Hide stock information for regular members
 
@@ -185,9 +190,9 @@ class PengajuanPinjamanController extends Controller
             return redirect()->back()->withInput();
         }
 
-        // Check for existing pending application using model method
+        // Check for existing pending application using helper method
         // Cek semua status yang masih dalam proses (diajukan, review_admin, review_panitia, review_ketua)
-        if (PengajuanPinjaman::hasExistingPengajuan($anggotaId)) {
+        if (PengajuanPinjamanValidationHelper::hasExistingPengajuan($anggotaId)) {
             Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman yang sedang dalam proses persetujuan. Tidak dapat mengajukan pinjaman baru selama masih ada pengajuan yang pending.');
             Session::flash('class', 'danger');
             return redirect()->back()->withInput();
@@ -196,11 +201,11 @@ class PengajuanPinjamanController extends Controller
         // Check top-up eligibility and validate loan type
         if ($anggotaId) {
             $jenis_pengajuan = PengajuanPinjaman::determineLoanType($anggotaId);
-            
+
             // If system determines it's a top-up, validate eligibility
             if ($jenis_pengajuan === 'top_up') {
                 $eligibility = PengajuanPinjaman::checkTopUpEligibility($anggotaId);
-                
+
                 if (!$eligibility) {
                     // This shouldn't happen if determineLoanType works correctly, but add safety check
                     Session::flash('message', 'Anggota tidak memenuhi syarat untuk pinjaman top-up. Sistem akan memproses sebagai pinjaman baru.');
@@ -215,12 +220,12 @@ class PengajuanPinjamanController extends Controller
                     }
                 }
             }
-            
+
             request()->merge(['jenis_pengajuan' => $jenis_pengajuan]);
         }
 
-        // Validation using model method
-        $validator = Validator::make(request()->all(), PengajuanPinjaman::getValidationRules());
+        // Validation using helper method
+        $validator = Validator::make(request()->all(), PengajuanPinjamanValidationHelper::getValidationRules());
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -246,19 +251,19 @@ class PengajuanPinjamanController extends Controller
             // Get basic data (anggota already retrieved and validated above)
             $paket = MasterPaketPinjaman::find(request('paket_pinjaman_id'));
             $tenor_pinjaman = request('tenor_pinjaman');
-            $tenor_bulan = PengajuanPinjaman::getTenorBulan($tenor_pinjaman);
+            $tenor_bulan = PengajuanPinjamanCalculationHelper::getTenorBulan($tenor_pinjaman);
             $jumlah_paket = request('jumlah_paket_dipilih');
 
-            // Calculate loan amounts using model method
-            $calculations = PengajuanPinjaman::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
+            // Calculate loan amounts using helper method
+            $calculations = PengajuanPinjamanCalculationHelper::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
 
             // Stock validation removed as per koperasi system preferences
             // Stock information is for display only, no blocking validation
             // This follows the preference: "auto-approve loan applications without stock validation"
 
-            // Get user role and username for workflow processing
-            $userRole = PengajuanPinjaman::getUserRole($data);
-            $currentUsername = PengajuanPinjaman::getCurrentUsername($data);
+            // Get user role and username for workflow processing using helper methods
+            $userRole = PengajuanPinjamanAuthHelper::getUserRole($data);
+            $currentUsername = PengajuanPinjamanAuthHelper::getCurrentUsername($data);
 
             // Determine initial status based on user role and approval workflow
             // Enum values: 'draft', 'diajukan', 'review_admin', 'review_panitia', 'review_ketua', 'disetujui', 'ditolak', 'dibatalkan'
@@ -267,17 +272,17 @@ class PengajuanPinjamanController extends Controller
                     $initialStatus = 'disetujui';
                     $approvalDate = now();
                     break;
-                    
+
                 case 'akredt': // Admin Kredit - starts at review_panitia level
                     $initialStatus = 'review_panitia';
                     $approvalDate = null;
                     break;
-                    
+
                 case 'kadmin': // Ketua Admin - starts at review_admin level
                     $initialStatus = 'review_admin';
                     $approvalDate = null;
                     break;
-                    
+
                 default: // Anggota and other users - normal workflow
                     $initialStatus = 'diajukan';
                     $approvalDate = null;
@@ -417,14 +422,14 @@ class PengajuanPinjamanController extends Controller
 
         // Recalculate using model method for display
         $tenor_bulan = PengajuanPinjaman::getTenorBulan($pengajuan->tenor_pinjaman);
-        $jumlah_paket = $pengajuan->jumlah_pinjaman / PengajuanPinjaman::NILAI_PER_PAKET;
+        $jumlah_paket = $pengajuan->jumlah_pinjaman / PengajuanPinjamanCalculationHelper::NILAI_PER_PAKET;
         $calculations = PengajuanPinjaman::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
 
         // Add calculations to data
         $data['cicilan_per_bulan_correct'] = $calculations['cicilan_per_bulan'];
         $data['total_pembayaran_correct'] = $calculations['total_pembayaran'];
         $data['cicilan_pokok'] = $calculations['jumlah_pinjaman'] / $tenor_bulan;
-        $data['bunga_flat'] = $calculations['jumlah_pinjaman'] * (PengajuanPinjaman::BUNGA_PER_BULAN / 100);
+        $data['bunga_flat'] = $calculations['jumlah_pinjaman'] * (PengajuanPinjamanCalculationHelper::BUNGA_PER_BULAN / 100);
 
         // Get additional data for view using Eloquent
         $data['periode_list'] = PeriodePencairan::where('isactive', '1')
@@ -617,11 +622,11 @@ class PengajuanPinjamanController extends Controller
         // Check top-up eligibility and validate loan type
         if ($anggotaId) {
             $jenis_pengajuan = PengajuanPinjaman::determineLoanType($anggotaId);
-            
+
             // If system determines it's a top-up, validate eligibility
             if ($jenis_pengajuan === 'top_up') {
                 $eligibility = PengajuanPinjaman::checkTopUpEligibility($anggotaId);
-                
+
                 if (!$eligibility) {
                     // This shouldn't happen if determineLoanType works correctly, but add safety check
                     Session::flash('message', 'Anggota tidak memenuhi syarat untuk pinjaman top-up. Sistem akan memproses sebagai pinjaman baru.');
@@ -636,7 +641,7 @@ class PengajuanPinjamanController extends Controller
                     }
                 }
             }
-            
+
             request()->merge(['jenis_pengajuan' => $jenis_pengajuan]);
         }
 
