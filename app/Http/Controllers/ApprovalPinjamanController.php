@@ -19,6 +19,7 @@ class ApprovalPinjamanController extends Controller
     /**
      * Display a listing of the resource - KOP202/list
      */
+    
     public function index($data)
     {
         // Export handling - EXACT MSJ Framework pattern
