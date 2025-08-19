@@ -90,4 +90,56 @@ class PeriodePencairan extends Model
 
 		return $created_periods;
 	}
+	/**
+	 * Get statistics for periode list (following MSJ Framework pattern)
+	 */
+	public static function getStatistics($collection)
+	{
+		return [
+			'total_periode' => $collection->count(),
+			'periode_aktif' => $collection->where('isactive', '1')->count(),
+			'periode_nonaktif' => $collection->where('isactive', '0')->count(),
+			'tahun_terbaru' => $collection->max('tahun'),
+		];
+	}
+
+	/**
+	 * Apply search filters to query (following MSJ Framework pattern)
+	 */
+	public static function applySearchFilter($query, $search)
+	{
+		if (!empty($search)) {
+			$query->where(function($q) use ($search) {
+				$q->where('tahun', 'like', "%$search%")
+				  ->orWhere('bulan', 'like', "%$search%");
+			});
+		}
+		return $query;
+	}
+
+	/**
+	 * Apply authorization rules to query (following MSJ Framework pattern)
+	 */
+	public static function applyAuthorizationRules($query, $authorize, $userRoles)
+	{
+		if ($authorize->rules == '1') {
+			$query->where(function ($q) use ($userRoles) {
+				foreach ($userRoles as $role) {
+					$q->orWhereRaw("FIND_IN_SET(?, REPLACE(rules, ' ', ''))", [$role]);
+				}
+			});
+		}
+		return $query;
+	}
+
+	/**
+	 * Get active list for dropdowns (following MSJ Framework pattern)
+	 */
+	public static function getActiveList()
+	{
+		return self::where('isactive', '1')
+			->orderBy('tahun', 'desc')
+			->orderBy('bulan', 'asc')
+			->get();
+	}
 }

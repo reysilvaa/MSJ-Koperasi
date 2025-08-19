@@ -16,67 +16,6 @@ $(document).ready(function() {
         initializePeriodeFormPage();
     }
 
-    // === LIST PAGE FUNCTIONALITY ===
-    function initializePeriodeListPage() {
-        // Initialize DataTables with proper column configuration
-        if ($('#list_KOP301').length) {
-            // Wait for DOM to be fully ready
-            setTimeout(function() {
-                try {
-                    // Destroy existing DataTable if exists
-                    if ($.fn.DataTable.isDataTable('#list_KOP301')) {
-                        $('#list_KOP301').DataTable().destroy();
-                    }
-
-                    // Initialize DataTable with explicit column configuration
-                    $('#list_KOP301').DataTable({
-                        "pageLength": 25,
-                        "order": [[ 2, "desc" ], [ 3, "asc" ]], // Order by Tahun desc, Bulan asc
-                        "columnDefs": [
-                            { "orderable": false, "targets": [0] }, // Disable sorting for Action column
-                            { "width": "110px", "targets": [0] }    // Set width for Action column
-                        ],
-                        "columns": [
-                            null, // Action
-                            null, // No
-                            null, // Tahun
-                            null, // Bulan
-                            null, // Nama Periode
-                            null, // Status
-                            null  // Dibuat
-                        ],
-                        "responsive": true,
-                        "destroy": true,
-                        "language": {
-                            "emptyTable": "Belum ada periode pencairan",
-                            "zeroRecords": "Tidak ada data yang cocok",
-                            "search": "Cari:",
-                            "lengthMenu": "Tampilkan _MENU_ data per halaman",
-                            "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
-                            "infoEmpty": "Menampilkan 0 sampai 0 dari 0 data",
-                            "infoFiltered": "(difilter dari _MAX_ total data)",
-                            "paginate": {
-                                "first": "Pertama",
-                                "last": "Terakhir",
-                                "next": "Selanjutnya",
-                                "previous": "Sebelumnya"
-                            }
-                        }
-                    });
-                } catch (error) {
-                    console.log('DataTable initialization error:', error);
-                }
-            }, 100);
-        }
-
-        console.log('Periode Pencairan list page initialized with DataTables');
-    }
-
-    // === SHOW PAGE FUNCTIONALITY ===
-    function initializePeriodeShowPage() {
-        // Show page specific functionality if needed
-        console.log('Periode Pencairan show page initialized');
-    }
 
     // === FORM PAGE FUNCTIONALITY ===
     function initializePeriodeFormPage() {

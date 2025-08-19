@@ -39,25 +39,32 @@ class PeriodePencairanController extends Controller
             ->orderBy('urut')
             ->get();
 
-        // Get periode pencairan data
-        $query = PeriodePencairan::where('isactive', '1');
+        // Get periode pencairan data - show both active and inactive records
+        $query = PeriodePencairan::query();
 
-        // Apply search filter if provided
+        // Apply search filter
         $search = request('search');
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('tahun', 'like', "%{$search}%")
-                  ->orWhere('bulan', 'like', "%{$search}%");
+                  ->orWhere('bulan', 'like', "%{$search}%")
+                  ->orWhere('nama_periode', 'like', "%{$search}%");
             });
         }
 
-        $collectionData = $query->orderBy('tahun', 'desc')
+        // Apply authorization rules using model method if exists
+        if (method_exists(PeriodePencairan::class, 'applyAuthorizationRules')) {
+            $query = PeriodePencairan::applyAuthorizationRules($query, $data['authorize'], $data['users_rules']);
+        }
+
+        $collectionData = $query->orderBy('isactive', 'desc') // Show active first
+                               ->orderBy('tahun', 'desc')
                                ->orderBy('bulan', 'asc')
                                ->get();
 
         // MSJ Framework standard: Use Laravel Pagination for view compatibility
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
-        $perPage = 25;
+        $perPage = 10;
         $currentItems = $collectionData->slice(($currentPage - 1) * $perPage, $perPage)->all();
         $data['list'] = new LengthAwarePaginator(
             $currentItems,
@@ -67,8 +74,18 @@ class PeriodePencairanController extends Controller
             ['path' => request()->url(), 'query' => request()->query()]
         );
 
-        // For backward compatibility with existing view
-        $data['periods'] = $collectionData;
+        // Get summary statistics
+        if (method_exists(PeriodePencairan::class, 'getStatistics')) {
+            $data['stats'] = PeriodePencairan::getStatistics($collectionData);
+        } else {
+            // Manual statistics calculation
+            $data['stats'] = [
+                'total_periode' => $collectionData->count(),
+                'periode_aktif' => $collectionData->where('isactive', '1')->count(),
+                'periode_nonaktif' => $collectionData->where('isactive', '0')->count(),
+                'tahun_terbaru' => $collectionData->max('tahun')
+            ];
+        }
 
         // Log access
         $syslog->log_insert('R', $data['dmenu'], 'Periode Pencairan List Accessed', '1');
@@ -141,7 +158,35 @@ class PeriodePencairanController extends Controller
             DB::beginTransaction();
 
             // Generate periode
-            $created_periods = PeriodePencairan::generateYearlyPeriods($tahun, $username);
+            if (method_exists(PeriodePencairan::class, 'generateYearlyPeriods')) {
+                $created_periods = PeriodePencairan::generateYearlyPeriods($tahun, $username);
+            } else {
+                // Manual generation if method doesn't exist
+                $created_periods = [];
+                $months = [
+                    1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                    5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                    9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+                ];
+
+                foreach ($months as $bulan => $nama_bulan) {
+                    $existing = PeriodePencairan::where('tahun', $tahun)
+                                              ->where('bulan', $bulan)
+                                              ->first();
+                    
+                    if (!$existing) {
+                        $periode = PeriodePencairan::create([
+                            'tahun' => $tahun,
+                            'bulan' => $bulan,
+                            'nama_periode' => $nama_bulan . ' ' . $tahun,
+                            'isactive' => '1',
+                            'user_create' => $username,
+                            'user_update' => $username
+                        ]);
+                        $created_periods[] = $periode;
+                    }
+                }
+            }
 
             if (count($created_periods) > 0) {
                 // Log success
@@ -325,6 +370,7 @@ class PeriodePencairanController extends Controller
 
     /**
      * Remove the specified resource from storage - KOP301/destroy
+     * This performs soft delete by toggling isactive status
      */
     public function destroy($data)
     {
@@ -348,7 +394,7 @@ class PeriodePencairanController extends Controller
                 return redirect($data['url_menu']);
             }
 
-            // Toggle active status (soft delete)
+            // Toggle active status (soft delete/activate)
             $newStatus = $periode->isactive == '1' ? '0' : '1';
             $periode->update([
                 'isactive' => $newStatus,
@@ -361,7 +407,7 @@ class PeriodePencairanController extends Controller
 
             DB::commit();
 
-            $message = $newStatus == '1' ? 'Aktif Data Berhasil!' : 'NonAktif Data Berhasil!';
+            $message = $newStatus == '1' ? 'Aktifkan Data Berhasil!' : 'Non-Aktifkan Data Berhasil!';
             Session::flash('message', $message);
             Session::flash('class', 'success');
             return redirect($data['url_menu']);
@@ -370,7 +416,7 @@ class PeriodePencairanController extends Controller
             DB::rollback();
 
             // Log error
-            $syslog->log_insert('E', $data['dmenu'], 'Delete Error: ' . $e->getMessage(), '0');
+            $syslog->log_insert('E', $data['dmenu'], 'Toggle Status Error: ' . $e->getMessage(), '0');
 
             Session::flash('message', 'Operasi Gagal!');
             Session::flash('class', 'danger');
