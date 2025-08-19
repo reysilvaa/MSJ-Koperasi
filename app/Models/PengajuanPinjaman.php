@@ -248,6 +248,7 @@ class PengajuanPinjaman extends Model
 
 	/**
 	 * Check eligibility for top-up loan
+	 * Fixed: Removed reference to non-existent 'status' column in cicilan_pinjaman table
 	 */
 	public static function checkTopUpEligibility($anggotaId)
 	{
@@ -255,14 +256,11 @@ class PengajuanPinjaman extends Model
 				'pengajuan_pinjaman.id as pengajuan_id',
 				'pinjaman.id as pinjaman_id',
 				'pinjaman.tenor_bulan',
-				DB::raw('COUNT(cicilan_pinjaman.id) as total_cicilan_lunas'),
-				DB::raw('(pinjaman.tenor_bulan - COUNT(cicilan_pinjaman.id)) as sisa_cicilan')
+				DB::raw('COUNT(CASE WHEN cicilan_pinjaman.tanggal_bayar IS NOT NULL THEN cicilan_pinjaman.id END) as total_cicilan_lunas'),
+				DB::raw('(pinjaman.tenor_bulan - COUNT(CASE WHEN cicilan_pinjaman.tanggal_bayar IS NOT NULL THEN cicilan_pinjaman.id END)) as sisa_cicilan')
 			)
 			->join('pinjaman', 'pengajuan_pinjaman.id', '=', 'pinjaman.pengajuan_pinjaman_id')
-			->leftJoin('cicilan_pinjaman', function($join) {
-				$join->on('pinjaman.id', '=', 'cicilan_pinjaman.pinjaman_id')
-					->where('cicilan_pinjaman.status', '=', 'lunas');
-			})
+			->leftJoin('cicilan_pinjaman', 'pinjaman.id', '=', 'cicilan_pinjaman.pinjaman_id')
 			->where('pengajuan_pinjaman.anggota_id', $anggotaId)
 			->where('pengajuan_pinjaman.status_pengajuan', 'disetujui')
 			->where('pinjaman.status', 'aktif')

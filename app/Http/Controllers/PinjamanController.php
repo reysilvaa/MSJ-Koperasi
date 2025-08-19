@@ -32,9 +32,9 @@ class PinjamanController extends Controller
                 'a.nama_lengkap',
                 'mpp.periode',
                 'pp.id as pengajuan_id',
-                DB::raw('(SELECT COUNT(*) FROM cicilan_pinjaman WHERE pinjaman_id = p.id AND status = "lunas") as cicilan_lunas'),
+                DB::raw('(SELECT COUNT(*) FROM cicilan_pinjaman WHERE pinjaman_id = p.id AND tanggal_bayar IS NOT NULL) as cicilan_lunas'),
                 DB::raw('(SELECT COUNT(*) FROM cicilan_pinjaman WHERE pinjaman_id = p.id) as total_cicilan'),
-                DB::raw('(SELECT SUM(nominal_dibayar) FROM cicilan_pinjaman WHERE pinjaman_id = p.id AND status = "lunas") as total_terbayar')
+                DB::raw('(SELECT SUM(total_bayar) FROM cicilan_pinjaman WHERE pinjaman_id = p.id AND tanggal_bayar IS NOT NULL) as total_terbayar')
             )
             ->where('p.isactive', '1')
             ->orderBy('p.created_at', 'desc')
@@ -77,7 +77,7 @@ class PinjamanController extends Controller
         // Summary untuk potong gaji
         $data['summary_potong_gaji'] = [
             'total_cicilan' => $data['cicilan_potong_gaji']->count(),
-            'total_nominal' => $data['cicilan_potong_gaji']->sum('nominal_angsuran'),
+            'total_nominal' => $data['cicilan_potong_gaji']->sum('total_bayar'),
             'jumlah_anggota' => $data['cicilan_potong_gaji']->unique('nama_lengkap')->count(),
         ];
 
@@ -148,10 +148,10 @@ class PinjamanController extends Controller
         // Calculate summary
         $data['summary'] = [
             'total_cicilan' => $data['cicilan_list']->count(),
-            'cicilan_lunas' => $data['cicilan_list']->where('status', 'lunas')->count(),
-            'cicilan_pending' => $data['cicilan_list']->where('status', 'belum_bayar')->count(),
-            'total_terbayar' => $data['cicilan_list']->where('status', 'lunas')->sum('nominal_dibayar'),
-            'sisa_pembayaran' => $data['pinjaman']->total_angsuran - $data['cicilan_list']->where('status', 'lunas')->sum('nominal_dibayar'),
+            'cicilan_lunas' => $data['cicilan_list']->whereNotNull('tanggal_bayar')->count(),
+            'cicilan_pending' => $data['cicilan_list']->whereNull('tanggal_bayar')->count(),
+            'total_terbayar' => $data['cicilan_list']->whereNotNull('tanggal_bayar')->sum('total_bayar'),
+            'sisa_pembayaran' => $data['pinjaman']->total_angsuran - $data['cicilan_list']->whereNotNull('tanggal_bayar')->sum('total_bayar'),
         ];
 
         return view($data['url'], $data);
@@ -354,16 +354,14 @@ class PinjamanController extends Controller
         // Calculate summary
         $data['summary'] = [
             'total_cicilan' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->count(),
-            'cicilan_lunas' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->where('status', 'lunas')->count(),
-            'cicilan_pending' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->where('status', 'belum_bayar')->count(),
-            'total_terbayar' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->where('status', 'lunas')->sum('nominal_dibayar'),
-            'sisa_pembayaran' => $data['pinjaman']->nominal_pinjaman - DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->where('status', 'lunas')->sum('nominal_dibayar'),
+            'cicilan_lunas' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->whereNotNull('tanggal_bayar')->count(),
+            'cicilan_pending' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->whereNull('tanggal_bayar')->count(),
+            'total_terbayar' => DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->whereNotNull('tanggal_bayar')->sum('total_bayar'),
+            'sisa_pembayaran' => $data['pinjaman']->nominal_pinjaman - DB::table('cicilan_pinjaman')->where('pinjaman_id', $id)->whereNotNull('tanggal_bayar')->sum('total_bayar'),
         ];
 
         return view($data['url'], $data);
     }
-
-
 
     /**
      * Update - Proses pembayaran cicilan - KOP203/update
@@ -397,7 +395,7 @@ class PinjamanController extends Controller
         // Get cicilan data
         $cicilan = DB::table('cicilan_pinjaman')->where('id', $cicilan_id)->first();
 
-        if (!$cicilan || $cicilan->status == 'lunas') {
+        if (!$cicilan || $cicilan->tanggal_bayar !== null) {
             $data['url_menu'] = 'error';
             $data['title_group'] = 'Error';
             $data['title_menu'] = 'Error';
@@ -409,12 +407,9 @@ class PinjamanController extends Controller
         $updated = DB::table('cicilan_pinjaman')
             ->where('id', $cicilan_id)
             ->update([
-                'status' => 'lunas',
-                'nominal_dibayar' => $nominal_dibayar,
                 'tanggal_bayar' => $tanggal_bayar,
                 'metode_pembayaran' => $metode_pembayaran,
                 'keterangan' => $keterangan,
-                'sisa_bayar' => 0,
                 'updated_at' => now(),
                 'user_update' => $data['user_login']->username
             ]);
@@ -423,7 +418,7 @@ class PinjamanController extends Controller
             // Check if all cicilan sudah lunas
             $remaining_cicilan = DB::table('cicilan_pinjaman')
                 ->where('pinjaman_id', $cicilan->pinjaman_id)
-                ->where('status', 'belum_bayar')
+                ->whereNull('tanggal_bayar')
                 ->count();
 
             // If all cicilan lunas, update pinjaman status
@@ -483,14 +478,12 @@ class PinjamanController extends Controller
             foreach ($cicilan_ids as $cicilan_id) {
                 $cicilan = DB::table('cicilan_pinjaman')->where('id', $cicilan_id)->first();
 
-                if ($cicilan && $cicilan->status == 'belum_bayar') {
+                if ($cicilan && $cicilan->tanggal_bayar === null) {
                     // Update cicilan menjadi lunas dengan potong gaji
                     DB::table('cicilan_pinjaman')
                         ->where('id', $cicilan_id)
                         ->update([
-                            'status' => 'lunas',
-                            'nominal_dibayar' => $cicilan->nominal_angsuran,
-                            'tanggal_dibayar' => $tanggal_potong,
+                            'tanggal_bayar' => $tanggal_potong,
                             'metode_pembayaran' => 'potong_gaji',
                             'keterangan' => 'Potong gaji bulan ' . date('F Y', strtotime($bulan_potong . '-01')),
                             'updated_at' => now(),
@@ -500,7 +493,7 @@ class PinjamanController extends Controller
                     // Check if all cicilan sudah lunas untuk update status pinjaman
                     $remaining_cicilan = DB::table('cicilan_pinjaman')
                         ->where('pinjaman_id', $cicilan->pinjaman_id)
-                        ->where('status', 'belum_bayar')
+                        ->whereNull('tanggal_bayar')
                         ->count();
 
                     if ($remaining_cicilan == 0) {
