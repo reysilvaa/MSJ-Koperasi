@@ -8,6 +8,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use App\Helpers\Koperasi\Approval\ApprovalWorkflowHelper;
 
 /**
  * Class ApprovalHistory
@@ -51,56 +52,6 @@ class ApprovalHistory extends Model
 		'user_update'
 	];
 
-	/**
-	 * Role to level mapping for approval workflow
-	 */
-	public const ROLE_LEVEL_MAP = [
-		'kadmin' => 'Ketua Admin',
-		'akredt' => 'Admin Kredit', 
-		'ketuum' => 'Ketua Umum'
-	];
-
-	/**
-	 * Status transition mapping for approval workflow
-	 * FIXED: Proper 3-level approval workflow
-	 */
-	public const STATUS_MAP = [
-		'kadmin' => ['approve' => 'review_admin', 'reject' => 'ditolak'],      // Level 1: kadmin -> review_admin
-		'akredt' => ['approve' => 'review_panitia', 'reject' => 'ditolak'],    // Level 2: akredt -> review_panitia  
-		'ketuum' => ['approve' => 'disetujui', 'reject' => 'ditolak'],         // Level 3: ketuum -> disetujui (FINAL)
-	];
-
-	/**
-	 * Valid workflow transitions
-	 * FIXED: Proper workflow sequence
-	 */
-	public const VALID_WORKFLOW = [
-		'diajukan' => ['kadmin'],           // Status 'diajukan' hanya bisa di-approve oleh kadmin
-		'review_admin' => ['akredt'],       // Status 'review_admin' hanya bisa di-approve oleh akredt
-		'review_panitia' => ['ketuum'],     // Status 'review_panitia' hanya bisa di-approve oleh ketuum
-	];
-
-	/**
-	 * Approval order mapping
-	 */
-	public const APPROVAL_ORDER = [
-		'kadmin' => 1,  // Level 1
-		'akredt' => 2,  // Level 2
-		'ketuum' => 3,  // Level 3 (Final)
-	];
-
-	/**
-	 * Status descriptions for better understanding
-	 */
-	public const STATUS_DESCRIPTIONS = [
-		'draft' => 'Draft - Belum diajukan',
-		'diajukan' => 'Diajukan - Menunggu review Ketua Admin',
-		'review_admin' => 'Review Admin - Menunggu review Admin Kredit', 
-		'review_panitia' => 'Review Panitia - Menunggu approval Ketua Umum',
-		'disetujui' => 'Disetujui - Pengajuan telah disetujui semua level',
-		'ditolak' => 'Ditolak - Pengajuan ditolak'
-	];
-
 	public function pengajuan_pinjaman()
 	{
 		return $this->belongsTo(PengajuanPinjaman::class);
@@ -112,118 +63,101 @@ class ApprovalHistory extends Model
 	}
 
 	/**
-	 * Get approval level for a given role
+	 * Delegate to ApprovalWorkflowHelper for approval level
+	 * @deprecated Use ApprovalWorkflowHelper::getApprovalLevel() instead
 	 */
 	public static function getApprovalLevel($role)
 	{
-		return self::ROLE_LEVEL_MAP[$role] ?? $role;
+		return ApprovalWorkflowHelper::getApprovalLevel($role);
 	}
 
 	/**
-	 * Check if user has already approved this application at their role level
+	 * Delegate to ApprovalWorkflowHelper for existing approval check
+	 * @deprecated Use ApprovalWorkflowHelper::hasExistingApproval() instead
 	 */
 	public static function hasExistingApproval($pengajuan_id, $username, $role)
 	{
-		$level = self::getApprovalLevel($role);
-
-		return self::where('pengajuan_pinjaman_id', $pengajuan_id)
-			->where('user_create', $username)
-			->where('level_approval', $level)
-			->where('isactive', '1')
-			->exists();
+		return ApprovalWorkflowHelper::hasExistingApproval($pengajuan_id, $username, $role);
 	}
 
 	/**
-	 * Validate workflow permissions for current user and status
+	 * Delegate to ApprovalWorkflowHelper for workflow permissions
+	 * @deprecated Use ApprovalWorkflowHelper::validateWorkflowPermissions() instead
 	 */
 	public static function validateWorkflowPermissions($currentStatus, $userRole)
 	{
-		return isset(self::VALID_WORKFLOW[$currentStatus]) &&
-			   in_array($userRole, self::VALID_WORKFLOW[$currentStatus]);
+		return ApprovalWorkflowHelper::validateWorkflowPermissions($currentStatus, $userRole);
 	}
 
 	/**
-	 * Get next status based on role and action
+	 * Delegate to ApprovalWorkflowHelper for next status
+	 * @deprecated Use ApprovalWorkflowHelper::getNextStatus() instead
 	 */
 	public static function getNextStatus($userRole, $action)
 	{
-		return self::STATUS_MAP[$userRole][$action] ?? 'ditolak';
+		return ApprovalWorkflowHelper::getNextStatus($userRole, $action);
 	}
 
 	/**
-	 * Get approval order for role
+	 * Delegate to ApprovalWorkflowHelper for approval order
+	 * @deprecated Use ApprovalWorkflowHelper::getApprovalOrder() instead
 	 */
 	public static function getApprovalOrder($userRole)
 	{
-		return self::APPROVAL_ORDER[$userRole] ?? 0;
+		return ApprovalWorkflowHelper::getApprovalOrder($userRole);
 	}
 
 	/**
-	 * Get status description
+	 * Delegate to ApprovalWorkflowHelper for status description
+	 * @deprecated Use ApprovalWorkflowHelper::getStatusDescription() instead
 	 */
 	public static function getStatusDescription($status)
 	{
-		return self::STATUS_DESCRIPTIONS[$status] ?? $status;
+		return ApprovalWorkflowHelper::getStatusDescription($status);
 	}
 
 	/**
-	 * Check if status is final (approved or rejected)
+	 * Delegate to ApprovalWorkflowHelper for final status check
+	 * @deprecated Use ApprovalWorkflowHelper::isFinalStatus() instead
 	 */
 	public static function isFinalStatus($status)
 	{
-		return in_array($status, ['disetujui', 'ditolak']);
+		return ApprovalWorkflowHelper::isFinalStatus($status);
 	}
 
 	/**
-	 * Get next required approver role for current status
+	 * Delegate to ApprovalWorkflowHelper for next approver role
+	 * @deprecated Use ApprovalWorkflowHelper::getNextApproverRole() instead
 	 */
 	public static function getNextApproverRole($currentStatus)
 	{
-		$nextRoles = self::VALID_WORKFLOW[$currentStatus] ?? [];
-		return !empty($nextRoles) ? $nextRoles[0] : null;
+		return ApprovalWorkflowHelper::getNextApproverRole($currentStatus);
 	}
 
 	/**
-	 * Get approval progress percentage
+	 * Delegate to ApprovalWorkflowHelper for approval progress
+	 * @deprecated Use ApprovalWorkflowHelper::getApprovalProgress() instead
 	 */
 	public static function getApprovalProgress($status)
 	{
-		$progressMap = [
-			'draft' => 0,
-			'diajukan' => 25,
-			'review_admin' => 50,
-			'review_panitia' => 75,
-			'disetujui' => 100,
-			'ditolak' => 0
-		];
-
-		return $progressMap[$status] ?? 0;
+		return ApprovalWorkflowHelper::getApprovalProgress($status);
 	}
 
 	/**
-	 * Get all approval history for a pengajuan with proper ordering
+	 * Delegate to ApprovalWorkflowHelper for approval history
+	 * @deprecated Use ApprovalWorkflowHelper::getApprovalHistoryForPengajuan() instead
 	 */
 	public static function getApprovalHistoryForPengajuan($pengajuan_id)
 	{
-		return self::where('pengajuan_pinjaman_id', $pengajuan_id)
-			->where('isactive', '1')
-			->orderBy('urutan', 'asc')
-			->orderBy('created_at', 'asc')
-			->get();
+		return ApprovalWorkflowHelper::getApprovalHistoryForPengajuan($pengajuan_id);
 	}
 
 	/**
-	 * Check if all required approvals are completed
+	 * Delegate to ApprovalWorkflowHelper for fully approved check
+	 * @deprecated Use ApprovalWorkflowHelper::isFullyApproved() instead
 	 */
 	public static function isFullyApproved($pengajuan_id)
 	{
-		$requiredLevels = ['Ketua Admin', 'Admin Kredit', 'Ketua Umum'];
-		$approvedLevels = self::where('pengajuan_pinjaman_id', $pengajuan_id)
-			->where('status_approval', 'approved')
-			->where('isactive', '1')
-			->pluck('level_approval')
-			->toArray();
-
-		return count(array_intersect($requiredLevels, $approvedLevels)) === count($requiredLevels);
+		return ApprovalWorkflowHelper::isFullyApproved($pengajuan_id);
 	}
 }
