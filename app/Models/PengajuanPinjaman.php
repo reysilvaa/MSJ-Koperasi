@@ -103,27 +103,12 @@ class PengajuanPinjaman extends Model
 		return $this->belongsTo(Anggotum::class, 'anggota_id');
 	}
 
-	public function anggotum()
-	{
-		return $this->belongsTo(Anggotum::class, 'anggota_id');
-	}
-
 	public function paketPinjaman()
 	{
 		return $this->belongsTo(MasterPaketPinjaman::class, 'paket_pinjaman_id');
 	}
 
-	public function master_paket_pinjaman()
-	{
-		return $this->belongsTo(MasterPaketPinjaman::class, 'paket_pinjaman_id');
-	}
-
 	public function periodePencairan()
-	{
-		return $this->belongsTo(PeriodePencairan::class, 'periode_pencairan_id');
-	}
-
-	public function periode_pencairan()
 	{
 		return $this->belongsTo(PeriodePencairan::class, 'periode_pencairan_id');
 	}
@@ -153,7 +138,7 @@ class PengajuanPinjaman extends Model
 	 */
 	public static function filterByRole($role, $username)
 	{
-		$query = self::with(['anggotum', 'master_paket_pinjaman', 'periode_pencairan'])
+		$query = self::with(['anggota', 'paketPinjaman', 'periodePencairan'])
 			->where('isactive', '1');
 
 		switch ($role) {
@@ -231,12 +216,24 @@ class PengajuanPinjaman extends Model
 	];
 
 	/**
-	 * Check if anggota has existing pending application
+	 * Check if anggota has existing pengajuan with specific statuses
+	 * This unified method handles both pending application checks and broader status validation
 	 */
-	public static function hasExistingPendingApplication($anggotaId, $excludeId = null)
+	public static function hasExistingPengajuan($anggotaId, $excludeId = null, $statuses = null)
 	{
+		// Default statuses to check for existing pengajuan
+		// If no statuses specified, check for all pending/review statuses
+		if ($statuses === null) {
+			$statuses = ['diajukan', 'review_admin', 'review_panitia', 'review_ketua'];
+		}
+
+		// Handle single status as string (for backward compatibility)
+		if (is_string($statuses)) {
+			$statuses = [$statuses];
+		}
+
 		$query = self::where('anggota_id', $anggotaId)
-			->where('status_pengajuan', 'diajukan')
+			->whereIn('status_pengajuan', $statuses)
 			->where('isactive', '1');
 
 		if ($excludeId) {
@@ -296,6 +293,8 @@ class PengajuanPinjaman extends Model
 			'bunga_per_bulan' => self::BUNGA_PER_BULAN,
 			'cicilan_per_bulan' => $cicilanPerBulan,
 			'total_pembayaran' => $totalPembayaran,
+			'angsuran_pokok' => $cicilanPokok,
+			'angsuran_bunga' => $bungaFlat,
 		];
 	}
 
@@ -352,7 +351,7 @@ class PengajuanPinjaman extends Model
 		if (!empty($search)) {
 			$query->where(function($q) use ($search) {
 				$q->where('id', 'like', "%$search%")
-				  ->orWhereHas('anggotum', function($qa) use ($search) {
+				  ->orWhereHas('anggota', function($qa) use ($search) {
 					  $qa->where('nama_lengkap', 'like', "%$search%")
 						->orWhere('nomor_anggota', 'like', "%$search%");
 				  });
@@ -374,5 +373,138 @@ class PengajuanPinjaman extends Model
 			});
 		}
 		return $query;
+	}
+
+	/**
+	 * Create approval history records based on user role and bypass level
+	 * Unified function to handle all approval history creation scenarios
+	 */
+	public function createApprovalHistory($userRole, $currentUsername)
+	{
+		$approvalLevels = [
+			1 => ['level' => 'Ketua Admin', 'role' => 'kadmin'],
+			2 => ['level' => 'Admin Kredit', 'role' => 'akredt'],
+			3 => ['level' => 'Ketua Umum', 'role' => 'ketuum']
+		];
+
+		switch ($userRole) {
+			case 'kadmin': // Ketua Admin - auto-approve their own level
+				ApprovalHistory::create([
+					'pengajuan_pinjaman_id' => $this->id,
+					'level_approval' => $approvalLevels[1]['level'],
+					'status_approval' => 'approved',
+					'catatan' => 'Auto-approved by Admin Koperasi (level 1)',
+					'tanggal_approval' => now(),
+					'urutan' => 1,
+					'isactive' => '1',
+					'user_create' => $currentUsername,
+				]);
+				break;
+
+			case 'ketuum': // Ketua Umum - bypass all levels (1, 2, 3)
+				// Level 1 - Ketua Admin (bypassed)
+				ApprovalHistory::create([
+					'pengajuan_pinjaman_id' => $this->id,
+					'level_approval' => $approvalLevels[1]['level'],
+					'status_approval' => 'approved',
+					'catatan' => 'Auto-approved by Ketua Umum (bypass level 1)',
+					'tanggal_approval' => now(),
+					'urutan' => 1,
+					'isactive' => '1',
+					'user_create' => $currentUsername,
+				]);
+
+				// Level 2 - Admin Kredit (bypassed)
+				ApprovalHistory::create([
+					'pengajuan_pinjaman_id' => $this->id,
+					'level_approval' => $approvalLevels[2]['level'],
+					'status_approval' => 'approved',
+					'catatan' => 'Auto-approved by Ketua Umum (bypass level 2)',
+					'tanggal_approval' => now(),
+					'urutan' => 2,
+					'isactive' => '1',
+					'user_create' => $currentUsername,
+				]);
+
+				// Level 3 - Ketua Umum (their own level)
+				ApprovalHistory::create([
+					'pengajuan_pinjaman_id' => $this->id,
+					'level_approval' => $approvalLevels[3]['level'],
+					'status_approval' => 'approved',
+					'catatan' => 'Approved by Ketua Umum during submission',
+					'tanggal_approval' => now(),
+					'urutan' => 3,
+					'isactive' => '1',
+					'user_create' => $currentUsername,
+				]);
+				break;
+		}
+	}
+
+	/**
+	 * Create active loan record for approved pengajuan
+	 */
+	public function createActiveLoan($jumlahPaket, $tenorPinjaman, $formatHelper, $currentUsername)
+	{
+		// Use existing method to get tenor in months
+		$tenorBulan = self::getTenorBulan($tenorPinjaman);
+
+		// Use existing calculateLoanAmounts method to get all calculations
+		$calculations = self::calculateLoanAmounts($jumlahPaket, $tenorBulan);
+
+		// Calculate dates
+		$tanggalPencairan = now();
+		$tanggalJatuhTempo = now()->addMonths($tenorBulan);
+		$tanggalAngsuranPertama = now()->addMonth();
+
+		return Pinjaman::create([
+			'nomor_pinjaman' => $formatHelper->IDFormat('KOP301'),
+			'pengajuan_pinjaman_id' => $this->id,
+			'anggota_id' => $this->anggota_id,
+			'nominal_pinjaman' => $calculations['jumlah_pinjaman'],
+			'bunga_per_bulan' => $calculations['bunga_per_bulan'],
+			'tenor_bulan' => $tenorBulan,
+			'angsuran_pokok' => $calculations['angsuran_pokok'],
+			'angsuran_bunga' => $calculations['angsuran_bunga'],
+			'total_angsuran' => $calculations['cicilan_per_bulan'],
+			'tanggal_pencairan' => $tanggalPencairan,
+			'tanggal_jatuh_tempo' => $tanggalJatuhTempo,
+			'tanggal_angsuran_pertama' => $tanggalAngsuranPertama,
+			'status' => 'aktif',
+			'sisa_pokok' => $calculations['jumlah_pinjaman'],
+			'total_dibayar' => 0,
+			'angsuran_ke' => 0,
+			'isactive' => '1',
+			'user_create' => $currentUsername,
+		]);
+	}
+
+	/**
+	 * Process pengajuan creation with proper workflow
+	 * Handles all user roles and their respective approval workflows
+	 */
+	public function processAfterCreation($userRole, $currentUsername, $jumlahPaket = null, $tenorPinjaman = null, $formatHelper = null)
+	{
+		// Create approval history based on user role
+		$this->createApprovalHistory($userRole, $currentUsername);
+
+		// Special handling for Ketua Umum - complete approval workflow
+		if ($userRole === 'ketuum') {
+			// Update status to approved immediately
+			$this->update([
+				'status_pengajuan' => 'disetujui',
+				'tanggal_approval' => now(),
+				'approved_by' => $currentUsername,
+			]);
+
+			// Create active loan if parameters are provided
+			if ($jumlahPaket && $tenorPinjaman && $formatHelper) {
+				$this->createActiveLoan($jumlahPaket, $tenorPinjaman, $formatHelper, $currentUsername);
+			}
+
+			return true; // Indicates complete bypass was processed
+		}
+
+		return false; // Indicates normal or partial bypass workflow
 	}
 }

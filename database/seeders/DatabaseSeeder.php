@@ -574,7 +574,7 @@ class DatabaseSeeder extends Seeder
             KoperasiReportIuranAnggota::class,
             KoperasiAuthSeeder::class,
             StockPaketSeeder::class,
-            KoperasiDummyDataSeeder::class,
+            // KoperasiDummyDataSeeder::class,
         ]);
     }
 }

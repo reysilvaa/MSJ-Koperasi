@@ -46,7 +46,7 @@ class PengajuanPinjamanController extends Controller
             ->get();
 
         // Get pengajuan pinjaman data using model methods (MSJ Framework standard)
-        $query = PengajuanPinjaman::with(['anggotum', 'master_paket_pinjaman', 'periode_pencairan'])
+        $query = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
             ->where('isactive', '1');
 
         // Apply search filter using model method
@@ -186,15 +186,36 @@ class PengajuanPinjamanController extends Controller
         }
 
         // Check for existing pending application using model method
-        if (PengajuanPinjaman::hasExistingPendingApplication($anggotaId)) {
-            Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status \'Diajukan\'. Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
+        // Cek semua status yang masih dalam proses (diajukan, review_admin, review_panitia, review_ketua)
+        if (PengajuanPinjaman::hasExistingPengajuan($anggotaId)) {
+            Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman yang sedang dalam proses persetujuan. Tidak dapat mengajukan pinjaman baru selama masih ada pengajuan yang pending.');
             Session::flash('class', 'danger');
             return redirect()->back()->withInput();
         }
 
-        // Automatic eligibility check and set jenis_pengajuan using model method
+        // Check top-up eligibility and validate loan type
         if ($anggotaId) {
             $jenis_pengajuan = PengajuanPinjaman::determineLoanType($anggotaId);
+            
+            // If system determines it's a top-up, validate eligibility
+            if ($jenis_pengajuan === 'top_up') {
+                $eligibility = PengajuanPinjaman::checkTopUpEligibility($anggotaId);
+                
+                if (!$eligibility) {
+                    // This shouldn't happen if determineLoanType works correctly, but add safety check
+                    Session::flash('message', 'Anggota tidak memenuhi syarat untuk pinjaman top-up. Sistem akan memproses sebagai pinjaman baru.');
+                    Session::flash('class', 'warning');
+                    $jenis_pengajuan = 'baru';
+                } else {
+                    // Validate that member has only 2 or fewer remaining installments
+                    if ($eligibility->sisa_cicilan > 2) {
+                        Session::flash('message', 'Pinjaman top-up hanya dapat diajukan jika sisa cicilan 2 bulan atau kurang. Sisa cicilan Anda: ' . $eligibility->sisa_cicilan . ' bulan. Sistem akan memproses sebagai pinjaman baru.');
+                        Session::flash('class', 'warning');
+                        $jenis_pengajuan = 'baru';
+                    }
+                }
+            }
+            
             request()->merge(['jenis_pengajuan' => $jenis_pengajuan]);
         }
 
@@ -235,15 +256,33 @@ class PengajuanPinjamanController extends Controller
             // Stock information is for display only, no blocking validation
             // This follows the preference: "auto-approve loan applications without stock validation"
 
-            // Determine initial status based on user role
-            // Admin users (kadmin, akredt, atrans, ketuum) get automatic approval bypass
-            // Regular members (anggot) go through standard approval workflow
+            // Get user role and username for workflow processing
             $userRole = PengajuanPinjaman::getUserRole($data);
             $currentUsername = PengajuanPinjaman::getCurrentUsername($data);
-            $isAdminUser = PengajuanPinjaman::isAdminUser($data);
 
-            $initialStatus = $isAdminUser ? 'disetujui' : 'diajukan';
-            $approvalDate = $isAdminUser ? now() : null;
+            // Determine initial status based on user role and approval workflow
+            // Enum values: 'draft', 'diajukan', 'review_admin', 'review_panitia', 'review_ketua', 'disetujui', 'ditolak', 'dibatalkan'
+            switch ($userRole) {
+                case 'ketuum': // Ketua Umum - can auto-approve (final level)
+                    $initialStatus = 'disetujui';
+                    $approvalDate = now();
+                    break;
+                    
+                case 'akredt': // Admin Kredit - starts at review_panitia level
+                    $initialStatus = 'review_panitia';
+                    $approvalDate = null;
+                    break;
+                    
+                case 'kadmin': // Ketua Admin - starts at review_admin level
+                    $initialStatus = 'review_admin';
+                    $approvalDate = null;
+                    break;
+                    
+                default: // Anggota and other users - normal workflow
+                    $initialStatus = 'diajukan';
+                    $approvalDate = null;
+                    break;
+            }
 
             // Create pengajuan using calculated values
             $pengajuan = PengajuanPinjaman::create([
@@ -262,7 +301,7 @@ class PengajuanPinjamanController extends Controller
                 'status_pencairan' => 'belum_cair',
                 'tanggal_pengajuan' => now(),
                 'tanggal_approval' => $approvalDate,
-                'approved_by' => $isAdminUser ? $currentUsername : null,
+                'approved_by' => ($userRole === 'kadmin' || $userRole === 'ketuum') ? $currentUsername : null,
                 'isactive' => '1',
                 'user_create' => $currentUsername,
                 'created_at' => now(),
@@ -275,46 +314,8 @@ class PengajuanPinjamanController extends Controller
                 $paket->updateStockUsage($jumlah_paket, 'increment');
             }
 
-            // Admin users bypass approval workflow - automatically create active loan record
-            // This streamlines the process for admin-created applications while maintaining
-            // audit trail through user_create field
-            if ($isAdminUser) {
-                // Calculate tenor in months from string like "6 bulan"
-                $tenor_bulan = (int) filter_var($tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
-
-                // Calculate angsuran details
-                $nominal_pinjaman = $calculations['jumlah_pinjaman'];
-                $bunga_per_bulan = $calculations['bunga_per_bulan'];
-                $angsuran_pokok = $nominal_pinjaman / $tenor_bulan;
-                $angsuran_bunga = $nominal_pinjaman * ($bunga_per_bulan / 100);
-                $total_angsuran = $angsuran_pokok + $angsuran_bunga;
-
-                // Calculate dates
-                $tanggal_pencairan = now();
-                $tanggal_jatuh_tempo = now()->addMonths($tenor_bulan);
-                $tanggal_angsuran_pertama = now()->addMonth();
-
-                Pinjaman::create([
-                    'nomor_pinjaman' => $data['format']->IDFormat('KOP301'),
-                    'pengajuan_pinjaman_id' => $pengajuan->id,
-                    'anggota_id' => $pengajuan->anggota_id,
-                    'nominal_pinjaman' => $nominal_pinjaman,
-                    'bunga_per_bulan' => $bunga_per_bulan,
-                    'tenor_bulan' => $tenor_bulan,
-                    'angsuran_pokok' => $angsuran_pokok,
-                    'angsuran_bunga' => $angsuran_bunga,
-                    'total_angsuran' => $total_angsuran,
-                    'tanggal_pencairan' => $tanggal_pencairan,
-                    'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
-                    'tanggal_angsuran_pertama' => $tanggal_angsuran_pertama,
-                    'status' => 'aktif',
-                    'sisa_pokok' => $nominal_pinjaman,
-                    'total_dibayar' => 0,
-                    'angsuran_ke' => 0,
-                    'isactive' => '1',
-                    'user_create' => $currentUsername,
-                ]);
-            }
+            // Process approval workflow using model method
+            $isBypass = $pengajuan->processAfterCreation($userRole, $currentUsername, $jumlah_paket, $tenor_pinjaman, $data['format']);
 
             DB::commit();
 
@@ -324,11 +325,11 @@ class PengajuanPinjamanController extends Controller
             // Create appropriate success message based on user role and approval status
             $jenis_text = $jenis_pengajuan === 'top_up' ? 'Top Up (otomatis terdeteksi)' : 'Pinjaman Baru';
 
-            if ($isAdminUser) {
+            if ($userRole === 'ketuum') {
                 Session::flash('message', 'Pengajuan pinjaman berhasil dibuat dan otomatis disetujui sebagai: ' . $jenis_text . '. Pinjaman telah aktif dan siap dicairkan.');
                 Session::flash('class', 'success');
             } else {
-                Session::flash('message', 'Pengajuan pinjaman berhasil dibuat sebagai: ' . $jenis_text . '. Menunggu proses approval.');
+                Session::flash('message', 'Pengajuan pinjaman berhasil dibuat sebagai: ' . $jenis_text . '. Status: Diajukan, menunggu proses approval.');
                 Session::flash('class', 'success');
             }
 
@@ -606,15 +607,36 @@ class PengajuanPinjamanController extends Controller
         }
 
         // Check for existing pending application using model method (excluding current one)
-        if (PengajuanPinjaman::hasExistingPendingApplication($anggotaId, $id)) {
-            Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman dengan status \'Diajukan\'. Tidak dapat mengajukan pinjaman baru selama masih dalam proses persetujuan.');
+        // Cek semua status yang masih dalam proses (diajukan, review_admin, review_panitia, review_ketua)
+        if (PengajuanPinjaman::hasExistingPengajuan($anggotaId, $id)) {
+            Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman yang sedang dalam proses persetujuan. Tidak dapat mengedit pengajuan ini selama masih ada pengajuan lain yang pending.');
             Session::flash('class', 'danger');
             return redirect()->back()->withInput();
         }
 
-        // Automatic eligibility check using model method
+        // Check top-up eligibility and validate loan type
         if ($anggotaId) {
             $jenis_pengajuan = PengajuanPinjaman::determineLoanType($anggotaId);
+            
+            // If system determines it's a top-up, validate eligibility
+            if ($jenis_pengajuan === 'top_up') {
+                $eligibility = PengajuanPinjaman::checkTopUpEligibility($anggotaId);
+                
+                if (!$eligibility) {
+                    // This shouldn't happen if determineLoanType works correctly, but add safety check
+                    Session::flash('message', 'Anggota tidak memenuhi syarat untuk pinjaman top-up. Sistem akan memproses sebagai pinjaman baru.');
+                    Session::flash('class', 'warning');
+                    $jenis_pengajuan = 'baru';
+                } else {
+                    // Validate that member has only 2 or fewer remaining installments
+                    if ($eligibility->sisa_cicilan > 2) {
+                        Session::flash('message', 'Pinjaman top-up hanya dapat diajukan jika sisa cicilan 2 bulan atau kurang. Sisa cicilan Anda: ' . $eligibility->sisa_cicilan . ' bulan. Sistem akan memproses sebagai pinjaman baru.');
+                        Session::flash('class', 'warning');
+                        $jenis_pengajuan = 'baru';
+                    }
+                }
+            }
+            
             request()->merge(['jenis_pengajuan' => $jenis_pengajuan]);
         }
 
@@ -908,7 +930,7 @@ class PengajuanPinjamanController extends Controller
 
         try {
             // Get data for export using same logic as index
-            $query = PengajuanPinjaman::with(['anggotum', 'master_paket_pinjaman', 'periode_pencairan'])
+            $query = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
                 ->where('isactive', '1');
 
             // Apply search filter if exists
@@ -925,8 +947,8 @@ class PengajuanPinjamanController extends Controller
                 $data[] = [
                     $index + 1,
                     $pengajuan->nomor_pengajuan ?? '-',
-                    $pengajuan->anggotum->nama_lengkap ?? '-',
-                    $pengajuan->master_paket_pinjaman->periode ?? '-',
+                    $pengajuan->anggota->nama_lengkap ?? '-',
+                    $pengajuan->paketPinjaman->periode ?? '-',
                     'Rp ' . number_format($pengajuan->jumlah_pinjaman, 0, ',', '.'),
                     $pengajuan->tenor_pinjaman,
                     ucfirst(str_replace('_', ' ', $pengajuan->status_pengajuan)),

@@ -321,41 +321,7 @@ class ApprovalPinjamanController extends Controller
 
             // If final approval, create pinjaman record
             if ($new_status === 'disetujui') {
-                // Calculate tenor in months from string like "6 bulan"
-                $tenor_bulan = (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
-
-                // Calculate angsuran details
-                $nominal_pinjaman = $pengajuan->jumlah_pinjaman;
-                $bunga_per_bulan = $pengajuan->bunga_per_bulan;
-                $angsuran_pokok = $nominal_pinjaman / $tenor_bulan;
-                $angsuran_bunga = $nominal_pinjaman * ($bunga_per_bulan / 100);
-                $total_angsuran = $angsuran_pokok + $angsuran_bunga;
-
-                // Calculate dates
-                $tanggal_pencairan = now();
-                $tanggal_jatuh_tempo = now()->addMonths($tenor_bulan);
-                $tanggal_angsuran_pertama = now()->addMonth();
-
-                Pinjaman::create([
-                    'nomor_pinjaman' => $data['format']->IDFormat('KOP301'),
-                    'pengajuan_pinjaman_id' => $id,
-                    'anggota_id' => $pengajuan->anggota_id,
-                    'nominal_pinjaman' => $nominal_pinjaman,
-                    'bunga_per_bulan' => $bunga_per_bulan,
-                    'tenor_bulan' => $tenor_bulan,
-                    'angsuran_pokok' => $angsuran_pokok,
-                    'angsuran_bunga' => $angsuran_bunga,
-                    'total_angsuran' => $total_angsuran,
-                    'tanggal_pencairan' => $tanggal_pencairan,
-                    'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
-                    'tanggal_angsuran_pertama' => $tanggal_angsuran_pertama,
-                    'status' => 'aktif',
-                    'sisa_pokok' => $nominal_pinjaman,
-                    'total_dibayar' => 0,
-                    'angsuran_ke' => 0,
-                    'isactive' => '1',
-                    'user_create' => $approved_by,
-                ]);
+                $this->createPinjamanRecord($pengajuan, $data['format'], $approved_by);
             }
 
             DB::commit();
@@ -379,50 +345,112 @@ class ApprovalPinjamanController extends Controller
         return redirect($data['url_menu']);
     }
 
-
-
-
-
     /**
      * Helper method to create pinjaman record when approved
+     * Fixed: Added retry mechanism for unique nomor_pinjaman generation
      */
-    private function createPinjamanRecord($pengajuan, $format)
+    private function createPinjamanRecord($pengajuan, $format, $approved_by)
     {
-        // Calculate tenor in months from string like "6 bulan"
-        $tenor_bulan = (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
+        $maxRetries = 5;
+        $retryCount = 0;
+        
+        while ($retryCount < $maxRetries) {
+            try {
+                // Calculate tenor in months from string like "6 bulan"
+                $tenor_bulan = (int) filter_var($pengajuan->tenor_pinjaman, FILTER_SANITIZE_NUMBER_INT);
 
-        // Calculate angsuran details
-        $nominal_pinjaman = $pengajuan->jumlah_pinjaman;
-        $bunga_per_bulan = $pengajuan->bunga_per_bulan;
-        $angsuran_pokok = $nominal_pinjaman / $tenor_bulan;
-        $angsuran_bunga = $nominal_pinjaman * ($bunga_per_bulan / 100);
-        $total_angsuran = $angsuran_pokok + $angsuran_bunga;
+                // Calculate angsuran details
+                $nominal_pinjaman = $pengajuan->jumlah_pinjaman;
+                $bunga_per_bulan = $pengajuan->bunga_per_bulan;
+                $angsuran_pokok = $nominal_pinjaman / $tenor_bulan;
+                $angsuran_bunga = $nominal_pinjaman * ($bunga_per_bulan / 100);
+                $total_angsuran = $angsuran_pokok + $angsuran_bunga;
 
-        // Calculate dates
-        $tanggal_pencairan = now();
-        $tanggal_jatuh_tempo = now()->addMonths($tenor_bulan);
-        $tanggal_angsuran_pertama = now()->addMonth();
+                // Calculate dates
+                $tanggal_pencairan = now();
+                $tanggal_jatuh_tempo = now()->addMonths($tenor_bulan);
+                $tanggal_angsuran_pertama = now()->addMonth();
 
-        return Pinjaman::create([
-            'nomor_pinjaman' => $format->IDFormat('KOP301'),
-            'pengajuan_pinjaman_id' => $pengajuan->id,
-            'anggota_id' => $pengajuan->anggota_id,
-            'nominal_pinjaman' => $nominal_pinjaman,
-            'bunga_per_bulan' => $bunga_per_bulan,
-            'tenor_bulan' => $tenor_bulan,
-            'angsuran_pokok' => $angsuran_pokok,
-            'angsuran_bunga' => $angsuran_bunga,
-            'total_angsuran' => $total_angsuran,
-            'tanggal_pencairan' => $tanggal_pencairan,
-            'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
-            'tanggal_angsuran_pertama' => $tanggal_angsuran_pertama,
-            'status' => 'aktif',
-            'sisa_pokok' => $nominal_pinjaman,
-            'total_dibayar' => 0,
-            'angsuran_ke' => 0,
-            'isactive' => '1',
-            'user_create' => $pengajuan->user_create ?? 'system',
-        ]);
+                // Generate unique nomor_pinjaman with retry mechanism
+                $nomor_pinjaman = $this->generateUniqueNomorPinjaman($format);
+
+                return Pinjaman::create([
+                    'nomor_pinjaman' => $nomor_pinjaman,
+                    'pengajuan_pinjaman_id' => $pengajuan->id,
+                    'anggota_id' => $pengajuan->anggota_id,
+                    'nominal_pinjaman' => $nominal_pinjaman,
+                    'bunga_per_bulan' => $bunga_per_bulan,
+                    'tenor_bulan' => $tenor_bulan,
+                    'angsuran_pokok' => $angsuran_pokok,
+                    'angsuran_bunga' => $angsuran_bunga,
+                    'total_angsuran' => $total_angsuran,
+                    'tanggal_pencairan' => $tanggal_pencairan,
+                    'tanggal_jatuh_tempo' => $tanggal_jatuh_tempo,
+                    'tanggal_angsuran_pertama' => $tanggal_angsuran_pertama,
+                    'status' => 'aktif',
+                    'sisa_pokok' => $nominal_pinjaman,
+                    'total_dibayar' => 0,
+                    'angsuran_ke' => 0,
+                    'isactive' => '1',
+                    'user_create' => $approved_by,
+                ]);
+
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Check if it's a duplicate entry error
+                if ($e->getCode() == 23000 && strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                    $retryCount++;
+                    if ($retryCount >= $maxRetries) {
+                        throw new \Exception('Gagal membuat nomor pinjaman unik setelah ' . $maxRetries . ' percobaan. Silakan coba lagi.');
+                    }
+                    // Wait a bit before retry to avoid race condition
+                    usleep(100000); // 100ms
+                    continue;
+                } else {
+                    throw $e;
+                }
+            }
+        }
+        
+        throw new \Exception('Gagal membuat pinjaman setelah ' . $maxRetries . ' percobaan.');
+    }
+
+    /**
+     * Generate unique nomor_pinjaman with database lock
+     */
+    private function generateUniqueNomorPinjaman($format)
+    {
+        // Use database lock to prevent race condition
+        DB::statement('LOCK TABLES sys_counter WRITE, pinjaman READ');
+        
+        try {
+            $nomor_pinjaman = $format->IDFormat('KOP301');
+            
+            // Double check if nomor already exists
+            $exists = Pinjaman::where('nomor_pinjaman', $nomor_pinjaman)->exists();
+            
+            if ($exists) {
+                // If exists, manually increment counter and try again
+                $this->incrementCounter();
+                $nomor_pinjaman = $format->IDFormat('KOP301');
+            }
+            
+            return $nomor_pinjaman;
+            
+        } finally {
+            DB::statement('UNLOCK TABLES');
+        }
+    }
+
+    /**
+     * Manually increment counter for KOP301
+     */
+    private function incrementCounter()
+    {
+        $string = date('Y-m') . '-'; // Assuming format is YYYY-MM-
+        
+        DB::table('sys_counter')
+            ->where('character', $string)
+            ->increment('counter', 1);
     }
 
     /**
@@ -517,6 +545,4 @@ class ApprovalPinjamanController extends Controller
             return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
         }
     }
-
-
 }

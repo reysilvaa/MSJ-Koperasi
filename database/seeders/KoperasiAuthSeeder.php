@@ -142,16 +142,16 @@ class KoperasiAuthSeeder extends Seeder
             ],
 
 
-            // Admin Kredit - Credit analysis and approval focus
+            // Admin Kredit - Credit analysis and approval focus (NO ADD/EDIT/DELETE)
             'akredt' => [
-                'add' => '1', 'edit' => '1', 'delete' => '0', 'approval' => '1',
+                'add' => '0', 'edit' => '0', 'delete' => '0', 'approval' => '1',
                 'print' => '1', 'excel' => '1', 'pdf' => '1', 'value' => '1',
                 'rules' => '0', 'isactive' => '1'
             ],
 
-            // Admin Transfer - Transfer and disbursement focus
+            // Admin Transfer - Transfer and disbursement focus (NO ADD/EDIT/DELETE)
             'atrans' => [
-                'add' => '1', 'edit' => '1', 'delete' => '0', 'approval' => '1',
+                'add' => '0', 'edit' => '0', 'delete' => '0', 'approval' => '1',
                 'print' => '1', 'excel' => '1', 'pdf' => '1', 'value' => '1',
                 'rules' => '0', 'isactive' => '1'
             ],
