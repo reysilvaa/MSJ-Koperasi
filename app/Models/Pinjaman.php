@@ -69,7 +69,8 @@ class Pinjaman extends Model
 	protected $fillable = [
 		'nomor_pinjaman',
 		'pengajuan_pinjaman_id',
-		'anggota_id',
+		'anggota_id', // Tetap ada untuk backward compatibility
+		'user_id', // Kolom baru untuk relasi ke users
 		'nominal_pinjaman',
 		'bunga_per_bulan',
 		'tenor_bulan',
@@ -89,9 +90,26 @@ class Pinjaman extends Model
 		'user_update'
 	];
 
+	// Relasi baru ke User
+	public function user()
+	{
+		return $this->belongsTo(User::class, 'user_id', 'username');
+	}
+
+	// Relasi lama ke Anggotum (untuk backward compatibility)
 	public function anggotum()
 	{
 		return $this->belongsTo(Anggotum::class, 'anggota_id');
+	}
+
+	// Accessor untuk mendapatkan data anggota dari user atau anggotum
+	public function getAnggotaAttribute()
+	{
+		// Prioritas: user_id dulu, baru anggota_id
+		if ($this->user_id && $this->user) {
+			return $this->user;
+		}
+		return $this->anggotum;
 	}
 
 	public function pengajuan_pinjaman()

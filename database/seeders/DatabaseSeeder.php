@@ -567,13 +567,14 @@ class DatabaseSeeder extends Seeder
             menu_rpt_seeder::class,
             tabel_rpt_seeder::class,
             example_call_seed::class,
-            KoperasiMenuSeeder::class,
-            KoperasiTableSeeder::class,
-            KoperasiDataSeeder::class,
-            KoperasiReportCicilanAnggota::class,
-            KoperasiReportIuranAnggota::class,
-            KoperasiAuthSeeder::class,
-            StockPaketSeeder::class,
+            // Koperasi Seeders - urutan penting
+            KoperasiMenuSeeder::class,          // 1. Menu dulu
+            KoperasiTableSeeder::class,         // 2. Table structure
+            KoperasiAuthSeeder::class,          // 3. Authorization
+            KoperasiDataSeeder::class,          // 4. Basic data
+            StockPaketSeeder::class,            // 5. Stock paket
+            KoperasiReportCicilanAnggota::class, // 6. Report cicilan
+            KoperasiReportIuranAnggota::class,  // 7. Report iuran
             // KoperasiDummyDataSeeder::class,
         ]);
     }

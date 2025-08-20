@@ -34,8 +34,8 @@ class KoperasiReportCicilanAnggota extends Seeder
             'list' => '1',
             'show' => '1',
             'query' => "SELECT
-                a.nomor_anggota,
-                a.nama_lengkap,
+                u.nomor_anggota,
+                u.nama_lengkap,
                 p.nomor_pinjaman,
                 cp.angsuran_ke,
                 cp.tanggal_jatuh_tempo,
@@ -61,11 +61,12 @@ class KoperasiReportCicilanAnggota extends Seeder
                 END as hari_keterlambatan
             FROM cicilan_pinjaman cp
             INNER JOIN pinjaman p ON cp.pinjaman_id = p.id
-            INNER JOIN anggota a ON p.anggota_id = a.id
+            INNER JOIN users u ON p.anggota_id = u.id
             WHERE p.isactive = '1'
                 AND cp.isactive = '1'
+                AND u.nomor_anggota IS NOT NULL
                 AND YEAR(cp.tanggal_jatuh_tempo) = :tahun
-            ORDER BY a.nama_lengkap, cp.tanggal_jatuh_tempo, cp.angsuran_ke",
+            ORDER BY u.nama_lengkap, cp.tanggal_jatuh_tempo, cp.angsuran_ke",
             'class' => '',
             'sub' => '',
             'link' => '',

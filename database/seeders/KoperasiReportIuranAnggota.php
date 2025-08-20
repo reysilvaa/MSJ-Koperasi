@@ -203,8 +203,8 @@ class KoperasiReportIuranAnggota extends Seeder
         ELSE 0
     END) AS total_saldo
 
-FROM anggota a
-WHERE a.isactive = '1'
+FROM users a
+WHERE a.isactive = '1' AND a.nomor_anggota IS NOT NULL
 ORDER BY a.nomor_anggota",
             'class' => '',
             'sub' => '',

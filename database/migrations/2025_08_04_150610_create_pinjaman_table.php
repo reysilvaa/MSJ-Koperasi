@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('nomor_pinjaman', 20)->unique();
             $table->foreignId('pengajuan_pinjaman_id')->constrained('pengajuan_pinjaman');
-            $table->foreignId('anggota_id')->constrained('anggota');
+            $table->string('user_id', 20); // Relasi ke users.username
             $table->decimal('nominal_pinjaman', 15, 2);
             $table->decimal('bunga_per_bulan', 5, 2);
             $table->integer('tenor_bulan');
@@ -35,6 +35,14 @@ return new class extends Migration
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             $table->string('user_create')->nullable();
             $table->string('user_update')->nullable();
+            
+            // FOREIGN KEY CONSTRAINTS
+            $table->foreign('user_id')->references('username')->on('users')->onDelete('cascade');
+            
+            // Index untuk performa
+            $table->index('user_id');
+            $table->index('status');
+            $table->index('tanggal_pencairan');
         });
     }
 

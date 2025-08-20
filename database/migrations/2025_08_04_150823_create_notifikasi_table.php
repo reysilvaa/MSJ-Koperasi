@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('notifikasi', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('anggota_id')->constrained('anggota');
+            $table->string('user_id', 20); // Relasi ke users.username
             $table->string('judul', 100);
             $table->text('pesan');
             $table->enum('jenis', ['info', 'warning', 'success', 'error']);

@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Anggotum;
+use App\Models\User;
 use App\Models\CicilanPinjaman;
 use App\Models\MasterPaketPinjaman;
 use App\Models\PengajuanPinjaman;
@@ -22,14 +22,14 @@ class KoperasiDummyDataSeeder extends Seeder
         // 1. Create Master Paket Pinjaman (2024-2026)
         $this->createMasterPaketPinjaman();
 
-        // 2. Create Anggota (50 members)
-        $this->createAnggota();
+        // 2. Create Users/Anggota (50 members)
+        $this->createUsersAnggota();
 
         // 3. Create Pengajuan Pinjaman (30 applications)
         $this->createPengajuanPinjaman();
 
         // 4. Create Users for each role
-        $this->createUsers();
+        $this->createAdminUsers();
 
         $this->command->info('✅ Koperasi Dummy Data Generation Completed!');
     }
@@ -47,11 +47,13 @@ class KoperasiDummyDataSeeder extends Seeder
         }
 
         foreach ($periods as $periode) {
-            MasterPaketPinjaman::create([
+            DB::table('master_paket_pinjaman')->insert([
                 'periode' => $periode,
                 'stock_limit' => fake()->numberBetween(50, 200),
                 'stock_terpakai' => fake()->numberBetween(0, 30),
                 'isactive' => '1',
+                'created_at' => now(),
+                'updated_at' => now(),
                 'user_create' => 'seeder',
                 'user_update' => 'seeder'
             ]);
@@ -60,23 +62,84 @@ class KoperasiDummyDataSeeder extends Seeder
         $this->command->info("   ✓ Created " . count($periods) . " paket pinjaman periods");
     }
 
-    private function createAnggota()
+    private function createUsersAnggota()
     {
-        $this->command->info('👥 Creating Anggota...');
+        $this->command->info('👥 Creating Users/Anggota...');
 
         // Create 40 active members
-        Anggotum::factory()
-            ->count(40)
-            ->active()
-            ->create();
+        for ($i = 1; $i <= 40; $i++) {
+            DB::table('users')->insert([
+                'username' => 'anggota' . str_pad($i, 3, '0', STR_PAD_LEFT),
+                'firstname' => fake()->firstName(),
+                'lastname' => fake()->lastName(),
+                'email' => fake()->unique()->safeEmail(),
+                'password' => bcrypt('password123'),
+                'idroles' => 'anggot',
+                // Data anggota terintegrasi
+                'nomor_anggota' => 'A' . date('y') . str_pad($i, 4, '0', STR_PAD_LEFT),
+                'nik' => fake()->numerify('################'),
+                'nama_lengkap' => fake()->name(),
+                'no_hp' => fake()->phoneNumber(),
+                'jenis_kelamin' => fake()->randomElement(['L', 'P']),
+                'tanggal_lahir' => fake()->dateTimeBetween('-50 years', '-20 years')->format('Y-m-d'),
+                'alamat' => fake()->address(),
+                'jabatan' => fake()->randomElement(['Staff', 'Supervisor', 'Manager', 'Operator', 'Admin']),
+                'departemen' => fake()->randomElement(['IT', 'Finance', 'HR', 'Production', 'Marketing']),
+                'gaji_pokok' => fake()->numberBetween(3000000, 15000000),
+                'tanggal_bergabung' => fake()->dateTimeBetween('-2 years', 'now')->format('Y-m-d'),
+                'tanggal_aktif' => fake()->dateTimeBetween('-1 year', 'now')->format('Y-m-d'),
+                'simpanan_pokok' => 50000,
+                'simpanan_wajib_bulanan' => 25000,
+                'total_simpanan_wajib' => fake()->numberBetween(100000, 500000),
+                'total_simpanan_sukarela' => fake()->numberBetween(0, 200000),
+                'no_rekening' => fake()->bankAccountNumber(),
+                'nama_bank' => fake()->randomElement(['BRI', 'BCA', 'Mandiri', 'BNI']),
+                'keterangan' => 'Anggota aktif',
+                'isactive' => '1',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'user_create' => 'seeder',
+                'user_update' => 'seeder'
+            ]);
+        }
 
         // Create 10 inactive members
-        Anggotum::factory()
-            ->count(10)
-            ->inactive()
-            ->create();
+        for ($i = 41; $i <= 50; $i++) {
+            DB::table('users')->insert([
+                'username' => 'anggota' . str_pad($i, 3, '0', STR_PAD_LEFT),
+                'firstname' => fake()->firstName(),
+                'lastname' => fake()->lastName(),
+                'email' => fake()->unique()->safeEmail(),
+                'password' => bcrypt('password123'),
+                'idroles' => 'anggot',
+                // Data anggota terintegrasi
+                'nomor_anggota' => 'A' . date('y') . str_pad($i, 4, '0', STR_PAD_LEFT),
+                'nik' => fake()->numerify('################'),
+                'nama_lengkap' => fake()->name(),
+                'no_hp' => fake()->phoneNumber(),
+                'jenis_kelamin' => fake()->randomElement(['L', 'P']),
+                'tanggal_lahir' => fake()->dateTimeBetween('-50 years', '-20 years')->format('Y-m-d'),
+                'alamat' => fake()->address(),
+                'jabatan' => fake()->randomElement(['Staff', 'Supervisor', 'Manager', 'Operator', 'Admin']),
+                'departemen' => fake()->randomElement(['IT', 'Finance', 'HR', 'Production', 'Marketing']),
+                'gaji_pokok' => fake()->numberBetween(3000000, 15000000),
+                'tanggal_bergabung' => fake()->dateTimeBetween('-2 years', 'now')->format('Y-m-d'),
+                'simpanan_pokok' => 50000,
+                'simpanan_wajib_bulanan' => 25000,
+                'total_simpanan_wajib' => fake()->numberBetween(100000, 500000),
+                'total_simpanan_sukarela' => fake()->numberBetween(0, 200000),
+                'no_rekening' => fake()->bankAccountNumber(),
+                'nama_bank' => fake()->randomElement(['BRI', 'BCA', 'Mandiri', 'BNI']),
+                'keterangan' => 'Anggota non-aktif',
+                'isactive' => '0',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'user_create' => 'seeder',
+                'user_update' => 'seeder'
+            ]);
+        }
 
-        $this->command->info('   ✓ Created 50 anggota (40 active, 10 inactive)');
+        $this->command->info('   ✓ Created 50 users/anggota (40 active, 10 inactive)');
     }
 
     private function createPengajuanPinjaman()
@@ -153,9 +216,9 @@ class KoperasiDummyDataSeeder extends Seeder
         $this->command->info('   ✓ Created 100 cicilan pinjaman (50 paid, 20 overdue, 30 upcoming)');
     }
 
-    private function createUsers()
+    private function createAdminUsers()
     {
-        $this->command->info('👤 Creating Additional Users...');
+        $this->command->info('👤 Creating Admin Users...');
 
         // Check if users already exist
         $existingUsers = DB::table('users')->whereIn('username', [
@@ -221,6 +284,6 @@ class KoperasiDummyDataSeeder extends Seeder
             }
         }
 
-        $this->command->info("   ✓ Created {$createdCount} new users (skipped existing ones)");
+        $this->command->info("   ✓ Created {$createdCount} new admin users (skipped existing ones)");
     }
 }

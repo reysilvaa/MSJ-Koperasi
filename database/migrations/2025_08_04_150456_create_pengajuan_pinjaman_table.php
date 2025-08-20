@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
 
             // FOREIGN KEY REFERENCES
-            $table->foreignId('anggota_id')->constrained('anggota');
+            $table->string('user_id', 20); // Relasi ke users.username
             $table->unsignedBigInteger('paket_pinjaman_id');
             $table->string('tenor_pinjaman', 50); // Simpan sebagai string: "6 bulan", "12 bulan", dll
 
@@ -52,12 +52,13 @@ return new class extends Migration
             $table->string('user_update')->nullable();
 
             // FOREIGN KEY CONSTRAINTS
+            $table->foreign('user_id')->references('username')->on('users')->onDelete('cascade');
             $table->foreign('paket_pinjaman_id')->references('id')->on('master_paket_pinjaman')->onDelete('cascade');
             $table->foreign('pinjaman_asal_id')->references('id')->on('pengajuan_pinjaman')->onDelete('set null');
             $table->foreign('periode_pencairan_id')->references('id')->on('periode_pencairan')->onDelete('set null');
 
             // Index untuk performa
-            $table->index('anggota_id');
+            $table->index('user_id');
             $table->index('status_pengajuan');
             $table->index('created_at');
         });
