@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
 use App\Helpers\Koperasi\Approval\ApprovalWorkflowHelper;
+use App\Helpers\Koperasi\Pengajuan\PengajuanPinjamanAuthHelper;
+
+
 
 
 class ApprovalPinjamanController extends Controller
@@ -19,7 +22,7 @@ class ApprovalPinjamanController extends Controller
     /**
      * Display a listing of the resource - KOP202/list
      */
-    
+
     public function index($data)
     {
         // Export handling - EXACT MSJ Framework pattern
@@ -44,8 +47,8 @@ class ApprovalPinjamanController extends Controller
             ->get();
 
         // Get user role and username using model helper methods
-        $user_role = PengajuanPinjaman::getUserRole($data);
-        $current_username = PengajuanPinjaman::getCurrentUsername($data);
+        $user_role = PengajuanPinjamanAuthHelper::getUserRole($data);
+        $current_username = PengajuanPinjamanAuthHelper::getCurrentUsername($data);
 
         // Check basic approval permission
         if ($data['authorize']->approval != '1') {
@@ -55,7 +58,7 @@ class ApprovalPinjamanController extends Controller
         }
 
         // Apply role-based filtering using model method
-        $query = PengajuanPinjaman::filterByRole($user_role, $current_username);
+        $query = PengajuanPinjamanAuthHelper::filterByRole($user_role, $current_username);
 
         // Search functionality
         $search = request('search');
@@ -260,8 +263,8 @@ class ApprovalPinjamanController extends Controller
         }
 
         // Get user role and username using model helper methods
-        $user_role = PengajuanPinjaman::getUserRole($data);
-        $current_username = PengajuanPinjaman::getCurrentUsername($data);
+        $user_role = PengajuanPinjamanAuthHelper::isAdminUser($data);
+        $current_username = PengajuanPinjamanAuthHelper::getCurrentUsername($data);
 
         // Check basic approval permission
         if ($data['authorize']->approval != '1') {
@@ -463,11 +466,11 @@ class ApprovalPinjamanController extends Controller
     {
         try {
             // Get user role and username using model helper methods
-            $user_role = PengajuanPinjaman::getUserRole(['user_login' => session('user_login')]);
-            $current_username = PengajuanPinjaman::getCurrentUsername(['user_login' => session('user_login')]);
+            $user_role = PengajuanPinjamanAuthHelper::getUserRole(['user_login' => session('user_login')]);
+            $current_username = PengajuanPinjamanAuthHelper::getCurrentUsername(['user_login' => session('user_login')]);
 
             // Get data using same logic as index method
-            $query = PengajuanPinjaman::filterByRole($user_role, $current_username);
+            $query = PengajuanPinjamanAuthHelper::filterByRole($user_role, $current_username);
 
             // Apply search filter if exists
             $search = request('search');
