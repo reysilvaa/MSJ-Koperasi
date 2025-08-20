@@ -66,12 +66,12 @@
                                             <div class="form-control-static bg-light p-2 border rounded">
                                                 <strong>{{ $current_anggota->nomor_anggota }} - {{ $current_anggota->nama_lengkap }}</strong>
                                             </div>
-                                            <input type="hidden" name="anggota_id" value="{{ $current_anggota->id }}">
+                                            <input type="hidden" name="user_id" value="{{ $current_anggota->id }}">
                                             <small class="text-muted">Nama anggota diambil otomatis dari akun login Anda</small>
                                         @else
                                             {{-- For admin roles, show search input --}}
                                             <div class="input-group">
-                                                <input type="text" class="form-control" name="anggota_id_display" id="anggota_id_display"
+                                                <input type="text" class="form-control" name="user_id_display" id="user_id_display"
                                                        value="{{ $pengajuan->anggota ? $pengajuan->anggota->nomor_anggota . ' - ' . $pengajuan->anggota->nama_lengkap : '' }}"
                                                        placeholder="Pilih Anggota" readonly required>
                                                 <span class="input-group-text bg-primary text-light icon-modal-search"
@@ -80,7 +80,7 @@
                                                     <i class="fas fa-search"></i>
                                                 </span>
                                             </div>
-                                            <input type="hidden" name="anggota_id" id="anggota_id" value="{{ $pengajuan->anggota_id }}" required>
+                                            <input type="hidden" name="user_id" id="user_id" value="{{ $pengajuan->user_id }}" required>
                                         @endif
                                     </div>
                                 </div>
@@ -354,10 +354,9 @@
                                         data-bs-dismiss="modal">
                                     Pilih
                                 </button>
-                            </td>
-                            <td>{{ $anggota->nomor_anggota }}</td>
+                            </td<td>{{ $anggota->nomor_anggota }}</td>
                             <td>{{ $anggota->nama_lengkap }}</td>
-                            <td>{{ $anggota->status_anggota }}</td>
+                            <td>{{ $anggota->isactive == '1' ? 'Aktif' : 'Tidak Aktif' }}</td>
                         </tr>
                         @endforeach
                     </tbody>

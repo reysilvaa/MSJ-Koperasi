@@ -5,6 +5,7 @@ namespace App\Helpers\Koperasi\Iuran;
 use Illuminate\Support\Facades\DB;
 use App\Models\Anggotum;
 use App\Helpers\Function_Helper;
+use App\Models\User;
 
 class IuranHelper
 {
@@ -87,7 +88,7 @@ class IuranHelper
         // Tambahkan kalkulasi total saldo
         $selectFields[] = DB::raw(self::buildTotalSaldoQuery($tahun, $currentYear, $currentMonth));
 
-        return Anggotum::select($selectFields)
+        return User::select($selectFields)
             ->where('isactive', '1')
             ->where('tanggal_bergabung', '<=', "{$tahun}-12-31")
             ->orderBy('nomor_anggota')
@@ -105,7 +106,7 @@ class IuranHelper
         $currentYear = date('Y');
         $currentMonth = date('n');
 
-        $spData = Anggotum::getSimpananPokokByMonth($tahun);
+        $spData = User::getSimpananPokokByMonth($tahun);
 
         // Jika tahun saat ini, batasi sampai bulan saat ini saja
         if ($tahun == $currentYear) {
@@ -130,7 +131,7 @@ class IuranHelper
         $currentYear = date('Y');
         $currentMonth = date('n');
 
-        $swData = Anggotum::getSimpananWajibByMonth($tahun);
+        $swData = User::getSimpananWajibByMonth($tahun);
 
         // Jika tahun saat ini, batasi sampai bulan saat ini saja
         if ($tahun == $currentYear) {

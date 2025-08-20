@@ -40,7 +40,7 @@
                             @include('components.alert')
 
                             <div class="row">
-                                {{-- Nomor Pengajuan (Auto Generated) --}}
+                                {{-- Status --}}
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-control-label">Status</label>
@@ -48,15 +48,13 @@
                                     </div>
                                 </div>
 
-                                {{-- Jenis Pengajuan (Auto Detected) --}}
+                                {{-- Jenis Pengajuan --}}
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-control-label">Jenis Pengajuan</label>
                                         <input type="text" class="form-control" id="jenis_pengajuan_display" value="Pinjaman Baru" readonly>
                                         <input type="hidden" name="jenis_pengajuan" id="jenis_pengajuan" value="baru">
-                                        <p class="text-secondary text-xs pt-1 px-1" id="jenis_pengajuan_info">
-                                            *) Sistem akan otomatis mendeteksi jenis pengajuan berdasarkan status anggota
-                                        </p>
+                                        <p class="text-secondary text-xs pt-1 px-1">*) Sistem akan otomatis mendeteksi jenis pengajuan berdasarkan status anggota</p>
                                     </div>
                                 </div>
 
@@ -65,39 +63,25 @@
                                     <div class="form-group">
                                         <label class="form-control-label">Anggota <span class="text-danger">*</span></label>
                                         @if($is_anggota_biasa && $current_anggota)
-                                            {{-- For anggota biasa role, show member name directly --}}
+                                            {{-- Untuk role anggota biasa --}}
                                             <div class="form-control-static bg-light p-2 border rounded">
                                                 <strong>{{ $current_anggota->nomor_anggota }} - {{ $current_anggota->nama_lengkap }}</strong>
                                             </div>
-                                            <input type="hidden" name="anggota_id" value="{{ $current_anggota->id }}">
+                                            <input type="hidden" name="user_id" value="{{ $current_anggota->username }}">
                                             <small class="text-muted">Nama anggota diambil otomatis dari akun login Anda</small>
                                         @else
-                                                @if(!empty($is_anggota_role) && $is_anggota_role)
-                                                    @if(!empty($anggota_not_found) && $anggota_not_found)
-                                                        <div class="alert alert-danger">Data anggota Anda tidak ditemukan. Silakan hubungi admin.</div>
-                                                    @else
-                                                        <div class="input-group">
-                                                            <input type="text" class="form-control" name="anggota_id_display" id="anggota_id_display"
-                                                                   value="{{ $anggota_list[0]->nomor_anggota ?? '' }} - {{ $anggota_list[0]->nama_lengkap ?? '' }}" readonly>
-                                                            <span class="input-group-text bg-secondary text-light">
-                                                                <i class="fas fa-lock"></i>
-                                                            </span>
-                                                        </div>
-                                                        <input type="hidden" name="anggota_id" id="anggota_id" value="{{ $anggota_list[0]->id ?? '' }}">
-                                                    @endif
-                                                @else
-                                                    <div class="input-group">
-                                                        <input type="text" class="form-control" name="anggota_id_display" id="anggota_id_display"
-                                                               value="{{ old('anggota_id') ? ($anggota_list->where('id', old('anggota_id'))->first()->nomor_anggota ?? '') . ' - ' . ($anggota_list->where('id', old('anggota_id'))->first()->nama_lengkap ?? '') : '' }}"
-                                                               placeholder="Pilih Anggota" readonly required>
-                                                        <span class="input-group-text bg-primary text-light icon-modal-search"
-                                                              data-bs-toggle="modal" data-bs-target="#searchModalAnggota"
-                                                              style="cursor: pointer;">
-                                                            <i class="fas fa-search"></i>
-                                                        </span>
-                                                    </div>
-                                                    <input type="hidden" name="anggota_id" id="anggota_id" value="{{ old('anggota_id') }}" required>
-                                                @endif
+                                            {{-- Untuk role admin/staff --}}
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" name="user_id_display" id="user_id_display"
+                                                       value="{{ old('user_id') ? ($anggota_list->where('username', old('user_id'))->first()->nomor_anggota ?? '') . ' - ' . ($anggota_list->where('username', old('user_id'))->first()->nama_lengkap ?? '') : '' }}"
+                                                       placeholder="Pilih Anggota" readonly required>
+                                                <span class="input-group-text bg-primary text-light icon-modal-search"
+                                                      data-bs-toggle="modal" data-bs-target="#searchModalAnggota"
+                                                      style="cursor: pointer;">
+                                                    <i class="fas fa-search"></i>
+                                                </span>
+                                            </div>
+                                            <input type="hidden" name="user_id" id="user_id" value="{{ old('user_id') }}" required>
                                         @endif
                                     </div>
                                 </div>
@@ -117,7 +101,6 @@
                                             </span>
                                         </div>
                                         <input type="hidden" name="paket_pinjaman_id" id="paket_pinjaman_id" value="{{ old('paket_pinjaman_id') }}" required>
-                                        <p class="text-secondary text-xs pt-1 px-1">*) Pilih paket sesuai kebutuhan</p>
                                     </div>
                                 </div>
 
@@ -129,7 +112,6 @@
                                                id="jumlah_paket_dipilih" min="1" max="40"
                                                value="{{ old('jumlah_paket_dipilih', 1) }}" required>
                                         <p class="text-secondary text-xs pt-1 px-1">*) 1 paket = Rp 500.000 (min: 1, max: 40 paket)</p>
-                                        <small id="stock-info" class="text-info"></small>
                                     </div>
                                 </div>
 
@@ -222,7 +204,7 @@
                     </div>
                 </div>
 
-                {{-- Stock Information Panel - Only visible for non-member roles --}}
+                {{-- Stock Information Panel --}}
                 @if(!$hide_stock_info)
                 <div class="card mt-3">
                     <div class="card-header pb-0">
@@ -232,7 +214,6 @@
                     <div class="card-body">
                         <div id="stock-information-panel" style="display: none;">
                             <div class="row">
-
                                 <div class="col-6">
                                     <div class="info-item mb-3">
                                         <label class="text-sm font-weight-bold">Stok Tersedia:</label>
@@ -271,7 +252,6 @@
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                         <div id="stock-no-selection" class="text-center py-3">
                             <i class="fas fa-box-open text-muted" style="font-size: 2rem;"></i>
@@ -284,7 +264,7 @@
         </div>
     </div>
 
-    {{-- Custom CSS for Stock Information Panel --}}
+    {{-- Custom CSS --}}
     @if(!$hide_stock_info)
     @push('css')
     <style>
@@ -293,24 +273,19 @@
             padding-left: 12px;
             transition: border-color 0.3s ease;
         }
-
         #stock-information-panel .info-item:hover {
             border-left-color: #007bff;
         }
-
         .stock-status-good { border-left-color: #28a745 !important; }
         .stock-status-danger { border-left-color: #dc3545 !important; }
-
         #stock-no-selection {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 8px;
         }
-
         .progress {
             background-color: #e9ecef;
             border-radius: 4px;
         }
-
         .progress-bar {
             transition: width 0.6s ease;
         }
@@ -318,11 +293,10 @@
     @endpush
     @endif
 
-    {{-- Check flag js on dmenu --}}
+    {{-- JavaScript --}}
     @if ($jsmenu == '1')
         @if (view()->exists("js.{$dmenu}"))
             @push('addjs')
-                {{-- file js in folder (resources/views/js) --}}
                 @include('js.' . $dmenu)
             @endpush
         @else
@@ -339,8 +313,8 @@
         @endif
     @endif
 
-    {{-- Search Modals --}}
-    @if(!$is_anggota_biasa || (!empty($is_anggota_role) && !$is_anggota_role))
+    {{-- Search Modals - Sesuai dengan Controller --}}
+    @if(!$is_anggota_biasa)
     <!-- Anggota Search Modal -->
     <div class="modal fade" id="searchModalAnggota" tabindex="-1" role="dialog" aria-labelledby="searchModalAnggotaLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
@@ -366,7 +340,7 @@
                             <tr>
                                 <td>
                                     <button type="button" class="btn btn-sm btn-primary select-anggota"
-                                            data-id="{{ $anggota->id }}"
+                                            data-id="{{ $anggota->username }}"
                                             data-display="{{ $anggota->nomor_anggota }} - {{ $anggota->nama_lengkap }}"
                                             data-bs-dismiss="modal">
                                         Pilih
@@ -374,7 +348,7 @@
                                 </td>
                                 <td>{{ $anggota->nomor_anggota }}</td>
                                 <td>{{ $anggota->nama_lengkap }}</td>
-                                <td>{{ $anggota->status_anggota }}</td>
+                                <td>{{ $anggota->isactive == '1' ? 'Aktif' : 'Tidak Aktif' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -483,5 +457,3 @@
         </div>
     </div>
 @endsection
-
-

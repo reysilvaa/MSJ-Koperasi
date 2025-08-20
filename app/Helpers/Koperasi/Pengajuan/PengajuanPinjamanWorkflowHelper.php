@@ -80,7 +80,7 @@ class PengajuanPinjamanWorkflowHelper
         return Pinjaman::create([
             'nomor_pinjaman' => $formatHelper->IDFormat('KOP301'),
             'pengajuan_pinjaman_id' => $pengajuan->id,
-            'anggota_id' => $pengajuan->anggota_id,
+            'user_id' => $pengajuan->anggota_id,
             'nominal_pinjaman' => $calculations['jumlah_pinjaman'],
             'bunga_per_bulan' => $calculations['bunga_per_bulan'],
             'tenor_bulan' => $tenorBulan,

@@ -20,7 +20,7 @@ use App\Helpers\Koperasi\Pengajuan\PengajuanPinjamanWorkflowHelper;
  *
  * @property int $id
  * @property string $nomor_pengajuan
- * @property int $anggota_id
+ * @property int $user_id
  * @property int $paket_pinjaman_id
  * @property int $jumlah_paket_dipilih
  * @property string $tenor_pinjaman
@@ -62,7 +62,7 @@ class PengajuanPinjaman extends Model
 	protected $table = 'pengajuan_pinjaman';
 
 	protected $casts = [
-		'anggota_id' => 'int',
+		'user_id' => 'string',
 		'paket_pinjaman_id' => 'int',
 		'jumlah_pinjaman' => 'float',
 		'bunga_per_bulan' => 'float',
@@ -76,7 +76,7 @@ class PengajuanPinjaman extends Model
 	];
 
 	protected $fillable = [
-		'anggota_id',
+		'user_id',
 		'paket_pinjaman_id',
 		'jumlah_paket_dipilih',
 		'tenor_pinjaman',
@@ -101,9 +101,9 @@ class PengajuanPinjaman extends Model
 		'user_update'
 	];
 
-	public function anggota()
+	public function users()
 	{
-		return $this->belongsTo(Anggotum::class, 'anggota_id');
+		return $this->belongsTo(User::class, 'user_id', 'username');
 	}
 
 	public function paketPinjaman()

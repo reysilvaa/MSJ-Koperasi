@@ -20,6 +20,9 @@ class User extends Authenticatable
 
     protected $table = 'users';
     protected $primaryKey = 'username';
+    protected $keyType = 'string';
+    public $incrementing = false;
+    
     protected $fillable = [
         'username',
         'firstname',
@@ -123,11 +126,15 @@ class User extends Authenticatable
 
     /**
      * Method untuk mendapatkan daftar anggota aktif (untuk dropdown/select)
+     * FIXED: Mengatasi masalah username = 0 atau kosong
      */
     public static function getActiveAnggotaList()
     {
         return self::where('isactive', '1')
             ->whereNotNull('nomor_anggota')
+            ->whereNotNull('username')
+            ->where('username', '!=', '')
+            ->where('username', '!=', '0')
             ->select('username', 'nomor_anggota', 'nama_lengkap')
             ->get();
     }

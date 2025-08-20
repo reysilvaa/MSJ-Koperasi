@@ -16,7 +16,7 @@ class PengajuanPinjamanValidationHelper
     public const EDITABLE_STATUSES = ['draft', 'diajukan'];
 
     /**
-     * Check if anggota has existing pengajuan with specific statuses
+     * Check if users has existing pengajuan with specific statuses
      * This unified method handles both pending application checks and broader status validation
      */
     public static function hasExistingPengajuan($anggotaId, $excludeId = null, $statuses = null)
@@ -32,7 +32,7 @@ class PengajuanPinjamanValidationHelper
             $statuses = [$statuses];
         }
 
-        $query = PengajuanPinjaman::where('anggota_id', $anggotaId)
+        $query = PengajuanPinjaman::where('user_id', $anggotaId)
             ->whereIn('status_pengajuan', $statuses)
             ->where('isactive', '1');
 
@@ -49,7 +49,7 @@ class PengajuanPinjamanValidationHelper
     public static function getValidationRules()
     {
         return [
-            'anggota_id' => 'required|exists:anggota,id',
+            'user_id' => 'required|exists:users,username',
             'paket_pinjaman_id' => 'required|exists:master_paket_pinjaman,id',
             'jumlah_paket_dipilih' => 'required|integer|min:1',
             'tenor_pinjaman' => 'required|string|in:6 bulan,10 bulan,12 bulan',

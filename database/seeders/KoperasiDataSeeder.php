@@ -15,7 +15,7 @@ class KoperasiDataSeeder extends Seeder
     {
         // Cek apakah user koperasi sudah ada
         if (DB::table('users')->where('username', 'admin_koperasi')->count() == 0) {
-            
+
             // Insert User Anggota dengan data lengkap
             DB::table('users')->insert([
                 'username' => 'anggota_koperasi',
@@ -68,7 +68,12 @@ class KoperasiDataSeeder extends Seeder
                     'lastname' => 'Koperasi',
                     'email' => 'admin.kredit@spunindo.com',
                     'password' => bcrypt('kredit123'),
-                    'idroles' => 'akredt'
+                    'idroles' => 'akredt',
+                    'isactive' => '1',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'user_create' => 'seeder',
+                    'user_update' => 'seeder'
                 ],
                 [
                     'username' => 'admin_transfer',
@@ -76,7 +81,12 @@ class KoperasiDataSeeder extends Seeder
                     'lastname' => 'Koperasi',
                     'email' => 'admin.transfer@spunindo.com',
                     'password' => bcrypt('transfer123'),
-                    'idroles' => 'atrans'
+                    'idroles' => 'atrans',
+                    'isactive' => '1',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'user_create' => 'seeder',
+                    'user_update' => 'seeder'
                 ],
                 [
                     'username' => 'ketua_umum',
@@ -84,13 +94,18 @@ class KoperasiDataSeeder extends Seeder
                     'lastname' => 'Koperasi',
                     'email' => 'ketua.umum@spunindo.com',
                     'password' => bcrypt('ketua123'),
-                    'idroles' => 'ketuum'
+                    'idroles' => 'ketuum',
+                    'isactive' => '1',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'user_create' => 'seeder',
+                    'user_update' => 'seeder'
                 ]
             ];
 
             foreach ($adminUsers as $user) {
                 DB::table('users')->insert(array_merge($user, [
-                    'isactive' => 1,
+                    'isactive' => '1',
                     'created_at' => now(),
                     'updated_at' => now(),
                     'user_create' => 'seeder',
@@ -104,7 +119,7 @@ class KoperasiDataSeeder extends Seeder
                     'periode' => '2025-08',
                     'stock_limit' => 100,
                     'stock_terpakai' => 0,
-                    'isactive' => 1,
+                    'isactive' => '1',
                     'created_at' => now(),
                     'updated_at' => now(),
                     'user_create' => 'seeder',
@@ -114,7 +129,7 @@ class KoperasiDataSeeder extends Seeder
                     'periode' => '2025-09',
                     'stock_limit' => 100,
                     'stock_terpakai' => 0,
-                    'isactive' => 1,
+                    'isactive' => '1',
                     'created_at' => now(),
                     'updated_at' => now(),
                     'user_create' => 'seeder',

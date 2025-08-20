@@ -79,7 +79,7 @@ class PengajuanPinjamanCalculationHelper
             )
             ->join('pinjaman', 'pengajuan_pinjaman.id', '=', 'pinjaman.pengajuan_pinjaman_id')
             ->leftJoin('cicilan_pinjaman', 'pinjaman.id', '=', 'cicilan_pinjaman.pinjaman_id')
-            ->where('pengajuan_pinjaman.anggota_id', $anggotaId)
+            ->where('pengajuan_pinjaman.user_id', $anggotaId)
             ->where('pengajuan_pinjaman.status_pengajuan', 'disetujui')
             ->where('pinjaman.status', 'aktif')
             ->where('pengajuan_pinjaman.isactive', '1')

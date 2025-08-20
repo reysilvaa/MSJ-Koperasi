@@ -10,7 +10,7 @@ use App\Helpers\Koperasi\Pengajuan\PengajuanPinjamanCalculationHelper;
 use App\Helpers\Koperasi\Pengajuan\PengajuanPinjamanValidationHelper;
 use App\Helpers\Koperasi\Pengajuan\PengajuanPinjamanAuthHelper;
 use App\Models\PengajuanPinjaman;
-use App\Models\Anggotum;
+use App\Models\User;
 use App\Models\MasterPaketPinjaman;
 use App\Models\PeriodePencairan;
 use App\Models\Pinjaman;
@@ -51,7 +51,7 @@ class PengajuanPinjamanController extends Controller
             ->get();
 
         // Get pengajuan pinjaman data using model methods (MSJ Framework standard)
-        $query = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
+        $query = PengajuanPinjaman::with(['users', 'paketPinjaman', 'periodePencairan'])
             ->where('isactive', '1');
 
         // Apply search filter using helper method
@@ -93,6 +93,7 @@ class PengajuanPinjamanController extends Controller
         $syslog = new Function_Helper;
         $data['format'] = new Format_Helper;
 
+
         // Get table structure data
         $data['table_header'] = DB::table('sys_table')
             ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu']])
@@ -106,19 +107,19 @@ class PengajuanPinjamanController extends Controller
 
         // Check if user is anggota (regular member) using helper method
         $userRole = PengajuanPinjamanAuthHelper::getUserRole($data);
-        $data['is_anggota_biasa'] = Anggotum::isRegularMember($userRole);
+        $data['is_anggota_biasa'] = User::isRegularMember($userRole);
         $data['hide_stock_info'] = $data['is_anggota_biasa']; // Hide stock information for regular members
 
         $data['current_anggota'] = null;
         if ($data['is_anggota_biasa']) {
-            $data['current_anggota'] = Anggotum::findByUserCredentials(
-                $data['user_login']->email,
-                $data['user_login']->username
-            );
+            $data['current_anggota'] = User::where('email', $data['user_login']->email)
+                ->orWhere('username', $data['user_login']->username)
+                ->where('isactive', '1')
+                ->first();
         }
 
         // Get form data using model methods
-        $data['anggota_list'] = Anggotum::getActiveList();
+        $data['anggota_list'] = User::getActiveAnggotaList();
         $data['paket_list'] = MasterPaketPinjaman::getActiveList();
 
         // Static tenor options using model constant
@@ -144,23 +145,23 @@ class PengajuanPinjamanController extends Controller
         $syslog = new Function_Helper;
         $data['format'] = new Format_Helper;
 
-        // Handle role-based anggota_id assignment
-        $anggotaId = request('anggota_id');
+        // Handle role-based user_id assignment
+        $anggotaId = request('user_id');
 
         // Determine if user is anggota biasa (regular member)
         $isAnggotaBiasa = false;
         if (isset($data['user_login']->idroles) && strpos($data['user_login']->idroles, 'anggot') !== false) {
             $isAnggotaBiasa = true;
             // Find anggota by email or username matching
-            $anggota = Anggotum::where('email', $data['user_login']->email)
-                              ->orWhere('user_create', $data['user_login']->username)
+            $anggota = User::where('email', $data['user_login']->email)
+                              ->orWhere('username', $data['user_login']->username)
                               ->where('isactive', '1')
                               ->first();
-
+            dd($anggota);
             if ($anggota) {
-                $anggotaId = $anggota->id;
-                // Override request with the found anggota_id
-                request()->merge(['anggota_id' => $anggotaId]);
+                $anggotaId = $anggota->username; // Use username as primary key for User model
+                // Override request with the found user_id
+                request()->merge(['user_id' => $anggotaId]);
             } else {
                 // Use MSJ framework Session flash message with badge info component styling
                 Session::flash('message', 'Data anggota Anda tidak ditemukan. Silakan hubungi admin untuk verifikasi data keanggotaan.');
@@ -177,7 +178,7 @@ class PengajuanPinjamanController extends Controller
         }
 
         // Validate anggota status - check if member is active
-        $anggota = Anggotum::find($anggotaId);
+        $anggota = User::where('username', $anggotaId)->first();
         if (!$anggota) {
             Session::flash('message', 'Data anggota tidak ditemukan. Silakan hubungi admin untuk verifikasi data keanggotaan.');
             Session::flash('class', 'danger');
@@ -200,11 +201,11 @@ class PengajuanPinjamanController extends Controller
 
         // Check top-up eligibility and validate loan type
         if ($anggotaId) {
-            $jenis_pengajuan = PengajuanPinjaman::determineLoanType($anggotaId);
+            $jenis_pengajuan = PengajuanPinjamanCalculationHelper::determineLoanType($anggotaId);
 
             // If system determines it's a top-up, validate eligibility
             if ($jenis_pengajuan === 'top_up') {
-                $eligibility = PengajuanPinjaman::checkTopUpEligibility($anggotaId);
+                $eligibility = PengajuanPinjamanCalculationHelper::checkTopUpEligibility($anggotaId);
 
                 if (!$eligibility) {
                     // This shouldn't happen if determineLoanType works correctly, but add safety check
@@ -291,7 +292,7 @@ class PengajuanPinjamanController extends Controller
 
             // Create pengajuan using calculated values
             $pengajuan = PengajuanPinjaman::create([
-                'anggota_id' => request('anggota_id'),
+                'user_id' => request('user_id'),
                 'paket_pinjaman_id' => request('paket_pinjaman_id'),
                 'jumlah_paket_dipilih' => $jumlah_paket,
                 'tenor_pinjaman' => $tenor_pinjaman,
@@ -314,13 +315,14 @@ class PengajuanPinjamanController extends Controller
             ]);
 
             // Update stock terpakai using model method (only for non-regular members)
-            $isAnggotaBiasa = Anggotum::isRegularMember($userRole);
+            $isAnggotaBiasa = User::isRegularMember($userRole);
             if (!$isAnggotaBiasa) {
                 $paket->updateStockUsage($jumlah_paket, 'increment');
             }
 
             // Process approval workflow using model method
-            $isBypass = $pengajuan->processAfterCreation($userRole, $currentUsername, $jumlah_paket, $tenor_pinjaman, $data['format']);
+            $isBypass = PengajuanPinjamanWorkflowHelper::processAfterCreation($userRole, $currentUsername, $jumlah_paket, $tenor_pinjaman, $data['format']);
+
 
             DB::commit();
 
@@ -383,7 +385,7 @@ class PengajuanPinjamanController extends Controller
         }
 
         // Get pengajuan detail using Eloquent with relationships
-        $pengajuan = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
+        $pengajuan = PengajuanPinjaman::with(['users', 'paketPinjaman', 'periodePencairan'])
             ->find($id);
 
         if (!$pengajuan) {
@@ -420,10 +422,10 @@ class PengajuanPinjamanController extends Controller
         $data['pengajuan'] = $pengajuan;
         $data['list'] = $pengajuan; // For view compatibility with $list variable
 
-        // Recalculate using model method for display
-        $tenor_bulan = PengajuanPinjaman::getTenorBulan($pengajuan->tenor_pinjaman);
+        // Recalculate using helper method for display
+        $tenor_bulan = PengajuanPinjamanCalculationHelper::getTenorBulan($pengajuan->tenor_pinjaman);
         $jumlah_paket = $pengajuan->jumlah_pinjaman / PengajuanPinjamanCalculationHelper::NILAI_PER_PAKET;
-        $calculations = PengajuanPinjaman::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
+        $calculations = PengajuanPinjamanCalculationHelper::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
 
         // Add calculations to data
         $data['cicilan_per_bulan_correct'] = $calculations['cicilan_per_bulan'];
@@ -509,31 +511,29 @@ class PengajuanPinjamanController extends Controller
         }
 
         // Check if editable using model method
-        if (!$pengajuan->isEditable()) {
-            $data['url_menu'] = 'error';
-            $data['title_group'] = 'Error';
-            $data['title_menu'] = 'Error';
-            $data['errorpages'] = 'Pengajuan tidak dapat diedit pada status ini!';
-            return view("pages.errorpages", $data);
+        if (PengajuanPinjamanValidationHelper::canProcessPengajuan(!$pengajuan)) {
+            Session::flash('message', 'Pengajuan tidak dapat diedit pada status ini!');
+            Session::flash('class', 'danger');
+            return redirect()->back();
         }
 
         $data['pengajuan'] = $pengajuan;
 
         // Check if user is anggota (anggota_koperasi)
-        $userRole = PengajuanPinjaman::getUserRole($data);
-        $data['is_anggota_biasa'] = Anggotum::isRegularMember($userRole);
+        $userRole = PengajuanPinjamanAuthHelper::getUserRole($data);
+        $data['is_anggota_biasa'] = User::isRegularMember($userRole);
         $data['hide_stock_info'] = $data['is_anggota_biasa'];
 
         $data['current_anggota'] = null;
         if ($data['is_anggota_biasa']) {
-            $data['current_anggota'] = Anggotum::findByUserCredentials(
-                $data['user_login']->email,
-                $data['user_login']->username
-            );
+            $data['current_anggota'] = User::where('email', $data['user_login']->email)
+                ->orWhere('username', $data['user_login']->username)
+                ->where('isactive', '1')
+                ->first();
         }
 
         // Get form data using model methods
-        $data['anggota_list'] = Anggotum::getActiveList();
+        $data['anggota_list'] = User::getActiveAnggotaList();
         $data['paket_list'] = MasterPaketPinjaman::getActiveList();
 
         $data['tenor_list'] = collect([
@@ -559,20 +559,20 @@ class PengajuanPinjamanController extends Controller
         $syslog = new Function_Helper;
         $data['format'] = new Format_Helper;
 
-        // Handle role-based anggota_id assignment using model methods
-        $anggotaId = request('anggota_id');
-        $userRole = PengajuanPinjaman::getUserRole($data);
+        // Handle role-based user_id assignment using model methods
+        $anggotaId = request('user_id');
+        $userRole = PengajuanPinjamanAuthHelper::getUserRole($data);
 
-        // Check if user is anggota and auto-assign anggota_id
-        if (Anggotum::isRegularMember($userRole)) {
-            $anggota = Anggotum::findByUserCredentials(
-                $data['user_login']->email,
-                $data['user_login']->username
-            );
+        // Check if user is anggota and auto-assign user_id
+        if (User::isRegularMember($userRole)) {
+            $anggota = User::where('email', $data['user_login']->email)
+                ->orWhere('username', $data['user_login']->username)
+                ->where('isactive', '1')
+                ->first();
 
             if ($anggota) {
-                $anggotaId = $anggota->id;
-                request()->merge(['anggota_id' => $anggotaId]);
+                $anggotaId = $anggota->username; // Use username as primary key for User model
+                request()->merge(['user_id' => $anggotaId]);
             } else {
                 Session::flash('message', 'Data anggota Anda tidak ditemukan. Silakan hubungi admin untuk verifikasi data keanggotaan.');
                 Session::flash('class', 'danger');
@@ -587,7 +587,7 @@ class PengajuanPinjamanController extends Controller
         }
 
         // Validate anggota status - check if member is active
-        $anggota = Anggotum::find($anggotaId);
+        $anggota = User::where('username', $anggotaId)->first();
         if (!$anggota) {
             Session::flash('message', 'Data anggota tidak ditemukan. Silakan hubungi admin untuk verifikasi data keanggotaan.');
             Session::flash('class', 'danger');
@@ -611,9 +611,9 @@ class PengajuanPinjamanController extends Controller
             return view("pages.errorpages", $data);
         }
 
-        // Check for existing pending application using model method (excluding current one)
+        // Check for existing pending application using helper method (excluding current one)
         // Cek semua status yang masih dalam proses (diajukan, review_admin, review_panitia, review_ketua)
-        if (PengajuanPinjaman::hasExistingPengajuan($anggotaId, $id)) {
+        if (PengajuanPinjamanValidationHelper::hasExistingPengajuan($anggotaId, $id)) {
             Session::flash('message', 'Anggota masih memiliki pengajuan pinjaman yang sedang dalam proses persetujuan. Tidak dapat mengedit pengajuan ini selama masih ada pengajuan lain yang pending.');
             Session::flash('class', 'danger');
             return redirect()->back()->withInput();
@@ -621,11 +621,11 @@ class PengajuanPinjamanController extends Controller
 
         // Check top-up eligibility and validate loan type
         if ($anggotaId) {
-            $jenis_pengajuan = PengajuanPinjaman::determineLoanType($anggotaId);
+            $jenis_pengajuan = PengajuanPinjamanCalculationHelper::determineLoanType($anggotaId);
 
             // If system determines it's a top-up, validate eligibility
             if ($jenis_pengajuan === 'top_up') {
-                $eligibility = PengajuanPinjaman::checkTopUpEligibility($anggotaId);
+                $eligibility = PengajuanPinjamanCalculationHelper::checkTopUpEligibility($anggotaId);
 
                 if (!$eligibility) {
                     // This shouldn't happen if determineLoanType works correctly, but add safety check
@@ -645,8 +645,8 @@ class PengajuanPinjamanController extends Controller
             request()->merge(['jenis_pengajuan' => $jenis_pengajuan]);
         }
 
-        // Validation using model method
-        $validator = Validator::make(request()->all(), PengajuanPinjaman::getValidationRules());
+        // Validation using helper method
+        $validator = Validator::make(request()->all(), PengajuanPinjamanValidationHelper::getValidationRules());
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -689,14 +689,14 @@ class PengajuanPinjamanController extends Controller
                 return view("pages.errorpages", $data);
             }
 
-            // Get basic data and calculate using model methods
+            // Get basic data and calculate using helper methods
             $paket = MasterPaketPinjaman::find(request('paket_pinjaman_id'));
             $tenor_pinjaman = request('tenor_pinjaman');
-            $tenor_bulan = PengajuanPinjaman::getTenorBulan($tenor_pinjaman);
+            $tenor_bulan = PengajuanPinjamanCalculationHelper::getTenorBulan($tenor_pinjaman);
             $jumlah_paket = request('jumlah_paket_dipilih');
 
-            // Calculate amounts using model method
-            $calculations = PengajuanPinjaman::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
+            // Calculate amounts using helper method
+            $calculations = PengajuanPinjamanCalculationHelper::calculateLoanAmounts($jumlah_paket, $tenor_bulan);
 
             // Update stock tracking using model methods (for information only, no validation)
             if ($pengajuan->paket_pinjaman_id != request('paket_pinjaman_id') || $pengajuan->jumlah_paket_dipilih != $jumlah_paket) {
@@ -710,7 +710,7 @@ class PengajuanPinjamanController extends Controller
 
             // Update pengajuan using calculated values
             $pengajuan->update([
-                'anggota_id' => request('anggota_id'),
+                'user_id' => request('user_id'),
                 'paket_pinjaman_id' => request('paket_pinjaman_id'),
                 'jumlah_paket_dipilih' => $jumlah_paket,
                 'tenor_pinjaman' => $tenor_pinjaman,
@@ -721,7 +721,7 @@ class PengajuanPinjamanController extends Controller
                 'tujuan_pinjaman' => request('tujuan_pinjaman'),
                 'jenis_pengajuan' => request('jenis_pengajuan'),
                 'periode_pencairan_id' => request('periode_pencairan_id'),
-                'user_update' => PengajuanPinjaman::getCurrentUsername($data),
+                'user_update' => PengajuanPinjamanAuthHelper::getCurrentUsername($data),
                 'updated_at' => now(),
             ]);
 
@@ -870,9 +870,9 @@ class PengajuanPinjamanController extends Controller
                 break;
 
             case 'get_anggota':
-                $anggotaList = Anggotum::where('status_keanggotaan', 'aktif')
-                    ->where('isactive', '1')
-                    ->select('id', 'nomor_anggota', 'nama_lengkap')
+                $anggotaList = User::where('isactive', '1')
+                    ->whereNotNull('nomor_anggota')
+                    ->select('username as id', 'nomor_anggota', 'nama_lengkap')
                     ->get();
 
                 return response()->json([
@@ -935,7 +935,7 @@ class PengajuanPinjamanController extends Controller
 
         try {
             // Get data for export using same logic as index
-            $query = PengajuanPinjaman::with(['anggota', 'paketPinjaman', 'periodePencairan'])
+            $query = PengajuanPinjaman::with(['users', 'paketPinjaman', 'periodePencairan'])
                 ->where('isactive', '1');
 
             // Apply search filter if exists
