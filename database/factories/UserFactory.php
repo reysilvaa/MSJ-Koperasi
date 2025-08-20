@@ -49,7 +49,7 @@ class UserFactory extends Factory
             'firstname' => $firstName,
             'lastname' => $lastName,
             'email' => fake()->unique()->safeEmail(),
-            'password' => static::$password ??= Hash::make('password123'),
+            'password' => static::$password ??= bcrypt('password123'), // Hash langsung untuk menghindari double hashing
             'idroles' => 'anggot', // Default role anggota
 
             // Data anggota koperasi

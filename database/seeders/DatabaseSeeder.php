@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Prophecy\Call\Call;
@@ -33,13 +34,13 @@ class DatabaseSeeder extends Seeder
             'description' => 'Administrator'
         ]);
 
-        //insert tabel users
+        //insert tabel users - menggunakan bcrypt langsung karena DB::table tidak memanggil mutator
         DB::table('users')->insert([
             'username' => 'msjit',
             'firstname' => 'Admin',
             'lastname' => 'MIS',
             'email' => 'msjit@spunindo.com',
-            'password' => bcrypt('mis'),
+            'password' => bcrypt('mis'), // Hash langsung karena menggunakan DB::table
             'idroles' => 'admins'
         ]);
         //insert tabel sys_gmenu
@@ -572,10 +573,10 @@ class DatabaseSeeder extends Seeder
             KoperasiTableSeeder::class,         // 2. Table structure
             KoperasiAuthSeeder::class,          // 3. Authorization
             KoperasiDataSeeder::class,          // 4. Basic data
-            StockPaketSeeder::class,            // 5. Stock paket
+            // StockPaketSeeder::class,            // 5. Stock paket
             KoperasiReportCicilanAnggota::class, // 6. Report cicilan
             // KoperasiReportIuranAnggota::class,  // 7. Report iuran
-            KoperasiDummyDataSeeder::class,
+            // KoperasiDummyDataSeeder::class,
         ]);
     }
 }
