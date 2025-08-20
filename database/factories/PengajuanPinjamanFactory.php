@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\PengajuanPinjaman;
-use App\Models\Anggotum;
+use App\Models\User;
 use App\Models\MasterPaketPinjaman;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -24,25 +24,36 @@ class PengajuanPinjamanFactory extends Factory
      *
      * @return array<string, mixed>
      */
-    public function definition()
+    public function definition(): array
     {
         // Get random active anggota and paket
-        $anggota = Anggotum::where('isactive', '1')->inRandomOrder()->first();
-        $paket = MasterPaketPinjaman::where('isactive', '1')->inRandomOrder()->first();
+        $anggota = User::whereNotNull('nomor_anggota')
+            ->where('isactive', '1')
+            ->inRandomOrder()
+            ->first();
 
-        // If no data exists, create default IDs
-        $anggotaId = $anggota ? $anggota->id : 1;
-        $paketId = $paket ? $paket->id : 1;
+        $paket = MasterPaketPinjaman::where('isactive', '1')
+            ->inRandomOrder()
+            ->first();
+
+        // If no data exists, create them
+        if (!$anggota) {
+            $anggota = User::factory()->anggotaAktif()->create();
+        }
+
+        if (!$paket) {
+            $paket = MasterPaketPinjaman::factory()->aktif()->create();
+        }
 
         // Generate jumlah paket (1-40)
-        $jumlahPaket = $this->faker->numberBetween(1, 40);
+        $jumlahPaket = fake()->numberBetween(1, 40);
 
         // Calculate amounts (1 paket = Rp 500,000)
         $jumlahPinjaman = $jumlahPaket * 500000;
 
         // Generate tenor
         $tenorOptions = ['6 bulan', '10 bulan', '12 bulan'];
-        $tenor = $this->faker->randomElement($tenorOptions);
+        $tenor = fake()->randomElement($tenorOptions);
         $tenorBulan = (int) explode(' ', $tenor)[0];
 
         // Bunga per bulan (1% flat)
@@ -70,7 +81,7 @@ class PengajuanPinjamanFactory extends Factory
 
         // Status pengajuan options
         $statusOptions = ['draft', 'diajukan', 'review_admin', 'review_panitia', 'disetujui', 'ditolak'];
-        $status = $this->faker->randomElement($statusOptions);
+        $status = fake()->randomElement($statusOptions);
 
         // Generate dates based on status
         $tanggalPengajuan = null;
@@ -78,45 +89,45 @@ class PengajuanPinjamanFactory extends Factory
         $approvedBy = null;
 
         if (in_array($status, ['diajukan', 'review_admin', 'review_panitia', 'disetujui', 'ditolak'])) {
-            $tanggalPengajuan = $this->faker->dateTimeBetween('-6 months', '-1 week');
+            $tanggalPengajuan = fake()->dateTimeBetween('-6 months', '-1 week');
         }
 
         if (in_array($status, ['disetujui', 'ditolak'])) {
-            $baseDate = $tanggalPengajuan ?: $this->faker->dateTimeBetween('-3 months', '-1 week');
-            $tanggalApproval = $this->faker->dateTimeBetween($baseDate, 'now');
-            $approvedBy = $this->faker->randomElement(['kadmin', 'akredt', 'ketuum']);
+            $baseDate = $tanggalPengajuan ?: fake()->dateTimeBetween('-3 months', '-1 week');
+            $tanggalApproval = fake()->dateTimeBetween($baseDate, 'now');
+            $approvedBy = fake()->randomElement(['kadmin', 'akredt', 'ketuum']);
         }
 
         return [
-            'anggota_id' => $anggotaId,
-            'paket_pinjaman_id' => $paketId,
+            'user_id' => $anggota->username, // Menggunakan username sesuai foreign key constraint
+            'paket_pinjaman_id' => $paket->id,
             'tenor_pinjaman' => $tenor,
             'jumlah_paket_dipilih' => $jumlahPaket,
             'jumlah_pinjaman' => $jumlahPinjaman,
             'bunga_per_bulan' => $bungaPerBulan,
             'cicilan_per_bulan' => $cicilanPerBulan,
             'total_pembayaran' => $totalPembayaran,
-            'tujuan_pinjaman' => $this->faker->randomElement($tujuanOptions),
-            'jenis_pengajuan' => $this->faker->randomElement(['baru', 'top_up']),
+            'tujuan_pinjaman' => fake()->randomElement($tujuanOptions),
+            'jenis_pengajuan' => fake()->randomElement(['baru', 'top_up']),
             'status_pengajuan' => $status,
-            'catatan_pengajuan' => $this->faker->optional(0.7)->sentence(),
-            'catatan_approval' => $status === 'ditolak' ? $this->faker->sentence() : null,
+            'catatan_pengajuan' => fake()->optional(0.7)->sentence(),
+            'catatan_approval' => $status === 'ditolak' ? fake()->sentence() : null,
             'tanggal_pengajuan' => $tanggalPengajuan?->format('Y-m-d H:i:s'),
             'tanggal_approval' => $tanggalApproval?->format('Y-m-d H:i:s'),
             'approved_by' => $approvedBy,
             'status_pencairan' => 'belum_cair',
             'isactive' => '1',
-            'user_create' => 'system',
-            'user_update' => 'system'
+            'created_at' => now(),
+            'updated_at' => now(),
+            'user_create' => 'factory',
+            'user_update' => 'factory'
         ];
     }
 
     /**
-     * Indicate that the pengajuan is approved.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk pengajuan yang disetujui
      */
-    public function approved()
+    public function approved(): static
     {
         return $this->state(function (array $attributes) {
             return [
@@ -130,11 +141,9 @@ class PengajuanPinjamanFactory extends Factory
     }
 
     /**
-     * Indicate that the pengajuan is pending.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk pengajuan yang pending
      */
-    public function pending()
+    public function pending(): static
     {
         return $this->state(function (array $attributes) {
             return [
@@ -148,11 +157,9 @@ class PengajuanPinjamanFactory extends Factory
     }
 
     /**
-     * Indicate that the pengajuan is rejected.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk pengajuan yang ditolak
      */
-    public function rejected()
+    public function rejected(): static
     {
         return $this->state(function (array $attributes) {
             return [
@@ -170,11 +177,9 @@ class PengajuanPinjamanFactory extends Factory
     }
 
     /**
-     * Indicate that the pengajuan is draft.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk pengajuan draft
      */
-    public function draft()
+    public function draft(): static
     {
         return $this->state(function (array $attributes) {
             return [
@@ -188,11 +193,9 @@ class PengajuanPinjamanFactory extends Factory
     }
 
     /**
-     * Indicate that the pengajuan is for top up.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk pengajuan top up
      */
-    public function topUp()
+    public function topUp(): static
     {
         return $this->state(function (array $attributes) {
             return [
@@ -203,17 +206,15 @@ class PengajuanPinjamanFactory extends Factory
     }
 
     /**
-     * Indicate small loan amount (1-5 paket).
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk pinjaman kecil (1-5 paket)
      */
-    public function smallLoan()
+    public function smallLoan(): static
     {
         return $this->state(function (array $attributes) {
-            $jumlahPaket = $this->faker->numberBetween(1, 5);
+            $jumlahPaket = fake()->numberBetween(1, 5);
             $jumlahPinjaman = $jumlahPaket * 500000;
 
-            $tenor = $this->faker->randomElement(['6 bulan', '12 bulan']);
+            $tenor = fake()->randomElement(['6 bulan', '12 bulan']);
             $tenorBulan = (int) explode(' ', $tenor)[0];
 
             $bungaPerBulan = $jumlahPinjaman * 0.01;
@@ -232,17 +233,15 @@ class PengajuanPinjamanFactory extends Factory
     }
 
     /**
-     * Indicate large loan amount (20-40 paket).
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk pinjaman besar (20-40 paket)
      */
-    public function largeLoan()
+    public function largeLoan(): static
     {
         return $this->state(function (array $attributes) {
-            $jumlahPaket = $this->faker->numberBetween(20, 40);
+            $jumlahPaket = fake()->numberBetween(20, 40);
             $jumlahPinjaman = $jumlahPaket * 500000;
 
-            $tenor = $this->faker->randomElement(['18 bulan', '24 bulan']);
+            $tenor = fake()->randomElement(['18 bulan', '24 bulan']);
             $tenorBulan = (int) explode(' ', $tenor)[0];
 
             $bungaPerBulan = $jumlahPinjaman * 0.01;
@@ -258,5 +257,15 @@ class PengajuanPinjamanFactory extends Factory
                 'total_pembayaran' => $totalPembayaran,
             ];
         });
+    }
+
+    /**
+     * State untuk user tertentu
+     */
+    public function forUser(User $user): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_id' => $user->username,
+        ]);
     }
 }

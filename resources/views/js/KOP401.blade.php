@@ -2,15 +2,48 @@
 let columnAbjad = '';
 
 $(document).ready(function() {
-    // Form validation for filter form
-    $('#filterForm').on('submit', function(e) {
+    // Form validation for filter form - updated for new KOP401 (Laporan Iuran Tahunan)
+    $('#{{ $dmenu ?? 'KOP401' }}-form').on('submit', function(e) {
         const tahun = $('#tahun').val();
+        const currentYear = new Date().getFullYear();
+        
+        // Validasi tahun
         if (!tahun || !$.isNumeric(tahun)) {
             e.preventDefault();
-            alert('Tahun harus berupa angka');
+            Swal.fire({
+                title: 'Validasi Error!',
+                text: 'Tahun harus berupa angka',
+                icon: 'error',
+                confirmButtonColor: '#028284'
+            });
             $('#tahun').focus();
             return false;
         }
+        
+        // Validasi range tahun
+        if (tahun < 2000 || tahun > currentYear) {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Validasi Error!',
+                text: 'Tahun harus antara 2000 - ' + currentYear,
+                icon: 'error',
+                confirmButtonColor: '#028284'
+            });
+            $('#tahun').focus();
+            return false;
+        }
+        
+        // Show loading saat submit
+        Swal.fire({
+            title: 'Memproses...',
+            text: 'Sedang generate laporan iuran tahunan untuk tahun ' + tahun,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
     });
 
     // Focus on tahun input when page loads
@@ -40,7 +73,131 @@ $(document).ready(function() {
         });
     }
 
-    // Initialize DataTable for result page - with delay to avoid global conflict
+    // Initialize DataTable for result page (dataTable ID from result.blade.php)
+    if ($('#dataTable').length > 0) {
+        // Use setTimeout to ensure this runs after global DataTable initialization
+        setTimeout(function() {
+            // Check if DataTable is already initialized and destroy it first
+            if ($.fn.DataTable.isDataTable('#dataTable')) {
+                $('#dataTable').DataTable().destroy();
+            }
+            
+            let table = $('#dataTable').DataTable({
+                "pageLength": 25,
+                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Semua"]],
+                "language": {
+                    "search": "Cari :",
+                    "lengthMenu": "Tampilkan _MENU_ baris",
+                    "zeroRecords": "Tidak ada data iuran",
+                    "info": "Data _START_ - _END_ dari _TOTAL_",
+                    "infoEmpty": "Tidak ada data",
+                    "infoFiltered": "(pencarian dari _MAX_ data)",
+                    "paginate": {
+                        "first": "Pertama",
+                        "last": "Terakhir",
+                        "next": "Selanjutnya",
+                        "previous": "Sebelumnya"
+                    }
+                },
+                "order": [[ 0, "asc" ]],
+                "columnDefs": [
+                    { "orderable": false, "targets": [0] }, // No column tidak bisa di-sort
+                    { "className": "text-center", "targets": [0, 3, 4, 5] }, // Center align untuk kolom tertentu
+                    { "className": "text-left", "targets": [1, 2] } // Left align untuk nama
+                ],
+                responsive: true,
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fas fa-file-excel me-1"></i>Excel',
+                        className: 'btn btn-success btn-sm',
+                        autoFilter: true,
+                        sheetName: 'Laporan Iuran Bulanan',
+                        title: function() {
+                            var filterInfo = '';
+                            if ($('.card-header p').length > 0) {
+                                filterInfo = $('.card-header p').text().replace('Filter: ', '');
+                            }
+                            return 'Laporan Iuran Bulanan - ' + filterInfo;
+                        },
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    },
+                    {
+                        extend: 'pdfHtml5',
+                        text: '<i class="fas fa-file-pdf me-1"></i>PDF',
+                        className: 'btn btn-danger btn-sm',
+                        orientation: 'landscape',
+                        pageSize: 'A4',
+                        title: function() {
+                            var filterInfo = '';
+                            if ($('.card-header p').length > 0) {
+                                filterInfo = $('.card-header p').text().replace('Filter: ', '');
+                            }
+                            return 'Laporan Iuran Bulanan - ' + filterInfo;
+                        },
+                        exportOptions: {
+                            columns: ':visible'
+                        },
+                        customize: function(doc) {
+                            // Style the document
+                            doc.defaultStyle.fontSize = 9;
+                            doc.styles.tableHeader.fontSize = 10;
+                            doc.styles.tableHeader.bold = true;
+                            doc.styles.tableHeader.alignment = 'center';
+                            
+                            // Add filter info to document
+                            if ($('.card-header p').length > 0) {
+                                var filterText = $('.card-header p').text();
+                                doc.content.splice(1, 0, {
+                                    text: filterText,
+                                    style: 'subheader',
+                                    alignment: 'center',
+                                    margin: [0, 0, 0, 10]
+                                });
+                            }
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fas fa-print me-1"></i>Print',
+                        className: 'btn btn-info btn-sm',
+                        title: function() {
+                            var filterInfo = '';
+                            if ($('.card-header p').length > 0) {
+                                filterInfo = $('.card-header p').text().replace('Filter: ', '');
+                            }
+                            return 'Laporan Iuran Bulanan - ' + filterInfo;
+                        },
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    }
+                ],
+                "initComplete": function(settings, json) {
+                    // Custom styling after DataTable initialization
+                    $('.dt-button').removeClass('dt-button');
+                    
+                    // Add summary info if available
+                    if ($('.card .card-body .row .col-xl-3').length > 0) {
+                        var totalRecords = this.api().data().length;
+                        console.log('Total records in table: ' + totalRecords);
+                    }
+                }
+            });
+
+            // Check authorize button datatables
+            @if(isset($authorize))
+                {{ $authorize->excel == '0' ? "$('.buttons-excel').remove();" : '' }}
+                {{ $authorize->pdf == '0' ? "$('.buttons-pdf').remove();" : '' }}
+                {{ $authorize->print == '0' ? "$('.buttons-print').remove();" : '' }}
+            @endif
+        }, 300);
+    }
+
+    // Initialize DataTable for legacy result page - with delay to avoid global conflict
     if ($('#list_{{ $dmenu ?? 'KOP401' }}').length > 0) {
         // Use setTimeout to ensure this runs after global DataTable initialization
         setTimeout(function() {
@@ -330,10 +487,220 @@ $(document).ready(function() {
     }
 });
 
-// Function delete
-function deleteData(name, msg) {
-    pesan = confirm('Apakah Anda Yakin ' + msg + ' Data ' + name + ' ini ?');
-    if (pesan) return true
-    else return false
+// Initialize Chart if canvas exists (from result.blade.php)
+    if ($('#chartIuran').length > 0 && typeof chartData !== 'undefined') {
+        setTimeout(function() {
+            initializeIuranChart();
+        }, 500);
+    }
+
+    // Auto-close loading swal when page is fully loaded
+    $(window).on('load', function() {
+        if (Swal.isVisible()) {
+            Swal.close();
+        }
+    });
+});
+
+// Function to initialize Chart.js for iuran data
+function initializeIuranChart() {
+    const ctx = document.getElementById('chartIuran');
+    if (!ctx) return;
+    
+    // Get chart data from global variable or from result page
+    let data = [];
+    if (typeof chartData !== 'undefined') {
+        data = chartData;
+    } else if (typeof window.chartData !== 'undefined') {
+        data = window.chartData;
+    }
+    
+    if (data.length === 0) {
+        console.log('No chart data available');
+        return;
+    }
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(item => item.nama_bulan),
+            datasets: [{
+                label: 'Total Nominal (Rp)',
+                data: data.map(item => item.total_nominal),
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            }, {
+                label: 'Jumlah Transaksi',
+                data: data.map(item => item.total_transaksi),
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1,
+                type: 'line',
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Bulan'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Total Nominal (Rp)'
+                    },
+                    ticks: {
+                        callback: function(value, index, values) {
+                            return 'Rp ' + value.toLocaleString('id-ID');
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Jumlah Transaksi'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Grafik Iuran per Bulan'
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.datasetIndex === 0) {
+                                label += 'Rp ' + context.parsed.y.toLocaleString('id-ID');
+                            } else {
+                                label += context.parsed.y + ' transaksi';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
+
+// Function to export data (called from result.blade.php)
+function exportData(type) {
+    if (document.getElementById('exportForm')) {
+        document.getElementById('exportType').value = type;
+        document.getElementById('exportForm').submit();
+    } else {
+        console.error('Export form not found');
+    }
+}
+
+// Function to format currency for display
+function formatCurrency(amount) {
+    return 'Rp ' + parseInt(amount).toLocaleString('id-ID');
+}
+
+// Function to format number with thousand separator
+function formatNumber(number) {
+    return parseInt(number).toLocaleString('id-ID');
+}
+
+// Function to show success message
+function showSuccessMessage(message) {
+    Swal.fire({
+        title: 'Berhasil!',
+        text: message,
+        icon: 'success',
+        confirmButtonColor: '#028284',
+        timer: 3000,
+        timerProgressBar: true
+    });
+}
+
+// Function to show error message
+function showErrorMessage(message) {
+    Swal.fire({
+        title: 'Error!',
+        text: message,
+        icon: 'error',
+        confirmButtonColor: '#028284'
+    });
+}
+
+// Function to show loading
+function showLoading(message = 'Memproses...') {
+    Swal.fire({
+        title: message,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+}
+
+// Function delete (legacy support)
+function deleteData(name, msg) {
+    return Swal.fire({
+        title: 'Konfirmasi Hapus',
+        text: 'Apakah Anda yakin ' + msg + ' data ' + name + ' ini?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        return result.isConfirmed;
+    });
+}
+
+// Function to handle responsive table on mobile
+function handleResponsiveTable() {
+    if ($(window).width() < 768) {
+        $('.table-responsive').addClass('table-responsive-sm');
+        $('.card-body').addClass('px-2');
+    } else {
+        $('.table-responsive').removeClass('table-responsive-sm');
+        $('.card-body').removeClass('px-2');
+    }
+}
+
+// Handle window resize for responsive table
+$(window).resize(function() {
+    handleResponsiveTable();
+});
+
+// Initialize responsive table on load
+$(document).ready(function() {
+    handleResponsiveTable();
+});
 </script>

@@ -44,7 +44,7 @@ class KoperasiMenuSeeder extends Seeder
             ['gmenu' => 'KOP003', 'dmenu' => 'KOP302', 'js' => '0', 'name' => 'Proses Pencairan', 'layout' => 'system', 'url' => 'proses-pencairan', 'tabel' => 'pengajuan_pinjaman', 'icon' => 'fas fa-hand-holding-usd', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 
             // KOP004 - Keuangan (sesuai activity diagram 05)
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP401', 'js' => '1', 'name' => 'Laporan Iuran Bulanan', 'layout' => 'manual', 'url' => 'iuranAnggota', 'tabel' => 'users', 'icon' => 'fas fa-chart-bar', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP401', 'js' => '1', 'name' => 'Laporan Iuran Bulanan', 'layout' => 'manual', 'url' => 'iuranAnggota', 'tabel' => 'iuran', 'icon' => 'fas fa-chart-bar', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP403', 'js' => '0', 'name' => 'Notifikasi', 'layout' => 'master', 'url' => 'notifikasi', 'tabel' => 'notifikasi', 'icon' => 'fas fa-bell', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 

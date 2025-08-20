@@ -99,7 +99,7 @@ class Pinjaman extends Model
 	// Relasi lama ke Anggotum (untuk backward compatibility)
 	public function anggotum()
 	{
-		return $this->belongsTo(Anggotum::class, 'anggota_id');
+		return $this->belongsTo(User::class, 'anggota_id');
 	}
 
 	// Accessor untuk mendapatkan data anggota dari user atau anggotum

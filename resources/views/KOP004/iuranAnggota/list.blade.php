@@ -33,15 +33,20 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="form-group">
-                                        <label for="tahun" class="form-control-label">Tahun Laporan</label>
+                                        <label for="tahun" class="form-control-label">Tahun Laporan <span class="text-danger">*</span></label>
                                         <input type="number"
                                                class="form-control"
                                                id="tahun"
                                                name="tahun"
                                                value="{{ old('tahun', $tahun_default ?? date('Y')) }}"
+                                               min="2000"
+                                               max="{{ date('Y') }}"
                                                required>
                                         <p class='text-secondary text-xs pt-1 px-1'>
-                                            *) Masukkan tahun laporan (contoh: 2025)
+                                            *) Masukkan tahun laporan (2000 - {{ date('Y') }})
+                                        </p>
+                                        <p class='text-info text-xs pt-1 px-1'>
+                                            <i class="fas fa-info-circle"></i> Laporan akan menampilkan data iuran per bulan dalam satu tahun
                                         </p>
                                         @error('tahun')
                                             <p class='text-danger text-xs pt-1'> {{ $message }} </p>

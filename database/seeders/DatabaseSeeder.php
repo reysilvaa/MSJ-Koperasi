@@ -574,8 +574,8 @@ class DatabaseSeeder extends Seeder
             KoperasiDataSeeder::class,          // 4. Basic data
             StockPaketSeeder::class,            // 5. Stock paket
             KoperasiReportCicilanAnggota::class, // 6. Report cicilan
-            KoperasiReportIuranAnggota::class,  // 7. Report iuran
-            // KoperasiDummyDataSeeder::class,
+            // KoperasiReportIuranAnggota::class,  // 7. Report iuran
+            KoperasiDummyDataSeeder::class,
         ]);
     }
 }

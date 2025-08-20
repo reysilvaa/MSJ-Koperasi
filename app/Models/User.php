@@ -22,7 +22,7 @@ class User extends Authenticatable
     protected $primaryKey = 'username';
     protected $keyType = 'string';
     public $incrementing = false;
-    
+
     protected $fillable = [
         'username',
         'firstname',
@@ -49,10 +49,6 @@ class User extends Authenticatable
         'gaji_pokok',
         'tanggal_bergabung',
         'tanggal_aktif',
-        'simpanan_pokok',
-        'simpanan_wajib_bulanan',
-        'total_simpanan_wajib',
-        'total_simpanan_sukarela',
         'no_rekening',
         'nama_bank',
         'foto_ktp',
@@ -83,10 +79,6 @@ class User extends Authenticatable
         'tanggal_bergabung' => 'date',
         'tanggal_aktif' => 'date',
         'gaji_pokok' => 'decimal:2',
-        'simpanan_pokok' => 'decimal:2',
-        'simpanan_wajib_bulanan' => 'decimal:2',
-        'total_simpanan_wajib' => 'decimal:2',
-        'total_simpanan_sukarela' => 'decimal:2',
     ];
 
     /**
@@ -125,6 +117,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Relasi ke tabel iuran (hasMany)
+     * Setiap user memiliki banyak iuran
+     */
+    public function iurans()
+    {
+        return $this->hasMany(Iuran::class, 'user_id', 'id');
+    }
+
+    /**
      * Method untuk mendapatkan daftar anggota aktif (untuk dropdown/select)
      * FIXED: Mengatasi masalah username = 0 atau kosong
      */
@@ -148,38 +149,47 @@ class User extends Authenticatable
     }
 
     /**
-     * Method untuk mendapatkan data simpanan pokok berdasarkan bulan
+     * Method untuk mendapatkan total iuran pokok user
      */
-    public static function getSimpananPokokByMonth($tahun)
+    public function getTotalIuranPokok()
     {
-        $result = self::selectRaw('MONTH(tanggal_bergabung) as bulan_bergabung, SUM(simpanan_pokok) as total_sp')
-            ->where('isactive', '1')
-            ->whereNotNull('nomor_anggota')
-            ->whereYear('tanggal_bergabung', $tahun)
-            ->groupByRaw('MONTH(tanggal_bergabung)')
-            ->get();
-
-        return $result->pluck('total_sp', 'bulan_bergabung')->toArray();
+        return $this->iurans()->where('jenis_iuran', 'pokok')->sum('iuran');
     }
 
     /**
-     * Method untuk mendapatkan data simpanan wajib berdasarkan bulan
+     * Method untuk mendapatkan total iuran wajib user berdasarkan tahun
      */
-    public static function getSimpananWajibByMonth($tahun)
+    public function getTotalIuranWajib($tahun = null)
     {
-        $swData = [];
-        
-        for ($bulan = 1; $bulan <= 12; $bulan++) {
-            $bulanFormatted = str_pad($bulan, 2, '0', STR_PAD_LEFT);
-            
-            $swTotal = self::where('isactive', '1')
-                ->whereNotNull('nomor_anggota')
-                ->where('tanggal_bergabung', '<', "{$tahun}-{$bulanFormatted}-01")
-                ->sum('simpanan_wajib_bulanan');
-                
-            $swData[$bulan] = $swTotal;
+        $query = $this->iurans()->where('jenis_iuran', 'wajib');
+
+        if ($tahun) {
+            $query->where('tahun', $tahun);
         }
 
-        return $swData;
+        return $query->sum('iuran');
+    }
+
+    /**
+     * Method untuk mendapatkan iuran user berdasarkan bulan dan tahun
+     */
+    public function getIuranByPeriode($bulan, $tahun)
+    {
+        return $this->iurans()
+            ->where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->get();
+    }
+
+    /**
+     * Method untuk cek apakah user sudah bayar iuran pada periode tertentu
+     */
+    public function hasIuranOnPeriode($jenis, $bulan, $tahun)
+    {
+        return $this->iurans()
+            ->where('jenis_iuran', $jenis)
+            ->where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->exists();
     }
 }

@@ -28,7 +28,7 @@ return new class extends Migration
             $table->text('about')->nullable();
             $table->longText('idroles')->nullable();
             $table->string('image')->default('noimage.png');
-            
+
             // Kolom dari tabel anggota yang diintegrasikan
             $table->string('nomor_anggota', 20)->nullable()->unique();
             $table->string('nik', 16)->nullable()->unique();
@@ -42,15 +42,10 @@ return new class extends Migration
             $table->decimal('gaji_pokok', 15, 2)->nullable();
             $table->date('tanggal_bergabung')->nullable();
             $table->date('tanggal_aktif')->nullable();
-            $table->decimal('simpanan_pokok', 15, 2)->default(0);
-            $table->decimal('simpanan_wajib_bulanan', 15, 2)->default(0);
-            $table->decimal('total_simpanan_wajib', 15, 2)->default(0);
-            $table->decimal('total_simpanan_sukarela', 15, 2)->default(0);
             $table->string('no_rekening', 20)->nullable();
             $table->string('nama_bank', 50)->nullable();
             $table->string('foto_ktp')->nullable();
             $table->text('keterangan')->nullable();
-            
             $table->enum('isactive', [0, 1])->default(1);
             $table->rememberToken();
             $table->timestamp('created_at')->useCurrent();

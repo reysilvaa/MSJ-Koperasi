@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\ApprovalHistory;
 use App\Models\PengajuanPinjaman;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -23,45 +24,41 @@ class ApprovalHistoryFactory extends Factory
      *
      * @return array<string, mixed>
      */
-    public function definition()
+    public function definition(): array
     {
         // Get random pengajuan pinjaman
         $pengajuan = PengajuanPinjaman::inRandomOrder()->first();
-        $pengajuanId = $pengajuan ? $pengajuan->id : 1;
         
-        // Approval workflow stages
-        $statusOptions = [
-            'pending_review',
-            'review_panitia', 
-            'approved',
-            'rejected',
-            'pencairan'
-        ];
+        if (!$pengajuan) {
+            $pengajuan = PengajuanPinjaman::factory()->create();
+        }
         
-        // Approver names
-        $approvers = [
-            'Ketua Koperasi',
-            'Sekretaris Koperasi',
-            'Bendahara Koperasi',
-            'Ketua Panitia Kredit',
-            'Anggota Panitia Kredit',
-            'Manager Koperasi',
-            'Admin Koperasi'
-        ];
+        // Approval levels
+        $levelApproval = fake()->randomElement([
+            'admin_koperasi',
+            'admin_kredit', 
+            'ketua_umum',
+            'admin_transfer'
+        ]);
+        
+        // Status approval options (sesuai enum di database)
+        $statusApproval = fake()->randomElement(['pending', 'approved', 'rejected']);
         
         // Generate approval notes based on status
-        $status = $this->faker->randomElement($statusOptions);
-        $notes = $this->generateNotesByStatus($status);
+        $notes = $this->generateNotesByStatus($statusApproval);
         
         return [
-            'pengajuan_pinjaman_id' => $pengajuanId,
-            'approver' => $this->faker->randomElement($approvers),
-            'status' => $status,
+            'pengajuan_pinjaman_id' => $pengajuan->id,
+            'level_approval' => $levelApproval,
+            'status_approval' => $statusApproval,
             'catatan' => $notes,
-            'tanggal_approval' => $this->faker->dateTimeBetween('-6 months', 'now')->format('Y-m-d'),
+            'tanggal_approval' => fake()->dateTimeBetween('-6 months', 'now')->format('Y-m-d H:i:s'),
+            'urutan' => fake()->numberBetween(1, 5),
             'isactive' => '1',
-            'user_create' => 'system',
-            'user_update' => 'system'
+            'created_at' => now(),
+            'updated_at' => now(),
+            'user_create' => 'factory',
+            'user_update' => 'factory'
         ];
     }
     
@@ -71,15 +68,10 @@ class ApprovalHistoryFactory extends Factory
     private function generateNotesByStatus($status)
     {
         $notesByStatus = [
-            'pending_review' => [
+            'pending' => [
                 'Pengajuan diterima dan menunggu review',
                 'Dokumen lengkap, siap untuk ditinjau',
                 'Pengajuan masuk antrian review'
-            ],
-            'review_panitia' => [
-                'Sedang dalam tahap review panitia kredit',
-                'Panitia sedang mengevaluasi kelayakan',
-                'Dalam proses verifikasi dokumen'
             ],
             'approved' => [
                 'Pengajuan disetujui sesuai ketentuan',
@@ -93,83 +85,97 @@ class ApprovalHistoryFactory extends Factory
                 'Riwayat pembayaran kurang baik',
                 'Jumlah pengajuan melebihi kemampuan bayar',
                 'Tidak sesuai dengan ketentuan koperasi'
-            ],
-            'pencairan' => [
-                'Dana telah dicairkan ke rekening anggota',
-                'Pencairan berhasil dilakukan',
-                'Dana sudah ditransfer sesuai persetujuan'
             ]
         ];
         
         $notes = $notesByStatus[$status] ?? ['Catatan approval'];
-        return $this->faker->randomElement($notes);
+        return fake()->randomElement($notes);
     }
     
     /**
-     * Indicate that the approval is pending.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk approval yang pending
      */
-    public function pending()
+    public function pending(): static
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'pending_review',
+                'status_approval' => 'pending',
                 'catatan' => 'Pengajuan diterima dan menunggu review',
-                'tanggal_approval' => now()->format('Y-m-d'),
+                'tanggal_approval' => null, // Pending belum ada tanggal approval
+                'urutan' => 1,
             ];
         });
     }
     
     /**
-     * Indicate that the approval is approved.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk approval yang disetujui
      */
-    public function approved()
+    public function approved(): static
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'approved',
+                'status_approval' => 'approved',
                 'catatan' => 'Pengajuan disetujui sesuai ketentuan',
-                'approver' => 'Ketua Panitia Kredit',
+                'level_approval' => 'ketua_umum',
+                'tanggal_approval' => fake()->dateTimeBetween('-1 month', 'now')->format('Y-m-d H:i:s'),
+                'urutan' => fake()->numberBetween(2, 4),
             ];
         });
     }
     
     /**
-     * Indicate that the approval is rejected.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk approval yang ditolak
      */
-    public function rejected()
+    public function rejected(): static
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'rejected',
-                'catatan' => $this->faker->randomElement([
+                'status_approval' => 'rejected',
+                'catatan' => fake()->randomElement([
                     'Tidak memenuhi syarat kelayakan kredit',
                     'Dokumen tidak lengkap atau tidak valid',
                     'Riwayat pembayaran kurang baik'
                 ]),
-                'approver' => 'Ketua Panitia Kredit',
+                'level_approval' => 'ketua_umum',
+                'tanggal_approval' => fake()->dateTimeBetween('-1 month', 'now')->format('Y-m-d H:i:s'),
+                'urutan' => fake()->numberBetween(2, 4),
             ];
         });
     }
     
     /**
-     * Indicate that the loan has been disbursed.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     * State untuk pencairan (approved dengan level admin_transfer)
      */
-    public function disbursed()
+    public function disbursed(): static
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'pencairan',
+                'status_approval' => 'approved',
                 'catatan' => 'Dana telah dicairkan ke rekening anggota',
-                'approver' => 'Bendahara Koperasi',
+                'level_approval' => 'admin_transfer',
+                'tanggal_approval' => fake()->dateTimeBetween('-1 week', 'now')->format('Y-m-d H:i:s'),
+                'urutan' => 5, // Pencairan biasanya step terakhir
             ];
         });
+    }
+
+    /**
+     * State untuk pengajuan tertentu
+     */
+    public function forPengajuan(PengajuanPinjaman $pengajuan): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'pengajuan_pinjaman_id' => $pengajuan->id,
+        ]);
+    }
+
+    /**
+     * State untuk level approval tertentu
+     */
+    public function byLevel(string $level): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'level_approval' => $level,
+        ]);
     }
 }

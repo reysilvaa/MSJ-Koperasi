@@ -8,7 +8,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
-use App\Helpers\Koperasi\Approval\ApprovalWorkflowHelper;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
  * Class ApprovalHistory
@@ -32,6 +32,7 @@ use App\Helpers\Koperasi\Approval\ApprovalWorkflowHelper;
  */
 class ApprovalHistory extends Model
 {
+	use HasFactory;
 	protected $table = 'approval_history';
 
 	protected $casts = [

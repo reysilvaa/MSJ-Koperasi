@@ -49,7 +49,7 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'email', 'alias' => 'Email', 'type' => 'email', 'length' => '100', 'validate' => 'required|email|unique:users,email'],
                     ['field' => 'password', 'alias' => 'Password', 'type' => 'password', 'length' => '255', 'validate' => 'required|min:6'],
                     ['field' => 'idroles', 'alias' => 'Role', 'type' => 'enum', 'length' => '20', 'validate' => 'required', 'query' => "select idroles as value, name as name from sys_roles where idroles in ('anggot', 'kadmin', 'akredt', 'atrans', 'ketuum')"],
-                    
+
                     // Data Anggota Terintegrasi
                     ['field' => 'nomor_anggota', 'alias' => 'Nomor Anggota', 'type' => 'text', 'length' => '20', 'validate' => 'nullable|unique:users,nomor_anggota'],
                     ['field' => 'nik', 'alias' => 'NIK', 'type' => 'text', 'length' => '16', 'validate' => 'nullable|unique:users,nik'],
@@ -63,10 +63,6 @@ class KoperasiTableSeeder extends Seeder
                     ['field' => 'gaji_pokok', 'alias' => 'Gaji Pokok', 'type' => 'number', 'length' => '15', 'validate' => 'nullable'],
                     ['field' => 'tanggal_bergabung', 'alias' => 'Tanggal Bergabung', 'type' => 'date', 'validate' => 'nullable'],
                     ['field' => 'tanggal_aktif', 'alias' => 'Tanggal Aktif', 'type' => 'date', 'validate' => 'nullable'],
-                    ['field' => 'simpanan_pokok', 'alias' => 'Simpanan Pokok', 'type' => 'number', 'length' => '15', 'default' => '0', 'validate' => 'nullable'],
-                    ['field' => 'simpanan_wajib_bulanan', 'alias' => 'Simpanan Wajib Bulanan', 'type' => 'number', 'length' => '15', 'default' => '0', 'validate' => 'nullable'],
-                    ['field' => 'total_simpanan_wajib', 'alias' => 'Total Simpanan Wajib', 'type' => 'number', 'length' => '15', 'default' => '0', 'list' => '1', 'show' => '1'],
-                    ['field' => 'total_simpanan_sukarela', 'alias' => 'Total Simpanan Sukarela', 'type' => 'number', 'length' => '15', 'default' => '0', 'list' => '1', 'show' => '1'],
                     ['field' => 'no_rekening', 'alias' => 'No Rekening', 'type' => 'text', 'length' => '20', 'validate' => 'nullable'],
                     ['field' => 'nama_bank', 'alias' => 'Nama Bank', 'type' => 'text', 'length' => '50', 'validate' => 'nullable'],
                     ['field' => 'foto_ktp', 'alias' => 'Foto KTP', 'type' => 'image', 'length' => '2048', 'validate' => 'nullable|mimes:png,PNG,jpg,JPG,jpeg,JPEG|file|max:2048', 'default' => 'noimage.png'],
@@ -175,19 +171,14 @@ class KoperasiTableSeeder extends Seeder
                 ]
             ],
 
-            // KOP401 - Iuran Anggota
+            // KOP401 - Laporan Iuran Bulanan (menggunakan tbl_iuran)
             'KOP401' => [
                 'gmenu' => 'KOP004',
                 'fields' => [
-                    ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
-                    ['field' => 'nomor_transaksi', 'alias' => 'Nomor Transaksi', 'type' => 'text', 'length' => '20', 'validate' => 'required', 'generateid' => 'auto'],
-                    ['field' => 'anggota_id', 'alias' => 'Anggota', 'type' => 'enum', 'length' => '11', 'validate' => 'required', 'query' => "select id as value, concat(nomor_anggota, ' - ', nama_lengkap) as name from users where isactive = '1' and nomor_anggota is not null"],
-                    ['field' => 'jenis_iuran', 'alias' => 'Jenis Iuran', 'type' => 'enum', 'length' => '20', 'validate' => 'required', 'query' => "select 'simpanan_pokok' as value, 'Simpanan Pokok' as name union select 'simpanan_wajib' as value, 'Simpanan Wajib' as name union select 'simpanan_sukarela' as value, 'Simpanan Sukarela' as name"],
-                    ['field' => 'nominal', 'alias' => 'Nominal', 'type' => 'currency', 'length' => '15', 'decimals' => '2', 'validate' => 'required'],
-                    ['field' => 'tanggal_iuran', 'alias' => 'Tanggal Iuran', 'type' => 'date', 'validate' => 'required'],
-                    ['field' => 'bulan_iuran', 'alias' => 'Bulan Iuran', 'type' => 'text', 'length' => '7', 'validate' => 'required'],
-                    ['field' => 'keterangan', 'alias' => 'Keterangan', 'type' => 'text', 'length' => '255', 'filter' => '0', 'list' => '0'],
-                    $this->getActiveField()
+                    ['field' => 'query', 'alias' => 'Query Laporan Iuran', 'type' => 'report', 'length' => '0', 'filter' => '0', 'list' => '0', 'query' => "SELECT u.nomor_anggota, u.nama_lengkap, ti.jenis_iuran, ti.iuran, ti.bulan, ti.tahun, CASE ti.bulan WHEN 1 THEN 'Januari' WHEN 2 THEN 'Februari' WHEN 3 THEN 'Maret' WHEN 4 THEN 'April' WHEN 5 THEN 'Mei' WHEN 6 THEN 'Juni' WHEN 7 THEN 'Juli' WHEN 8 THEN 'Agustus' WHEN 9 THEN 'September' WHEN 10 THEN 'Oktober' WHEN 11 THEN 'November' WHEN 12 THEN 'Desember' END as nama_bulan FROM tbl_iuran ti LEFT JOIN users u ON ti.user_id = u.id WHERE ti.tahun = :tahun AND (:bulan = 0 OR ti.bulan = :bulan) AND (:jenis_iuran = '' OR ti.jenis_iuran = :jenis_iuran) ORDER BY u.nama_lengkap, ti.bulan"],
+                    ['field' => 'tahun', 'alias' => 'Tahun', 'type' => 'number', 'validate' => 'required', 'default' => date('Y'), 'list' => '0'],
+                    ['field' => 'bulan', 'alias' => 'Bulan', 'type' => 'enum', 'query' => "select '0' as value, 'Semua Bulan' as name union select '1' as value, 'Januari' as name union select '2' as value, 'Februari' as name union select '3' as value, 'Maret' as name union select '4' as value, 'April' as name union select '5' as value, 'Mei' as name union select '6' as value, 'Juni' as name union select '7' as value, 'Juli' as name union select '8' as value, 'Agustus' as name union select '9' as value, 'September' as name union select '10' as value, 'Oktober' as name union select '11' as value, 'November' as name union select '12' as value, 'Desember' as name", 'list' => '0'],
+                    ['field' => 'jenis_iuran', 'alias' => 'Jenis Iuran', 'type' => 'enum', 'query' => "select '' as value, 'Semua Jenis' as name union select 'wajib' as value, 'Iuran Wajib' as name union select 'pokok' as value, 'Iuran Pokok' as name", 'list' => '0']
                 ]
             ],
 
