@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\DB;
  * Class Anggotum
  *
  * @property int $id
- * @property string $nomor_anggota
  * @property string $nik
  * @property string $nama_lengkap
  * @property string $email
@@ -28,8 +27,6 @@ use Illuminate\Support\Facades\DB;
  * @property string $departemen
  * @property float $gaji_pokok
  * @property Carbon $tanggal_bergabung
- * @property Carbon|null $tanggal_aktif
- * @property float $simpanan_pokok
  * @property float $simpanan_wajib_bulanan
  * @property float $total_simpanan_wajib
  * @property float $total_simpanan_sukarela
@@ -59,15 +56,9 @@ class Anggotum extends Model
 		'tanggal_lahir' => 'datetime',
 		'gaji_pokok' => 'float',
 		'tanggal_bergabung' => 'datetime',
-		'tanggal_aktif' => 'datetime',
-		'simpanan_pokok' => 'float',
-		'simpanan_wajib_bulanan' => 'float',
-		'total_simpanan_wajib' => 'float',
-		'total_simpanan_sukarela' => 'float'
 	];
 
 	protected $fillable = [
-		'nomor_anggota',
 		'nik',
 		'nama_lengkap',
 		'email',
@@ -79,11 +70,6 @@ class Anggotum extends Model
 		'departemen',
 		'gaji_pokok',
 		'tanggal_bergabung',
-		'tanggal_aktif',
-		'simpanan_pokok',
-		'simpanan_wajib_bulanan',
-		'total_simpanan_wajib',
-		'total_simpanan_sukarela',
 		'no_rekening',
 		'nama_bank',
 		'foto_ktp',
@@ -109,12 +95,20 @@ class Anggotum extends Model
 	}
 
 	/**
+	 * Get the user that owns the anggota.
+	 */
+	public function user()
+	{
+		return $this->belongsTo(User::class, 'nik', 'username');
+	}
+
+	/**
 	 * Get active anggota list for forms
 	 */
 	public static function getActiveList()
 	{
 		return self::where('isactive', '1')
-			->select('id', 'nomor_anggota', 'nama_lengkap')
+			->select('id', 'nik', 'nama_lengkap')
 			->get();
 	}
 
@@ -126,7 +120,7 @@ class Anggotum extends Model
 		return self::where('email', $email)
 			->orWhere('user_create', $username)
 			->where('isactive', '1')
-			->select('id', 'nomor_anggota', 'nama_lengkap')
+			->select('id', 'nik', 'nama_lengkap')
 			->first();
 	}
 

@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('anggota', function (Blueprint $table) {
             $table->id();
-            $table->string('nomor_anggota', 20)->unique();
             $table->string('nik', 16)->unique();
             $table->string('nama_lengkap', 100);
             $table->string('email', 100)->unique();
@@ -25,11 +24,6 @@ return new class extends Migration
             $table->string('departemen', 50);
             $table->decimal('gaji_pokok', 15, 2);
             $table->date('tanggal_bergabung');
-            $table->date('tanggal_aktif')->nullable();
-            $table->decimal('simpanan_pokok', 15, 2)->default(50000.00);
-            $table->decimal('simpanan_wajib_bulanan', 15, 2)->default(25000.00);
-            $table->decimal('total_simpanan_wajib', 15, 2)->default(0);
-            $table->decimal('total_simpanan_sukarela', 15, 2)->default(0);
             $table->string('no_rekening', 20)->nullable();
             $table->string('nama_bank', 50)->nullable();
             $table->string('foto_ktp')->nullable();

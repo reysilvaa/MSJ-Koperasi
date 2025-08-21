@@ -14,10 +14,9 @@ class KoperasiDataSeeder extends Seeder
     public function run(): void
     {
         // Cek apakah data anggota sudah ada
-        if (DB::table('anggota')->where('nomor_anggota', 'A240001')->count() == 0) {
+        if (DB::table('anggota')->where('nik', '3515123456789012')->count() == 0) {
         // Insert data anggota untuk user dengan role anggota
         DB::table('anggota')->insert([
-            'nomor_anggota' => 'A240001',
             'nik' => '3515123456789012',
             'nama_lengkap' => 'Anggota Koperasi',
             'email' => 'anggota.koperasi@spunindo.com',
@@ -29,11 +28,6 @@ class KoperasiDataSeeder extends Seeder
             'departemen' => 'IT',
             'gaji_pokok' => 8000000.00,
             'tanggal_bergabung' => '2024-01-01',
-            'tanggal_aktif' => '2024-02-01',
-            'simpanan_pokok' => 50000.00,
-            'simpanan_wajib_bulanan' => 25000.00,
-            'total_simpanan_wajib' => 200000.00, // 8 bulan x 25rb
-            'total_simpanan_sukarela' => 0.00,
             'no_rekening' => '1234567890',
             'nama_bank' => 'BRI',
             'foto_ktp' => null,

@@ -64,4 +64,12 @@ class User extends Authenticatable
     {
         $this->attributes['password'] = bcrypt($value);
     }
+
+    /**
+     * Get the anggota associated with the user.
+     */
+    public function anggota()
+    {
+        return $this->hasOne(Anggotum::class, 'nik', 'username');
+    }
 }
