@@ -64,4 +64,9 @@ class User extends Authenticatable
     {
         $this->attributes['password'] = bcrypt($value);
     }
+
+	public function mst_anggota()
+	{
+		return $this->hasMany(MstAnggota::class);
+	}
 }

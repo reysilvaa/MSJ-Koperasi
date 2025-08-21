@@ -14,7 +14,6 @@
         "laravel/ui": "^4.5",
         "mpdf/mpdf": "^8.2",
         "phpoffice/phpspreadsheet": "^1.29",
-        "reliese/laravel": "^1.4",
         "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "require-dev": {
@@ -25,6 +24,7 @@
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^8.1",
         "phpunit/phpunit": "^11.0",
+        "reliese/laravel": "^1.4",
         "spatie/laravel-ignition": "^2.0"
     },
     "autoload": {
