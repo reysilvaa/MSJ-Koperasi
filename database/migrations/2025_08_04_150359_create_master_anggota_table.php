@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('mst_anggota', function (Blueprint $table) {
-            $table->string('nik', 255)->unique();
-            $table->foreignId('user_id')->unique()->constrained('users')->cascadeOnDelete();
+            $table->string('nik', 255)->unique()->primary();
+            $table->foreignId('user_id')->nullable()->unique()->constrained('users')->cascadeOnDelete();
             $table->string('nama_lengkap', 255)->nullable();
             $table->enum('jenis_kelamin', ['L', 'P'])->nullable();
             $table->string('no_telp', 255)->nullable();

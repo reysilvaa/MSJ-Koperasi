@@ -30,7 +30,7 @@ class KoperasiMenuSeeder extends Seeder
         // Insert sys_dmenu (Detail Menu) - sesuai migration yang tersedia
         $dmenus = [
             // KOP001 - Master Data
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP101', 'js' => '0', 'name' => 'Data Anggota', 'layout' => 'master', 'url' => 'anggota', 'tabel' => 'mst_anggota', 'icon' => 'fas fa-user-friends', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP101', 'js' => '0', 'name' => 'Data Anggota', 'layout' => 'manual', 'url' => 'anggota', 'tabel' => 'mst_anggota', 'icon' => 'fas fa-user-friends', 'urut' => 1, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
             ['gmenu' => 'KOP001', 'dmenu' => 'KOP102', 'js' => '0', 'name' => 'Paket Pinjaman', 'layout' => 'master', 'url' => 'paket', 'tabel' => 'mst_paket', 'icon' => 'fas fa-box', 'urut' => 2, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
             ['gmenu' => 'KOP001', 'dmenu' => 'KOP103', 'js' => '0', 'name' => 'Periode Pencairan', 'layout' => 'master', 'url' => 'periode', 'tabel' => 'mst_periode', 'icon' => 'fas fa-calendar-alt', 'urut' => 3, 'isactive' => '1', 'created_at' => now(), 'updated_at' => now(), 'user_create' => 'seeder', 'user_update' => 'seeder'],
 
