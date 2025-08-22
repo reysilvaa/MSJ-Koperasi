@@ -14,12 +14,22 @@ class KoperasiTableSeeder extends Seeder
         $menuToDelete = [
             ['gmenu' => 'KOP001', 'dmenu' => 'KOP101'],
             ['gmenu' => 'KOP001', 'dmenu' => 'KOP102'],
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP103'],
             ['gmenu' => 'KOP002', 'dmenu' => 'KOP201'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP202'],
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP203'],
+            ['gmenu' => 'KOP003', 'dmenu' => 'KOP301'],
+            ['gmenu' => 'KOP003', 'dmenu' => 'KOP302'],
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP401'],
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP402'],
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP403'],
             ['gmenu' => 'KOP005', 'dmenu' => 'KOP501'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP502'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP503'],
+            // Laporan Keuangan Baru
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP504'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP505'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP506'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP507'],
+            ['gmenu' => 'KOP005', 'dmenu' => 'KOP508'],
         ];
 
         foreach ($menuToDelete as $menu) {
@@ -55,18 +65,21 @@ class KoperasiTableSeeder extends Seeder
                 'fields' => [
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
                     ['field' => 'periode', 'alias' => 'Periode', 'type' => 'text', 'length' => '7', 'validate' => 'required', 'default' => date('Y-m'), 'note' => 'Format: 2025-08'],
+
+                    // Stock Management Fields (Sederhana)
                     ['field' => 'stock_limit', 'alias' => 'Stock Limit', 'type' => 'number', 'length' => '11', 'validate' => 'required', 'default' => '100'],
                     ['field' => 'stock_terpakai', 'alias' => 'Stock Terpakai', 'type' => 'number', 'length' => '11', 'default' => '0', 'list' => '1', 'show' => '0'],
+
                     $this->getActiveField()
                 ]
             ],
 
-            // KOP103 - Periode Pencairan
+        // KOP103 - Periode Pencairan
             'KOP103' => [
                 'gmenu' => 'KOP001',
                 'fields' => [
-                    ['field' => 'id', 'alias' => 'ID Periode', 'type' => 'string', 'length' => '255', 'validate' => 'required|unique:mst_periode,id', 'primary' => '1'],
-                    ['field' => 'tahun', 'alias' => 'Tahun', 'type' => 'number', 'length' => '4', 'validate' => 'required|digits:4|integer|min:2020|max:2030'],
+                    ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '25', 'primary' => '1'],
+                    ['field' => 'tahun', 'alias' => 'Tahun', 'type' => 'number', 'length' => '4', 'validate' => 'required|digits:4|integer|min:2000|max:2100'],
                     ['field' => 'bulan', 'alias' => 'Bulan', 'type' => 'number', 'length' => '2', 'validate' => 'required|integer|min:1|max:12'],
                     $this->getActiveField()
                 ]
@@ -146,9 +159,9 @@ class KoperasiTableSeeder extends Seeder
                 ]
             ],
 
-            // KOP501 - Users
-            'KOP501' => [
-                'gmenu' => 'KOP005',
+            // KOP601 - Users
+            'KOP601' => [
+                'gmenu' => 'KOP006',
                 'fields' => [
                     ['field' => 'id', 'alias' => 'ID', 'type' => 'primarykey', 'length' => '11', 'primary' => '1'],
                     ['field' => 'username', 'alias' => 'Username', 'type' => 'text', 'length' => '20', 'validate' => 'required|unique:users,username'],

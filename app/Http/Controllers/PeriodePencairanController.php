@@ -4,14 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Helpers\Function_Helper;
 use App\Helpers\Format_Helper;
-use App\Models\MstPeriode;
+use App\Models\PeriodePencairan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class PeriodeController extends Controller
+class PeriodePencairanController extends Controller
 {
     /**
      * Display a listing of the resource - KOP301/list
@@ -41,20 +41,21 @@ class PeriodeController extends Controller
             ->get();
 
         // Get periode pencairan data - show both active and inactive records
-        $query = MstPeriode::query();
+        $query = PeriodePencairan::query();
 
         // Apply search filter
         $search = request('search');
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('tahun', 'like', "%{$search}%")
-                  ->orWhere('bulan', 'like', "%{$search}%");
+                  ->orWhere('bulan', 'like', "%{$search}%")
+                  ->orWhere('nama_periode', 'like', "%{$search}%");
             });
         }
 
         // Apply authorization rules using model method if exists
-        if (method_exists(MstPeriode::class, 'applyAuthorizationRules')) {
-            $query = MstPeriode::applyAuthorizationRules($query, $data['authorize'], $data['users_rules']);
+        if (method_exists(PeriodePencairan::class, 'applyAuthorizationRules')) {
+            $query = PeriodePencairan::applyAuthorizationRules($query, $data['authorize'], $data['users_rules']);
         }
 
         $collectionData = $query->orderBy('isactive', 'desc') // Show active first
@@ -75,8 +76,8 @@ class PeriodeController extends Controller
         );
 
         // Get summary statistics
-        if (method_exists(MstPeriode::class, 'getStatistics')) {
-            $data['stats'] = MstPeriode::getStatistics($collectionData);
+        if (method_exists(PeriodePencairan::class, 'getStatistics')) {
+            $data['stats'] = PeriodePencairan::getStatistics($collectionData);
         } else {
             // Manual statistics calculation
             $data['stats'] = [
@@ -158,8 +159,8 @@ class PeriodeController extends Controller
             DB::beginTransaction();
 
             // Generate periode
-            if (method_exists(MstPeriode::class, 'generateYearlyPeriods')) {
-                $created_periods = MstPeriode::generateYearlyPeriods($tahun, $username);
+            if (method_exists(PeriodePencairan::class, 'generateYearlyPeriods')) {
+                $created_periods = PeriodePencairan::generateYearlyPeriods($tahun, $username);
             } else {
                 // Manual generation if method doesn't exist
                 $created_periods = [];
@@ -170,18 +171,15 @@ class PeriodeController extends Controller
                 ];
 
                 foreach ($months as $bulan => $nama_bulan) {
-                    $existing = MstPeriode::where('tahun', $tahun)
-                                         ->where('bulan', $bulan)
-                                         ->first();
+                    $existing = PeriodePencairan::where('tahun', $tahun)
+                                              ->where('bulan', $bulan)
+                                              ->first();
                     
                     if (!$existing) {
-                        // Generate ID for periode
-                        $id = $tahun . str_pad($bulan, 2, '0', STR_PAD_LEFT);
-                        
-                        $periode = MstPeriode::create([
-                            'id' => $id,
-                            'tahun' => (int) $tahun,
-                            'bulan' => (int) $bulan,
+                        $periode = PeriodePencairan::create([
+                            'tahun' => $tahun,
+                            'bulan' => $bulan,
+                            'nama_periode' => $nama_bulan . ' ' . $tahun,
                             'isactive' => '1',
                             'user_create' => $username,
                             'user_update' => $username
@@ -223,58 +221,45 @@ class PeriodeController extends Controller
     }
 
     /**
-     * Display the specified resource - KOP103/show
+     * Display the specified resource - KOP301/show
      */
     public function show($data)
     {
         $syslog = new Function_Helper;
         $data['format'] = new Format_Helper;
+        $id = decrypt($data['idencrypt']);
+
+        // Check authorization
+        if ($data['authorize']->view == '0') {
+            $data['errorpages'] = 'Not Authorized!';
+            $syslog->log_insert('E', $data['url_menu'], 'Not Authorized! - Show Periode', '0');
+            return view("pages.errorpages", $data);
+        }
 
         // Get table structure data
         $data['table_header'] = DB::table('sys_table')
-            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'filter' => '1', 'show' => '1'])
+            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu']])
+            ->orderBy('urut')
             ->get();
 
         $data['table_primary'] = DB::table('sys_table')
             ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'primary' => '1'])
-            ->first();
-
-        $data['table_header_l'] = DB::table('sys_table')
-            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'position' => '3', 'show' => '1', 'filter' => '1'])
             ->orderBy('urut')
             ->get();
-
-        $data['table_header_r'] = DB::table('sys_table')
-            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'position' => '4', 'show' => '1', 'filter' => '1'])
-            ->orderBy('urut')
-            ->get();
-
-        // Check decrypt
-        try {
-            $id = decrypt($data['idencrypt']);
-        } catch (\Exception $e) {
-            $id = "";
-        }
 
         // Get periode data
-        $list = MstPeriode::find($id);
+        $data['list'] = PeriodePencairan::find($id);
 
-        // Check if data exists
-        if ($list) {
-            $data['list'] = $list;
-            
-            // Log access
-            $syslog->log_insert('R', $data['dmenu'], 'Periode Pencairan Show: ' . $id, '1');
-            
-            return view($data['url'], $data);
-        } else {
-            // If not exist
-            $data['url_menu'] = 'error';
-            $data['title_group'] = 'Error';
-            $data['title_menu'] = 'Error';
-            $data['errorpages'] = 'Not Found!';
-            return view("pages.errorpages", $data);
+        if (!$data['list']) {
+            Session::flash('message', 'Data periode tidak ditemukan');
+            Session::flash('class', 'danger');
+            return redirect($data['url_menu']);
         }
+
+        // Log access
+        $syslog->log_insert('R', $data['dmenu'], 'Periode Pencairan Show: ' . $id, '1');
+
+        return view($data['url'], $data);
     }
 
     /**
@@ -305,7 +290,7 @@ class PeriodeController extends Controller
             ->get();
 
         // Get periode data
-        $data['list'] = MstPeriode::find($id);
+        $data['list'] = PeriodePencairan::find($id);
 
         if (!$data['list']) {
             Session::flash('message', 'Data periode tidak ditemukan');
@@ -349,7 +334,7 @@ class PeriodeController extends Controller
         try {
             DB::beginTransaction();
 
-            $periode = MstPeriode::find($id);
+            $periode = PeriodePencairan::find($id);
             if (!$periode) {
                 Session::flash('message', 'Data periode tidak ditemukan');
                 Session::flash('class', 'danger');
@@ -358,8 +343,8 @@ class PeriodeController extends Controller
 
             // Update data
             $periode->update([
-                'tahun' => (int) request('tahun'),
-                'bulan' => (int) request('bulan'),
+                'tahun' => request('tahun'),
+                'bulan' => request('bulan'),
                 'user_update' => $data['user_login']->username ?? 'system'
             ]);
 
@@ -403,7 +388,7 @@ class PeriodeController extends Controller
         try {
             DB::beginTransaction();
 
-            $periode = MstPeriode::find($id);
+            $periode = PeriodePencairan::find($id);
             if (!$periode) {
                 Session::flash('message', 'Data periode tidak ditemukan');
                 Session::flash('class', 'danger');
