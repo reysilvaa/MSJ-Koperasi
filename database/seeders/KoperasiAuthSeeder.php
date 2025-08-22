@@ -111,7 +111,7 @@ class KoperasiAuthSeeder extends Seeder
             ['gmenu' => 'KOP004', 'dmenu' => 'KOP403'], // trs_shu
 
             // Pengguna (users)
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP501'], // users
+            ['gmenu' => 'KOP006', 'dmenu' => 'KOP601'], // users
         ];
 
                 // Authorization configurations based on activity diagram roles (5 roles)

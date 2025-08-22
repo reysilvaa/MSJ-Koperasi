@@ -149,7 +149,7 @@
                                                 <th>No</th>
                                                 <th>Tahun</th>
                                                 <th>Bulan</th>
-                                                <th>Periode</th>
+                                                <th>Nama Periode</th>
                                                 <th>Status</th>
                                                 <th>Dibuat</th>
                                             </tr>
@@ -214,16 +214,7 @@
                                                     <td>{{ $list->firstItem() + $index }}</td>
                                                     <td class="text-sm font-weight-normal">{{ $item->tahun }}</td>
                                                     <td class="text-sm font-weight-normal">{{ $item->bulan }}</td>
-                                                    <td class="text-sm font-weight-normal">
-                                                        @php
-                                                            $months = [
-                                                                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
-                                                                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-                                                                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
-                                                            ];
-                                                        @endphp
-                                                        {{ $months[$item->bulan] ?? $item->bulan }} {{ $item->tahun }}
-                                                    </td>
+                                                    <td class="text-sm font-weight-normal">{{ $item->nama_periode }}</td>
                                                     <td class="text-sm font-weight-normal">
                                                         @if($item->isactive == '1')
                                                             <span class="badge bg-success text-white">
