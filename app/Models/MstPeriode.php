@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * Class MstPeriode
  * 
  * @property string $id
- * @property Carbon $tahun
+ * @property int $tahun
  * @property int $bulan
  * @property string $isactive
  * @property Carbon $created_at
@@ -32,11 +32,12 @@ class MstPeriode extends Model
 	public $incrementing = false;
 
 	protected $casts = [
-		'tahun' => 'datetime',
+		'tahun' => 'int',
 		'bulan' => 'int'
 	];
 
 	protected $fillable = [
+		'id',
 		'tahun',
 		'bulan',
 		'isactive',
