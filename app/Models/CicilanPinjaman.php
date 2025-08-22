@@ -8,68 +8,65 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
- * Class TrsCicilan
- * 
- * @property string $nomor_pinjaman
- * @property string $nik
- * @property string $periode
+ * Class CicilanPinjaman
+ *
+ * @property int $id
+ * @property int $pinjaman_id
  * @property int $angsuran_ke
  * @property Carbon $tanggal_jatuh_tempo
- * @property float $nominal_pokok
- * @property float $bunga_rp
- * @property float $total_angsuran
  * @property Carbon|null $tanggal_bayar
- * @property string $isbayar
+ * @property float $nominal_pokok
+ * @property float $nominal_bunga
  * @property float $total_bayar
+ * @property string|null $metode_pembayaran
+ * @property string|null $nomor_transaksi
+ * @property string|null $keterangan
  * @property string $isactive
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property string|null $user_create
  * @property string|null $user_update
- * 
- * @property MstAnggota $mst_anggota
- * @property TrsPiutang $trs_piutang
+ *
+ * @property Pinjaman $pinjaman
  *
  * @package App\Models
  */
-class TrsCicilan extends Model
+class CicilanPinjaman extends Model
 {
-	protected $table = 'trs_cicilan';
-	public $incrementing = false;
+	use HasFactory;
+	protected $table = 'cicilan_pinjaman';
 
 	protected $casts = [
+		'pinjaman_id' => 'int',
 		'angsuran_ke' => 'int',
 		'tanggal_jatuh_tempo' => 'datetime',
-		'nominal_pokok' => 'float',
-		'bunga_rp' => 'float',
-		'total_angsuran' => 'float',
 		'tanggal_bayar' => 'datetime',
+		'nominal_pokok' => 'float',
+		'nominal_bunga' => 'float',
 		'total_bayar' => 'float'
 	];
 
 	protected $fillable = [
+		'pinjaman_id',
 		'angsuran_ke',
 		'tanggal_jatuh_tempo',
-		'nominal_pokok',
-		'bunga_rp',
-		'total_angsuran',
 		'tanggal_bayar',
-		'isbayar',
+		'nominal_pokok',
+		'nominal_bunga',
 		'total_bayar',
+		'metode_pembayaran',
+		'nomor_transaksi',
+		'keterangan',
 		'isactive',
 		'user_create',
 		'user_update'
 	];
 
-	public function mst_anggota()
+	public function pinjaman()
 	{
-		return $this->belongsTo(MstAnggota::class, 'nik');
-	}
-
-	public function trs_piutang()
-	{
-		return $this->belongsTo(TrsPiutang::class, 'nomor_pinjaman');
+		return $this->belongsTo(Pinjaman::class);
 	}
 }

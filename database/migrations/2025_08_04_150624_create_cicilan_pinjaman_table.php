@@ -11,12 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('master_paket_pinjaman', function (Blueprint $table) {
+        Schema::create('cicilan_pinjaman', function (Blueprint $table) {
             $table->id();
-            $table->string('periode', 7); // Format: 2025-08 (tahun-bulan)
-            $table->integer('stock_limit')->default(100); // Total limit untuk bulan ini
-            $table->integer('stock_terpakai')->default(0); // Yang sudah digunakan
-
+            $table->foreignId('pinjaman_id')->constrained('pinjaman');
+            $table->integer('angsuran_ke');
+            $table->date('tanggal_jatuh_tempo');
+            $table->date('tanggal_bayar')->nullable();
+            $table->decimal('nominal_pokok', 15, 2);
+            $table->decimal('nominal_bunga', 15, 2);
+            $table->decimal('total_bayar', 15, 2);
+            $table->string('metode_pembayaran', 20)->nullable();
+            $table->string('nomor_transaksi', 50)->nullable();
+            $table->text('keterangan')->nullable();
             $table->enum('isactive', [0, 1])->default(1);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
@@ -30,6 +36,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('master_paket_pinjaman');
+        Schema::dropIfExists('cicilan_pinjaman');
     }
 };
