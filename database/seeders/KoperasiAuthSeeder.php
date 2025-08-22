@@ -95,34 +95,23 @@ class KoperasiAuthSeeder extends Seeder
             ]
         ]);
 
-        // Define all menu items with their groups
+        // Define menu items in scope (berdasarkan migration yang tersedia)
         $menuItems = [
-            // KOP001 - Master Data
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP101'],
-            ['gmenu' => 'KOP001', 'dmenu' => 'KOP102'],
+            // Master Data
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP101'], // mst_anggota
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP102'], // mst_paket
+            ['gmenu' => 'KOP001', 'dmenu' => 'KOP103'], // mst_periode
 
-            // KOP002 - Pinjaman
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP201'],
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP202'],
-            ['gmenu' => 'KOP002', 'dmenu' => 'KOP203'],
+            // Pinjaman
+            ['gmenu' => 'KOP002', 'dmenu' => 'KOP201'], // trs_piutang
 
-            // KOP003 - Pencairan
-            ['gmenu' => 'KOP003', 'dmenu' => 'KOP301'],
-            ['gmenu' => 'KOP003', 'dmenu' => 'KOP302'],
+            // Keuangan
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP401'], // trs_potongan
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP402'], // trs_cicilan
+            ['gmenu' => 'KOP004', 'dmenu' => 'KOP403'], // trs_shu
 
-            // KOP004 - Keuangan
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP401'],
-            ['gmenu' => 'KOP004', 'dmenu' => 'KOP403'],
-
-            // KOP005 - Laporan
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP501'],
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP502'],
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP503'],
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP504'], // Neraca
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP505'], // Laba Rugi
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP506'], // Cash Flow
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP507'], // SHU
-            ['gmenu' => 'KOP005', 'dmenu' => 'KOP508'], // Jurnal Umum
+            // Pengguna (users)
+            ['gmenu' => 'KOP006', 'dmenu' => 'KOP601'], // users
         ];
 
                 // Authorization configurations based on activity diagram roles (5 roles)
@@ -169,61 +158,11 @@ class KoperasiAuthSeeder extends Seeder
 
         foreach ($authConfigs as $roleId => $permissions) {
             foreach ($menuItems as $menu) {
-                // Special permissions for specific menus based on activity diagram
-                $menuPermissions = $permissions;
-                $skipMenu = false; // Flag to skip creating record for this menu
-
-                // Anggota special rules - HANYA bisa akses menu tertentu
-                if ($roleId === 'anggot') {
-                    // Anggota HANYA bisa akses: KOP201 (Pengajuan Pinjaman), KOP203 (Cicilan Anggota), KOP401 (Laporan Iuran), KOP403 (Notifikasi)
-                    $allowedMenus = ['KOP201', 'KOP203', 'KOP401', 'KOP403'];
-
-                    if (!in_array($menu['dmenu'], $allowedMenus)) {
-                        $skipMenu = true; // Skip menu yang tidak diizinkan
-                    } else {
-                        if ($menu['dmenu'] === 'KOP201') { // Pengajuan Pinjaman
-                            $menuPermissions['add'] = '1'; // Anggota bisa mengajukan pinjaman
-                            $menuPermissions['edit'] = '1'; // Edit pengajuan sendiri
-                        }
-                    }
-                }
-
-                // Admin Kredit special rules (Fokus pada credit analysis)
-                if ($roleId === 'akredt') {
-                    // Admin Kredit tidak bisa akses: KOP301, KOP302 (Pencairan), KOP401, KOP401 (Keuangan)
-                    $restrictedMenus = ['KOP301', 'KOP302', 'KOP401'];
-
-                    if (in_array($menu['dmenu'], $restrictedMenus)) {
-                        $skipMenu = true; // Skip menu yang tidak diizinkan
-                    } else {
-                        if ($menu['dmenu'] === 'KOP202') { // Approval Pinjaman
-                            $menuPermissions['approval'] = '1'; // Strong approval rights
-                        }
-                    }
-                }
-
-                // Admin Transfer special rules (Fokus pada pencairan dan transfer)
-                if ($roleId === 'atrans') {
-                    // Admin Transfer tidak bisa akses: KOP101, KOP102 (Master Data), KOP202 (Approval)
-                    $restrictedMenus = ['KOP101', 'KOP102', 'KOP202'];
-
-                    if (in_array($menu['dmenu'], $restrictedMenus)) {
-                        $skipMenu = true; // Skip menu yang tidak diizinkan
-                    } else {
-                        if (in_array($menu['dmenu'], ['KOP301', 'KOP302', 'KOP401'])) { // Transfer & Finance
-                            $menuPermissions['approval'] = '1'; // Strong approval for transfers
-                        }
-                    }
-                }
-
-                // Hanya tambahkan record jika menu tidak di-skip
-                if (!$skipMenu) {
-                    $authRecords[] = array_merge([
-                        'idroles' => $roleId,
-                        'gmenu' => $menu['gmenu'],
-                        'dmenu' => $menu['dmenu']
-                    ], $menuPermissions);
-                }
+                $authRecords[] = array_merge([
+                    'idroles' => $roleId,
+                    'gmenu' => $menu['gmenu'],
+                    'dmenu' => $menu['dmenu']
+                ], $permissions);
             }
         }
 

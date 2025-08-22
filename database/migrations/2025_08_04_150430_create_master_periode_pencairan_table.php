@@ -12,17 +12,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('mst_paket', function (Blueprint $table) {
+        Schema::create('mst_periode', function (Blueprint $table) {
             $table->string('id', 255)->primary();
-            $table->string('nama_paket', 255);
-            $table->integer('stock_limit')->default(100);
-            $table->integer('stock_terpakai')->default(0);
+            $table->year('tahun');
+            $table->tinyInteger('bulan')->unsigned();
             $table->enum('isactive', ['0', '1'])->default('1');
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             $table->string('user_create', 255)->nullable();
             $table->string('user_update', 255)->nullable();
+
+            // Unique constraint untuk tahun dan bulan
+            $table->unique(['tahun', 'bulan'], 'unique_periode');
         });
+
     }
 
     /**
@@ -30,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('mst_paket');
+        Schema::dropIfExists('mst_periode');
     }
 };
