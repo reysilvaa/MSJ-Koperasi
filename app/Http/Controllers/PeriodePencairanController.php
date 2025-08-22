@@ -27,7 +27,6 @@ class PeriodePencairanController extends Controller
         // Function helper
         $syslog = new Function_Helper;
         $data['format'] = new Format_Helper;
-        
 
         // Get table structure data
         $data['table_header'] = DB::table('sys_table')

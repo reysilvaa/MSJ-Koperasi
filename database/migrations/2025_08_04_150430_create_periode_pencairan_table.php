@@ -11,12 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('master_paket_pinjaman', function (Blueprint $table) {
+        Schema::create('periode_pencairan', function (Blueprint $table) {
             $table->id();
-            $table->string('periode', 7); // Format: 2025-08 (tahun-bulan)
-            $table->integer('stock_limit')->default(100); // Total limit untuk bulan ini
-            $table->integer('stock_terpakai')->default(0); // Yang sudah digunakan
-
+            $table->integer('tahun'); // 2025
+            $table->integer('bulan'); // 1-12
             $table->enum('isactive', [0, 1])->default(1);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
@@ -30,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('master_paket_pinjaman');
+        Schema::dropIfExists('periode_pencairan');
     }
 };

@@ -570,11 +570,10 @@ class DatabaseSeeder extends Seeder
             KoperasiMenuSeeder::class,
             KoperasiTableSeeder::class,
             KoperasiDataSeeder::class,
-            // KoperasiReportCicilanAnggota::class,
-            // KoperasiReportIuranAnggota::class,
+            KoperasiReportCicilanAnggota::class,
+            KoperasiReportIuranAnggota::class,
             KoperasiAuthSeeder::class,
-            // StockPaketSeeder::class,
-            KoperasiEnumSeeder::class,
+            StockPaketSeeder::class,
             // KoperasiDummyDataSeeder::class,
         ]);
     }
