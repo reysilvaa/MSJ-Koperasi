@@ -137,7 +137,7 @@
                                                 Bank
                                             </th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">
-                                                Status
+                                                Status & Akses
                                             </th>
                                             <th class="text-secondary opacity-7">Aksi</th>
                                         </tr>
@@ -214,12 +214,27 @@
                                                     </div>
                                                 </td>
                                                 <td class="align-middle text-center text-sm">
-                                                    @php
-                                                        $statusLabel = isset($statusOptions) ? $statusOptions->where('value', $item->isactive)->first() : null;
-                                                    @endphp
-                                                    <span class="badge badge-sm bg-gradient-{{ $item->isactive == '1' ? 'success' : 'danger' }}">
-                                                        {{ $statusLabel ? $statusLabel->name : ($item->isactive == '1' ? 'Active' : 'Not Active') }}
-                                                    </span>
+                                                    <div class="d-flex flex-column align-items-center">
+                                                        {{-- Status Anggota --}}
+                                                        @php
+                                                            $statusLabel = isset($statusOptions) ? $statusOptions->where('value', $item->isactive)->first() : null;
+                                                        @endphp
+                                                        <span class="badge badge-sm bg-gradient-{{ $item->isactive == '1' ? 'success' : 'danger' }} mb-1">
+                                                            {{ $statusLabel ? $statusLabel->name : ($item->isactive == '1' ? 'Active' : 'Not Active') }}
+                                                        </span>
+                                                        
+                                                        {{-- Status Login --}}
+                                                        @if($item->user_id)
+                                                            <span class="badge badge-sm bg-gradient-info">
+                                                                <i class="fas fa-user-check me-1"></i>Login: Aktif
+                                                            </span>
+                                                            <small class="text-xs text-secondary mt-1">{{ $item->user_username }}</small>
+                                                        @else
+                                                            <span class="badge badge-sm bg-gradient-secondary">
+                                                                <i class="fas fa-user-times me-1"></i>Login: Tidak
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                 </td>
                                                 <td class="align-middle">
                                                     <div class="dropdown">
@@ -234,6 +249,21 @@
                                                             <a class="dropdown-item" href="{{ $url_menu }}/edit/{{ encrypt($item->nik) }}">
                                                                 <i class="fas fa-edit me-2"></i>Edit
                                                             </a>
+                                                            <div class="dropdown-divider"></div>
+                                                            
+                                                            {{-- Toggle Login Access --}}
+                                                            @if($item->user_id)
+                                                                <a class="dropdown-item text-warning" 
+                                                                   href="#" onclick="confirmToggleLogin('{{ encrypt($item->nik) }}', '{{ $item->nama_lengkap }}', true, '{{ $item->user_email }}')">
+                                                                    <i class="fas fa-user-times me-2"></i>Hapus Akses Login
+                                                                </a>
+                                                            @else
+                                                                <a class="dropdown-item text-info" 
+                                                                   href="#" onclick="confirmToggleLogin('{{ encrypt($item->nik) }}', '{{ $item->nama_lengkap }}', false)">
+                                                                    <i class="fas fa-user-plus me-2"></i>Buat Akses Login
+                                                                </a>
+                                                            @endif
+                                                            
                                                             <div class="dropdown-divider"></div>
                                                             <a class="dropdown-item text-{{ $item->isactive == '1' ? 'danger' : 'success' }}" 
                                                                href="#" onclick="confirmToggleStatus('{{ encrypt($item->nik) }}', '{{ $item->nama_lengkap }}', '{{ $item->isactive }}')">
@@ -291,6 +321,31 @@
             </div>
         </div>
     </div>
+
+    {{-- Toggle Login Access Confirmation Modal --}}
+    <div class="modal fade" id="toggleLoginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Konfirmasi Akses Login</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="loginModalContent">
+                        <!-- Content will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <form id="toggleLoginForm" method="POST" style="display: inline;">
+                        @csrf
+                        @method('POST')
+                        <button type="submit" class="btn" id="confirmLoginButton">Konfirmasi</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('js')
@@ -309,6 +364,50 @@
         confirmButton.textContent = isActive ? 'Nonaktifkan' : 'Aktifkan';
         
         var toggleModal = new bootstrap.Modal(document.getElementById('toggleStatusModal'));
+        toggleModal.show();
+    }
+
+    function confirmToggleLogin(encryptedId, nama, hasUser, userEmail = '') {
+        const modalContent = document.getElementById('loginModalContent');
+        const confirmButton = document.getElementById('confirmLoginButton');
+        
+        if (hasUser) {
+            // Removing user access
+            modalContent.innerHTML = `
+                <p>Apakah Anda yakin ingin <strong class="text-danger">menghapus akses login</strong> untuk anggota <strong>${nama}</strong>?</p>
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle me-1"></i>Peringatan:</h6>
+                    <ul class="mb-0">
+                        <li>Email: <strong>${userEmail}</strong> akan dihapus</li>
+                        <li>Anggota tidak akan bisa login lagi</li>
+                        <li>Data akun akan hilang permanen</li>
+                    </ul>
+                </div>
+            `;
+            confirmButton.className = 'btn btn-danger';
+            confirmButton.textContent = 'Hapus Akses Login';
+        } else {
+            // Creating user access
+            const nik = encryptedId; // This should be the actual NIK, but for security we'll show the pattern
+            modalContent.innerHTML = `
+                <p>Apakah Anda yakin ingin <strong class="text-success">membuat akses login</strong> untuk anggota <strong>${nama}</strong>?</p>
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-1"></i>Akun yang akan dibuat:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Email:</strong> [NIK]@koperasi.local</li>
+                        <li><strong>Username:</strong> [NIK]</li>
+                        <li><strong>Password:</strong> [NIK]</li>
+                    </ul>
+                    <small class="text-muted">*NIK akan digunakan sebagai email, username, dan password default</small>
+                </div>
+            `;
+            confirmButton.className = 'btn btn-success';
+            confirmButton.textContent = 'Buat Akses Login';
+        }
+        
+        document.getElementById('toggleLoginForm').action = `{{ $url_menu }}/toggle-user-access/${encryptedId}`;
+        
+        var toggleModal = new bootstrap.Modal(document.getElementById('toggleLoginModal'));
         toggleModal.show();
     }
 

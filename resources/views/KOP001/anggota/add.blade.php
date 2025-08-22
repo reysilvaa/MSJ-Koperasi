@@ -115,25 +115,24 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="row">
-                                        {{-- User Account --}}
+                                        {{-- Toggle Buat Akses Login --}}
                                         <div class="col-md-12">
                                             <div class="form-group">
-                                                <label for="user_id" class="form-control-label">User Account</label>
-                                                <select class="form-select" name="user_id" id="user_id">
-                                                    <option value="">Pilih User (Opsional)</option>
-                                                    @if(isset($userOptions))
-                                                        @foreach($userOptions as $option)
-                                                            <option value="{{ $option->value }}" 
-                                                                    {{ old('user_id') == $option->value ? 'selected' : '' }}>
-                                                                {{ $option->value }} - {{ $option->name }}
-                                                            </option>
-                                                        @endforeach
-                                                    @endif
-                                                </select>
-                                                <p class='text-secondary text-xs pt-1 px-1'>*) Hubungkan dengan akun user untuk login</p>
-                                                @error('user_id')
-                                                    <p class='text-danger text-xs pt-1'> {{ $message }} </p>
-                                                @enderror
+                                                <div class="d-flex align-items-center justify-content-between border rounded p-3 mb-3">
+                                                    <div>
+                                                        <label class="form-control-label mb-1">Buat Akses Login</label>
+                                                        <p class="text-xs text-secondary mb-0">
+                                                            Aktifkan untuk membuat akun login otomatis.<br>
+                                                            Email: [NIK]@koperasi.local | Password: [NIK]
+                                                        </p>
+                                                    </div>
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" 
+                                                               name="create_user_access" id="create_user_access" value="1"
+                                                               {{ old('create_user_access') ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="create_user_access"></label>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         {{-- Departemen --}}
@@ -251,6 +250,24 @@
                                             <p class='text-danger text-xs pt-1'> {{ $message }} </p>
                                         @enderror
                                     </div>
+                                    
+                                    {{-- Info box for login credentials preview --}}
+                                    <div id="login-info" class="mt-3 p-3 bg-light rounded" style="display: none;">
+                                        <h6 class="text-sm mb-2">
+                                            <i class="fas fa-info-circle text-info me-1"></i>Informasi Login
+                                        </h6>
+                                        <div class="text-xs">
+                                            <div class="mb-1">
+                                                <strong>Email:</strong> <span id="preview-email">-</span>
+                                            </div>
+                                            <div class="mb-1">
+                                                <strong>Username:</strong> <span id="preview-username">-</span>
+                                            </div>
+                                            <div>
+                                                <strong>Password:</strong> <span id="preview-password">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <hr class="horizontal dark">
@@ -297,6 +314,7 @@
         if (!namaPemilikRekening.value && this.value) {
             namaPemilikRekening.value = this.value;
         }
+        updateLoginPreview(); // Update preview when name changes
     });
 
     // NIK validation (16 digits)
@@ -305,6 +323,7 @@
         if (this.value.length > 16) {
             this.value = this.value.slice(0, 16);
         }
+        updateLoginPreview(); // Update preview when NIK changes
     });
 
     // Phone number validation
@@ -317,11 +336,38 @@
         this.value = this.value.replace(/\D/g, ''); // Only numbers
     });
 
+    // Toggle user access functionality
+    document.getElementById('create_user_access').addEventListener('change', function() {
+        updateLoginPreview();
+    });
+
+    // Function to update login credentials preview
+    function updateLoginPreview() {
+        const toggleChecked = document.getElementById('create_user_access').checked;
+        const nik = document.getElementById('nik').value;
+        const loginInfo = document.getElementById('login-info');
+        
+        if (toggleChecked && nik) {
+            const email = nik + '@koperasi.local';
+            const username = nik;
+            const password = nik;
+            
+            document.getElementById('preview-email').textContent = email;
+            document.getElementById('preview-username').textContent = username;
+            document.getElementById('preview-password').textContent = password;
+            
+            loginInfo.style.display = 'block';
+        } else {
+            loginInfo.style.display = 'none';
+        }
+    }
+
     // Form validation before submit
     document.getElementById('anggota-form').addEventListener('submit', function(e) {
         const nik = document.getElementById('nik').value;
         const namaLengkap = document.getElementById('nama_lengkap').value;
         const jenisKelamin = document.getElementById('jenis_kelamin').value;
+        const createUserAccess = document.getElementById('create_user_access').checked;
         
         if (nik.length !== 16) {
             e.preventDefault();
@@ -343,6 +389,20 @@
             document.getElementById('jenis_kelamin').focus();
             return;
         }
+        
+        // Confirmation for user access creation
+        if (createUserAccess) {
+            const confirmMessage = `Akan dibuat akses login dengan:\n\nEmail: ${nik}@koperasi.local\nUsername: ${nik}\nPassword: ${nik}\n\nLanjutkan?`;
+            if (!confirm(confirmMessage)) {
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+
+    // Initialize preview on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateLoginPreview();
     });
 </script>
 @endpush

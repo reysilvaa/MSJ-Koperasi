@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
 
 class AnggotaController extends Controller
 {
@@ -82,7 +83,9 @@ class AnggotaController extends Controller
                         'a.nama_pemilik_rekening',
                         'a.foto_ktp',
                         'a.isactive',
-                        'u.email as user_email'
+                        'a.user_id',
+                        'u.email as user_email',
+                        'u.username as user_username'
                     );
 
                 // Apply filters if any
@@ -134,7 +137,6 @@ class AnggotaController extends Controller
         $data['jenis_kelamin'] = request('jenis_kelamin', '');
         $data['departemen'] = request('departemen', '');
 
-        $data['table_primary'] = "JANCOK";
         // check data table primary
         if ($data['table_primary']) {
             // return page menu
@@ -189,13 +191,6 @@ class AnggotaController extends Controller
             (object)['value' => 'L', 'name' => 'Laki-laki'],
             (object)['value' => 'P', 'name' => 'Perempuan']
         ]);
-
-        // Get users that are not yet assigned to any member
-        $data['userOptions'] = DB::table('users')
-            ->leftJoin('mst_anggota', 'users.id', '=', 'mst_anggota.user_id')
-            ->whereNull('mst_anggota.user_id')
-            ->select('users.id as value', 'users.email as name')
-            ->get();
 
         //check authorization access add
         if ($data['authorize']->add == '1') {
@@ -312,48 +307,108 @@ class AnggotaController extends Controller
             }
         }
         
-        //list data
-        $data['table_header'] = DB::table('sys_table')
-            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'list' => '1'])
-            ->orderBy('urut')
-            ->get();
-            
-        $data['table_detail'] = DB::table($data['tabel'])->get();
+        DB::beginTransaction();
         
-        //check data Generate ID
-        if ($sys_id) {
-            //set ID from generate id
-            $insert_data = DB::table($data['tabel'])->insert([
-                $data['table_primary']->field => $data['format']->IDFormat($data['dmenu'])
-            ] + $attributes + ['user_create' => session('username')]);
-        } else {
-            //set ID manual
-            $insert_data = DB::table($data['tabel'])->insert($attributes + ['user_create' => session('username')]);
-        }
-        
-        //check insert
-        if ($insert_data) {
-            //insert sys_log
-            $idtrans = DB::table($data['tabel'])
-                ->where(['user_create' => session('username')])
-                ->orderByDesc('created_at')
-                ->first();
-            $syslog->log_insert('C', $data['dmenu'], 'Created : ' . $idtrans->{$data['table_primary']->field}, '1');
+        try {
+            //check data Generate ID
+            if ($sys_id) {
+                //set ID from generate id
+                $insert_data = DB::table($data['tabel'])->insert([
+                    $data['table_primary']->field => $data['format']->IDFormat($data['dmenu'])
+                ] + $attributes + ['user_create' => session('username')]);
+                $nik = $data['format']->IDFormat($data['dmenu']);
+            } else {
+                //set ID manual
+                $insert_data = DB::table($data['tabel'])->insert($attributes + ['user_create' => session('username')]);
+                $nik = $attributes['nik'];
+            }
             
-            // Set a session message
-            Session::flash('message', 'Tambah Data Anggota Berhasil!');
-            Session::flash('class', 'success');
-            // return page menu
-            return redirect($data['url_menu'])->with($data);
-        } else {
+            //check insert anggota
+            if ($insert_data) {
+                // Check if toggle user access is enabled
+                $createUserAccess = request()->has('create_user_access') && request('create_user_access') == '1';
+                
+                if ($createUserAccess) {
+                    // Get anggota data that was just inserted
+                    $anggota = DB::table($data['tabel'])
+                        ->where($data['table_primary']->field, $nik)
+                        ->first();
+                    
+                    if ($anggota && $anggota->nama_lengkap) {
+                        // Generate email dari NIK
+                        $email = $anggota->nik . '@koperasi.local';
+                        
+                        // Check if email already exists
+                        $existingUser = DB::table('users')->where('email', $email)->first();
+                        if ($existingUser) {
+                            throw new \Exception('Email ' . $email . ' sudah digunakan');
+                        }
+                        
+                        // Generate username dari NIK
+                        $username = $anggota->nik;
+                        
+                        // Check if username already exists
+                        $existingUsername = DB::table('users')->where('username', $username)->first();
+                        if ($existingUsername) {
+                            throw new \Exception('Username ' . $username . ' sudah digunakan');
+                        }
+                        
+                        // Default password = NIK
+                        $defaultPassword = $anggota->nik;
+                        
+                        // Create new user
+                        $userId = DB::table('users')->insertGetId([
+                            'username' => $username,
+                            'firstname' => $anggota->nama_lengkap,
+                            'lastname' => '',
+                            'email' => $email,
+                            'password' => Hash::make($defaultPassword),
+                            'address' => $anggota->alamat ?? '',
+                            'idroles' => '3', // Default role untuk anggota
+                            'isactive' => '1',
+                            'user_create' => session('username'),
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                        
+                        // Update anggota dengan user_id
+                        DB::table($data['tabel'])
+                            ->where($data['table_primary']->field, $nik)
+                            ->update(['user_id' => $userId]);
+                        
+                        $syslog->log_insert('C', $data['dmenu'], 'Created Anggota with User Access: ' . $nik . ' (Email: ' . $email . ', Password: ' . $defaultPassword . ')', '1');
+                        
+                        Session::flash('message', 'Tambah Data Anggota Berhasil! Akses login dibuat dengan Email: ' . $email . ', Password: ' . $defaultPassword);
+                    } else {
+                        $syslog->log_insert('C', $data['dmenu'], 'Created Anggota: ' . $nik, '1');
+                        Session::flash('message', 'Tambah Data Anggota Berhasil!');
+                    }
+                } else {
+                    $syslog->log_insert('C', $data['dmenu'], 'Created Anggota: ' . $nik, '1');
+                    Session::flash('message', 'Tambah Data Anggota Berhasil!');
+                }
+                
+                Session::flash('class', 'success');
+                
+                DB::commit();
+                
+                // return page menu
+                return redirect($data['url_menu'])->with($data);
+            } else {
+                throw new \Exception('Gagal menyimpan data anggota');
+            }
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            
             //insert sys_log
-            $syslog->log_insert('E', $data['dmenu'], 'Create Error', '0');
+            $syslog->log_insert('E', $data['dmenu'], 'Create Error: ' . $e->getMessage(), '0');
             // Set a session message
-            Session::flash('message', 'Tambah Data Anggota Gagal!');
+            Session::flash('message', 'Tambah Data Anggota Gagal! ' . $e->getMessage());
             Session::flash('class', 'danger');
             // return page menu
             return redirect($data['url_menu'])->with($data);
-        };
+        }
     }
 
     /**
@@ -472,7 +527,11 @@ class AnggotaController extends Controller
             ->first();
             
         // Get anggota data for manual layout
-        $data['anggota'] = DB::table('mst_anggota')->where('nik', $id)->first();
+        $data['anggota'] = DB::table('mst_anggota as a')
+            ->leftJoin('users as u', 'a.user_id', '=', 'u.id')
+            ->select('a.*', 'u.email as user_email', 'u.username as user_username')
+            ->where('a.nik', $id)
+            ->first();
 
         // Get options for form
         $data['statusOptions'] = DB::table('sys_enum')
@@ -485,27 +544,6 @@ class AnggotaController extends Controller
             (object)['value' => 'L', 'name' => 'Laki-laki'],
             (object)['value' => 'P', 'name' => 'Perempuan']
         ]);
-
-        // Get users that are not yet assigned to any member (except current)
-        $data['userOptions'] = DB::table('users')
-            ->leftJoin('mst_anggota', function($join) use ($id) {
-                $join->on('users.id', '=', 'mst_anggota.user_id')
-                     ->where('mst_anggota.nik', '!=', $id);
-            })
-            ->whereNull('mst_anggota.user_id')
-            ->select('users.id as value', 'users.email as name')
-            ->get();
-
-        // Add current user if exists
-        if ($data['anggota'] && $data['anggota']->user_id) {
-            $currentUser = DB::table('users')
-                ->where('id', $data['anggota']->user_id)
-                ->select('id as value', 'email as name')
-                ->first();
-            if ($currentUser) {
-                $data['userOptions']->prepend($currentUser);
-            }
-        }
             
         // check data list
         if ($data['list']) {
@@ -643,37 +681,122 @@ class AnggotaController extends Controller
             }
         }
         
-        //list data 
-        $data['table_header'] = DB::table('sys_table')
-            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'list' => '1'])
-            ->orderBy('urut')
-            ->get();
-            
-        $data['table_detail'] = DB::table($data['tabel'])->get();
+        DB::beginTransaction();
         
-        // Update data by id
-        $updateData = DB::table($data['tabel'])
-            ->where($data['table_primary']->field, $id)
-            ->update($attributes + ['user_update' => session('username')]);
+        try {
+            // Get current anggota data before update
+            $currentAnggota = DB::table($data['tabel'])
+                ->where($data['table_primary']->field, $id)
+                ->first();
             
-        //check update
-        if ($updateData) {
+            // Update data by id
+            $updateData = DB::table($data['tabel'])
+                ->where($data['table_primary']->field, $id)
+                ->update($attributes + ['user_update' => session('username')]);
+                
+            //check update anggota
+            if ($updateData || true) { // true added to handle case when no actual changes made
+                // Check toggle user access
+                $createUserAccess = request()->has('create_user_access') && request('create_user_access') == '1';
+                
+                if ($createUserAccess && !$currentAnggota->user_id) {
+                    // Create user access - user belum ada, buat baru
+                    $updatedAnggota = DB::table($data['tabel'])
+                        ->where($data['table_primary']->field, $id)
+                        ->first();
+                    
+                    if ($updatedAnggota && $updatedAnggota->nama_lengkap) {
+                        // Generate email dari NIK
+                        $email = $updatedAnggota->nik . '@koperasi.local';
+                        
+                        // Check if email already exists
+                        $existingUser = DB::table('users')->where('email', $email)->first();
+                        if ($existingUser) {
+                            throw new \Exception('Email ' . $email . ' sudah digunakan');
+                        }
+                        
+                        // Generate username dari NIK
+                        $username = $updatedAnggota->nik;
+                        
+                        // Check if username already exists
+                        $existingUsername = DB::table('users')->where('username', $username)->first();
+                        if ($existingUsername) {
+                            throw new \Exception('Username ' . $username . ' sudah digunakan');
+                        }
+                        
+                        // Default password = NIK
+                        $defaultPassword = $updatedAnggota->nik;
+                        
+                        // Create new user
+                        $userId = DB::table('users')->insertGetId([
+                            'username' => $username,
+                            'firstname' => $updatedAnggota->nama_lengkap,
+                            'lastname' => '',
+                            'email' => $email,
+                            'password' => Hash::make($defaultPassword),
+                            'address' => $updatedAnggota->alamat ?? '',
+                            'idroles' => '3', // Default role untuk anggota
+                            'isactive' => '1',
+                            'user_create' => session('username'),
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                        
+                        // Update anggota dengan user_id
+                        DB::table($data['tabel'])
+                            ->where($data['table_primary']->field, $id)
+                            ->update(['user_id' => $userId]);
+                        
+                        $syslog->log_insert('U', $data['dmenu'], 'Updated Anggota with User Access Created: ' . $id . ' (Email: ' . $email . ', Password: ' . $defaultPassword . ')', '1');
+                        
+                        Session::flash('message', 'Edit Data Anggota Berhasil! Akses login dibuat dengan Email: ' . $email . ', Password: ' . $defaultPassword);
+                    }
+                    
+                } elseif (!$createUserAccess && $currentAnggota->user_id) {
+                    // Remove user access - user ada, hapus
+                    $user = DB::table('users')->where('id', $currentAnggota->user_id)->first();
+                    
+                    if ($user) {
+                        // Hapus user
+                        DB::table('users')->where('id', $currentAnggota->user_id)->delete();
+                        
+                        // Update anggota, set user_id ke null
+                        DB::table($data['tabel'])
+                            ->where($data['table_primary']->field, $id)
+                            ->update(['user_id' => null]);
+                        
+                        $syslog->log_insert('U', $data['dmenu'], 'Updated Anggota with User Access Removed: ' . $id . ' (Email: ' . $user->email . ')', '1');
+                        
+                        Session::flash('message', 'Edit Data Anggota Berhasil! Akses login dihapus.');
+                    }
+                    
+                } else {
+                    // No change in user access toggle
+                    $syslog->log_insert('U', $data['dmenu'], 'Updated Anggota: ' . $id, '1');
+                    Session::flash('message', 'Edit Data Anggota Berhasil!');
+                }
+                
+                Session::flash('class', 'success');
+                
+                DB::commit();
+                
+                // return page menu
+                return redirect($data['url_menu'])->with($data);
+            } else {
+                throw new \Exception('Tidak ada perubahan data');
+            }
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            
             //insert sys_log
-            $syslog->log_insert('U', $data['dmenu'], 'Updated : ' . $id, '1');
+            $syslog->log_insert('E', $data['dmenu'], 'Update Error: ' . $e->getMessage(), '0');
             // Set a session message
-            Session::flash('message', 'Edit Data Anggota Berhasil!');
-            Session::flash('class', 'success');
-            // return page menu
-            return redirect($data['url_menu'])->with($data);
-        } else {
-            //insert sys_log
-            $syslog->log_insert('E', $data['dmenu'], 'Update Error', '0');
-            // Set a session message
-            Session::flash('message', 'Edit Data Anggota Gagal!');
+            Session::flash('message', 'Edit Data Anggota Gagal! ' . $e->getMessage());
             Session::flash('class', 'danger');
             //return error page
             return redirect($data['url_menu'])->with($data);
-        };
+        }
     }
 
     /**
@@ -731,5 +854,130 @@ class AnggotaController extends Controller
             //return error page
             return redirect($data['url_menu'])->with($data);
         }
+    }
+
+    /**
+     * Toggle user access for anggota (create/delete user login) - Standalone method
+     */
+    public function toggleUserAccess($data)
+    {
+        // function helper
+        $syslog = new Function_Helper;
+        
+        //list data
+        $data['table_primary'] = DB::table('sys_table')
+            ->where(['gmenu' => $data['gmenuid'], 'dmenu' => $data['dmenu'], 'primary' => '1'])
+            ->first();
+        
+        //check decrypt
+        try {
+            $id = decrypt($data['idencrypt']);
+        } catch (DecryptException $e) {
+            $id = "";
+        }
+        
+        // Get anggota data
+        $anggota = DB::table('mst_anggota')
+            ->where('nik', $id)
+            ->first();
+            
+        if (!$anggota) {
+            Session::flash('message', 'Data Anggota tidak ditemukan!');
+            Session::flash('class', 'danger');
+            return redirect($data['url_menu']);
+        }
+        
+        DB::beginTransaction();
+        
+        try {
+            if ($anggota->user_id) {
+                // User sudah ada, hapus user dan update anggota
+                $user = DB::table('users')->where('id', $anggota->user_id)->first();
+                
+                if ($user) {
+                    // Hapus user
+                    DB::table('users')->where('id', $anggota->user_id)->delete();
+                    
+                    // Update anggota, set user_id ke null
+                    DB::table('mst_anggota')
+                        ->where('nik', $id)
+                        ->update([
+                            'user_id' => null,
+                            'user_update' => session('username')
+                        ]);
+                    
+                    $syslog->log_insert('D', $data['dmenu'], 'User Access Removed for : ' . $id . ' (Email: ' . $user->email . ')', '1');
+                    
+                    Session::flash('message', 'Akses login anggota berhasil dihapus!');
+                    Session::flash('class', 'success');
+                }
+            } else {
+                // User belum ada, buat user baru
+                if (!$anggota->nama_lengkap) {
+                    throw new \Exception('Nama lengkap anggota harus diisi terlebih dahulu');
+                }
+                
+                // Generate email dari NIK jika tidak ada email
+                $email = $anggota->nik . '@koperasi.local';
+                
+                // Check if email already exists
+                $existingUser = DB::table('users')->where('email', $email)->first();
+                if ($existingUser) {
+                    throw new \Exception('Email ' . $email . ' sudah digunakan');
+                }
+                
+                // Generate username dari NIK
+                $username = $anggota->nik;
+                
+                // Check if username already exists
+                $existingUsername = DB::table('users')->where('username', $username)->first();
+                if ($existingUsername) {
+                    throw new \Exception('Username ' . $username . ' sudah digunakan');
+                }
+                
+                // Default password = NIK
+                $defaultPassword = $anggota->nik;
+                
+                // Create new user
+                $userId = DB::table('users')->insertGetId([
+                    'username' => $username,
+                    'firstname' => $anggota->nama_lengkap,
+                    'lastname' => '',
+                    'email' => $email,
+                    'password' => Hash::make($defaultPassword),
+                    'address' => $anggota->alamat ?? '',
+                    'idroles' => '3', // Default role untuk anggota (sesuaikan dengan sistem role Anda)
+                    'isactive' => '1',
+                    'user_create' => session('username'),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+                // Update anggota dengan user_id
+                DB::table('mst_anggota')
+                    ->where('nik', $id)
+                    ->update([
+                        'user_id' => $userId,
+                        'user_update' => session('username')
+                    ]);
+                
+                $syslog->log_insert('C', $data['dmenu'], 'User Access Created for : ' . $id . ' (Email: ' . $email . ', Password: ' . $defaultPassword . ')', '1');
+                
+                Session::flash('message', 'Akses login anggota berhasil dibuat! Email: ' . $email . ', Password: ' . $defaultPassword);
+                Session::flash('class', 'success');
+            }
+            
+            DB::commit();
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            $syslog->log_insert('E', $data['dmenu'], 'Toggle User Access Error for : ' . $id . ' - ' . $e->getMessage(), '0');
+            
+            Session::flash('message', 'Gagal mengubah akses login: ' . $e->getMessage());
+            Session::flash('class', 'danger');
+        }
+        
+        return redirect($data['url_menu']);
     }
 }

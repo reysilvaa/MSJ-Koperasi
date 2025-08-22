@@ -53,18 +53,31 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
+                                    {{-- Toggle Akses Login --}}
                                     <div class="form-group">
-                                        <label for="user_id" class="form-control-label">User Account</label>
-                                        <select class="form-select" name="user_id" id="user_id">
-                                            <option value="">Pilih User (Opsional)</option>
-                                            @foreach($userOptions as $option)
-                                                <option value="{{ $option->value }}" 
-                                                        {{ old('user_id', $anggota->user_id) == $option->value ? 'selected' : '' }}>
-                                                    {{ $option->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <small class="form-text text-muted">Hubungkan dengan akun user untuk login</small>
+                                        <div class="d-flex align-items-center justify-content-between border rounded p-3">
+                                            <div>
+                                                <label class="form-control-label mb-1">Akses Login</label>
+                                                <p class="text-xs text-secondary mb-0">
+                                                    @if($anggota->user_id)
+                                                        <span class="text-success">
+                                                            <i class="fas fa-check-circle me-1"></i>Sudah memiliki akses login
+                                                        </span>
+                                                        <br><small>Email: {{ $anggota->user_email ?? '-' }}</small>
+                                                    @else
+                                                        <span class="text-muted">
+                                                            <i class="fas fa-times-circle me-1"></i>Belum memiliki akses login
+                                                        </span>
+                                                    @endif
+                                                </p>
+                                            </div>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       name="create_user_access" id="create_user_access" value="1"
+                                                       {{ ($anggota->user_id || old('create_user_access')) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="create_user_access"></label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -233,6 +246,25 @@
                                         </select>
                                     </div>
                                     
+                                    {{-- Info box for login credentials preview --}}
+                                    <div id="login-info" class="mt-3 p-3 bg-light rounded" style="display: none;">
+                                        <h6 class="text-sm mb-2">
+                                            <i class="fas fa-info-circle text-info me-1"></i>
+                                            <span id="login-info-title">Informasi Login</span>
+                                        </h6>
+                                        <div class="text-xs">
+                                            <div class="mb-1">
+                                                <strong>Email:</strong> <span id="preview-email">-</span>
+                                            </div>
+                                            <div class="mb-1">
+                                                <strong>Username:</strong> <span id="preview-username">-</span>
+                                            </div>
+                                            <div>
+                                                <strong>Password:</strong> <span id="preview-password">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     {{-- Audit Info --}}
                                     <div class="mt-3">
                                         <small class="text-muted">
@@ -279,6 +311,12 @@
 
 @push('js')
 <script>
+    // Store initial state
+    const initialHasUser = {{ $anggota->user_id ? 'true' : 'false' }};
+    const currentEmail = '{{ $anggota->user_email ?? '' }}';
+    const currentUsername = '{{ $anggota->user_username ?? '' }}';
+    const nik = '{{ $anggota->nik }}';
+
     // Preview image upload
     document.getElementById('foto_ktp').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -325,10 +363,55 @@
         this.value = this.value.replace(/\D/g, ''); // Only numbers
     });
 
+    // Toggle user access functionality
+    document.getElementById('create_user_access').addEventListener('change', function() {
+        updateLoginPreview();
+    });
+
+    // Function to update login credentials preview
+    function updateLoginPreview() {
+        const toggleChecked = document.getElementById('create_user_access').checked;
+        const loginInfo = document.getElementById('login-info');
+        const loginTitle = document.getElementById('login-info-title');
+        
+        if (toggleChecked) {
+            if (initialHasUser) {
+                // Show existing user info
+                loginTitle.textContent = 'Login Saat Ini';
+                document.getElementById('preview-email').textContent = currentEmail || (nik + '@koperasi.local');
+                document.getElementById('preview-username').textContent = currentUsername || nik;
+                document.getElementById('preview-password').textContent = 'Tidak berubah';
+            } else {
+                // Show new user info that will be created
+                loginTitle.textContent = 'Login Akan Dibuat';
+                const newEmail = nik + '@koperasi.local';
+                const newUsername = nik;
+                const newPassword = nik;
+                
+                document.getElementById('preview-email').textContent = newEmail;
+                document.getElementById('preview-username').textContent = newUsername;
+                document.getElementById('preview-password').textContent = newPassword;
+            }
+            loginInfo.style.display = 'block';
+        } else {
+            if (initialHasUser) {
+                // Show warning that user will be deleted
+                loginTitle.textContent = 'Login Akan Dihapus';
+                document.getElementById('preview-email').textContent = currentEmail + ' (akan dihapus)';
+                document.getElementById('preview-username').textContent = currentUsername + ' (akan dihapus)';
+                document.getElementById('preview-password').textContent = 'Akses login akan dihapus';
+                loginInfo.style.display = 'block';
+            } else {
+                loginInfo.style.display = 'none';
+            }
+        }
+    }
+
     // Form validation before submit
     document.querySelector('form').addEventListener('submit', function(e) {
         const namaLengkap = document.getElementById('nama_lengkap').value;
         const jenisKelamin = document.getElementById('jenis_kelamin').value;
+        const createUserAccess = document.getElementById('create_user_access').checked;
         
         if (!namaLengkap.trim()) {
             e.preventDefault();
@@ -343,6 +426,29 @@
             document.getElementById('jenis_kelamin').focus();
             return;
         }
+        
+        // Confirmation for user access changes
+        if (createUserAccess !== initialHasUser) {
+            let confirmMessage;
+            
+            if (createUserAccess && !initialHasUser) {
+                // Creating new user access
+                confirmMessage = `Akan dibuat akses login dengan:\n\nEmail: ${nik}@koperasi.local\nUsername: ${nik}\nPassword: ${nik}\n\nLanjutkan?`;
+            } else if (!createUserAccess && initialHasUser) {
+                // Removing existing user access
+                confirmMessage = `Akses login akan dihapus!\n\nEmail: ${currentEmail}\nUsername: ${currentUsername}\n\nAnggota tidak akan bisa login lagi. Lanjutkan?`;
+            }
+            
+            if (confirmMessage && !confirm(confirmMessage)) {
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+
+    // Initialize preview on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateLoginPreview();
     });
 </script>
 @endpush
